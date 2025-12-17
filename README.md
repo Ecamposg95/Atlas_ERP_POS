@@ -14,13 +14,13 @@ Se busca una **API REST modular, eficiente y escalable** que funcione como el n�
 
 ## 🧱 Stack Tecnológico Recomendado
 
-- 🐍 **Python 3.10+**
-- ⚡ **FastAPI**
-- 🧬 **SQLAlchemy 2.0**
-- 🧱 **Alembic**
-- 🐘 **PostgreSQL**
-- 🔐 **JWT Authentication**
-- 🚀 **Uvicorn (ASGI Server)**
+![Python](https://img.shields.io/badge/Python-3.9%2B-blue?logo=python)
+![FastAPI](https://img.shields.io/badge/FastAPI-Framework-009688?logo=fastapi)
+![SQLAlchemy](https://img.shields.io/badge/ORM-SQLAlchemy-red)
+![Alembic](https://img.shields.io/badge/Migrations-Alembic-orange)
+![PostgreSQL](https://img.shields.io/badge/Database-PostgreSQL-336791?logo=postgresql)
+![JWT](https://img.shields.io/badge/Auth-JWT-black?logo=jsonwebtokens)
+![Uvicorn](https://img.shields.io/badge/Server-Uvicorn-4B8BBE)
 
 ---
 
