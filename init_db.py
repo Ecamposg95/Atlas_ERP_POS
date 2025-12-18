@@ -1,106 +1,106 @@
 from app.database import SessionLocal, engine
-# Importamos TODO desde app.models (usando el __init__.py que ya configuramos)
-# Esto evita importar .base por separado y causar doble carga
-from app.models import Base, User, Branch, Product, ProductVariant, StockOnHand, Customer, Role
+from app.models import Base
+# Importamos todos los modelos para asegurar que se creen las tablas
+from app.models import (
+    User, Branch, Role,
+    Product, ProductVariant, StockOnHand, ProductPrice, Category,
+    Customer, CashSession
+)
 from app.security import get_password_hash
 
 def init_db():
-    print("--- Creando Tablas ---")
+    print("--- 1. Eliminando y Creando Tablas ---")
+    Base.metadata.drop_all(bind=engine) # Borrón y cuenta nueva
     Base.metadata.create_all(bind=engine)
+    
     db = SessionLocal()
 
-    print("--- Iniciando Poblado ---")
-
-    # 1. SUCURSAL
-    branch = db.query(Branch).first()
-    if not branch:
-        branch = Branch(name="Sucursal Centro", address="Av. Reforma #123")
-        db.add(branch)
-        db.commit()
-        db.refresh(branch)
-        print("✅ Sucursal creada.")
-
-    # 2. USUARIOS
-    users_to_create = [
-        ("admin", "1234", Role.ADMINISTRADOR),
-        ("cajero1", "0000", Role.CAJERO),
-        ("cajero2", "1111", Role.CAJERO),
-    ]
-
-    for uname, pin, role in users_to_create:
-        if not db.query(User).filter(User.username == uname).first():
-            user = User(
-                username=uname,
-                password_hash=get_password_hash(pin),
-                role=role,
-                branch_id=branch.id,
-                full_name=uname.capitalize()
-            )
-            db.add(user)
-            print(f"✅ Usuario '{uname}' creado.")
-
+    print("--- 2. Creando Sucursal y Usuarios ---")
+    branch = Branch(name="Matriz Centro", address="Av. Reforma #123")
+    db.add(branch)
     db.commit()
 
-    # 3. CLIENTES
-    customers_data = [
-        {"name": "Cliente General", "tax_id": "XAXX010101000", "has_credit": False},
-        {"name": "Cliente VIP", "tax_id": "VIP001", "has_credit": True},
-        {"name": "Abarrotes Don Pepe", "tax_id": "ADP990101", "has_credit": True},
+    # Usuarios
+    users = [
+        ("admin", "1234", Role.ADMINISTRADOR, "Admin General"),
+        ("gerente", "5678", Role.GERENTE, "Gerente Tienda"),
+        ("cajero1", "0000", Role.CAJERO, "Juan Pérez"),
     ]
-
-    for c in customers_data:
-        if not db.query(Customer).filter(Customer.name == c["name"]).first():
-            new_c = Customer(
-                name=c["name"],
-                tax_id=c["tax_id"],
-                has_credit=c["has_credit"],
-                credit_limit=5000 if c["has_credit"] else 0,
-                credit_days=30 if c["has_credit"] else 0
-            )
-            db.add(new_c)
-    db.commit()
-    print("✅ Clientes creados.")
-
-    # 4. PRODUCTOS
-    products_list = [
-        ("Coca Cola 600ml", "COCA600", 18.00, 12.50),
-        ("Pepsi 600ml", "PEPSI600", 17.00, 11.50),
-        ("Agua Ciel 1L", "AGUA1L", 12.00, 6.00),
-        ("Sabritas Sal", "SABRITAS", 19.00, 13.00),
-        ("Galletas Emperador", "EMPERADOR", 16.00, 10.00),
-    ]
-
-    count = 0
-    for name, sku, price, cost in products_list:
-        existing = db.query(ProductVariant).filter(ProductVariant.sku == sku).first()
-        if not existing:
-            # Producto Padre
-            prod = Product(name=name, has_variants=False)
-            db.add(prod)
-            db.flush()
-            
-            # Variante
-            var = ProductVariant(
-                product_id=prod.id, 
-                sku=sku, 
-                variant_name="Standard", 
-                price=price, 
-                cost=cost
-            )
-            db.add(var)
-            db.flush()
-            
-            # Stock
-            stock = StockOnHand(
-                branch_id=branch.id, 
-                variant_id=var.id, 
-                qty_on_hand=100
-            )
-            db.add(stock)
-            count += 1
     
+    for user, pin, role, name in users:
+        new_u = User(
+            username=user, 
+            password_hash=get_password_hash(pin),
+            role=role, 
+            full_name=name,
+            branch_id=branch.id
+        )
+        db.add(new_u)
     db.commit()
-    print(f"✅ {count} Productos creados.")
+
+    print("--- 3. Creando Departamentos ---")
+    depts = ["Abarrotes", "Bebidas", "Botanas", "Limpieza", "Farmacia"]
+    dept_objs = {}
+    for d in depts:
+        cat = Category(name=d)
+        db.add(cat)
+        db.flush()
+        dept_objs[d] = cat.id
+    db.commit()
+
+    print("--- 4. Creando Productos con Variantes y Precios ---")
+    # Formato: (Nombre, SKU, PrecioLista, Costo, Depto, Stock, PrecioMayoreo)
+    products_data = [
+        ("Coca Cola 600ml", "COCA600", 18.00, 12.50, "Bebidas", 100, 16.50),
+        ("Coca Cola 2.5L", "COCA25", 42.00, 35.00, "Bebidas", 50, 40.00),
+        ("Sabritas Sal 45g", "SABRITAS", 19.00, 13.00, "Botanas", 80, 17.00),
+        ("Aceite 1-2-3 1L", "ACEITE1L", 45.00, 38.00, "Abarrotes", 40, 42.00),
+        ("Cloralex 1L", "CLORALEX", 19.00, 12.00, "Limpieza", 60, 17.50),
+        ("Paracetamol 500mg", "PARACET", 25.00, 10.00, "Farmacia", 100, 20.00),
+    ]
+
+    for name, sku, price, cost, dept, stock, wholesale in products_data:
+        # Producto Padre
+        prod = Product(
+            name=name, 
+            description=f"Producto {name}", 
+            unit="pza",
+            category_id=dept_objs.get(dept),
+            is_active=True
+        )
+        db.add(prod)
+        db.flush()
+
+        # Variante
+        var = ProductVariant(
+            product_id=prod.id,
+            sku=sku,
+            variant_name="Estándar",
+            price=price,
+            cost=cost
+        )
+        db.add(var)
+        db.flush()
+
+        # Precio Extra (Mayoreo)
+        if wholesale:
+            p_price = ProductPrice(
+                variant_id=var.id,
+                price_name="Mayoreo",
+                min_quantity=6, # A partir de 6 piezas
+                unit_price=wholesale
+            )
+            db.add(p_price)
+
+        # Stock
+        db.add(StockOnHand(
+            branch_id=branch.id,
+            variant_id=var.id,
+            qty_on_hand=stock
+        ))
+
+    db.commit()
+    print("✅ Base de datos regenerada exitosamente.")
     db.close()
 
 if __name__ == "__main__":

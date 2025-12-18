@@ -1,9 +1,16 @@
 from .base import Base
 from .users import User, Branch, Role
-from .products import Product, ProductVariant, StockOnHand, Brand, Category, UnitOfMeasure
+# --- AQUÍ ESTABA EL FALTANTE ---
+from .products import (
+    Product, 
+    ProductVariant, 
+    StockOnHand, 
+    Brand, 
+    Category, 
+    UnitOfMeasure, 
+    ProductPrice  # <--- Agregado nuevo
+)
 from .inventory import InventoryMovement, MovementType
-# --- AQUÍ ESTÁ EL CAMBIO ---
-# Agregamos PaymentMethod y CashSessionStatus a la lista
 from .sales import (
     SalesDocument, 
     SalesLineItem, 

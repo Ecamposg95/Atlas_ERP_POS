@@ -33,6 +33,7 @@ app.include_router(sales.router, prefix="/api/sales", tags=["Ventas POS"])
 app.include_router(crm.router, prefix="/api/customers", tags=["CRM Clientes"])
 app.include_router(cash.router, prefix="/api/cash", tags=["Corte de Caja"])
 app.include_router(printer.router, prefix="/api/printer", tags=["Impresora"]) # <--- AGREGADO
+app.include_router(products.router, prefix="/api/products", tags=["Catálogo"])
 
 @app.get("/")
 def read_root(request: Request):

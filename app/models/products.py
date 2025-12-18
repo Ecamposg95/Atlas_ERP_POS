@@ -2,15 +2,17 @@ from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, Numeric
 from sqlalchemy.orm import relationship
 from .base import Base
 
-# --- Modelos Opcionales (Stubs para evitar error de importación) ---
-class Brand(Base):
-    __tablename__ = "brands"
-    __table_args__ = {'extend_existing': True}
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, index=True)
-
+# --- Usaremos Category como "Departamento" ---
 class Category(Base):
     __tablename__ = "categories"
+    __table_args__ = {'extend_existing': True}
+    
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, index=True)
+    description = Column(String, nullable=True)
+
+class Brand(Base):
+    __tablename__ = "brands"
     __table_args__ = {'extend_existing': True}
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, index=True)
@@ -22,8 +24,7 @@ class UnitOfMeasure(Base):
     name = Column(String, index=True)
     code = Column(String, index=True)
 
-# --- Modelos Principales ---
-
+# --- PRODUCTO PADRE ---
 class Product(Base):
     __tablename__ = "products"
     __table_args__ = {'extend_existing': True}
@@ -31,16 +32,19 @@ class Product(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, index=True)
     description = Column(String, nullable=True)
+    unit = Column(String, default="pza") # Ej: pza, kg, lt
     
-    # Clasificación (Opcional, foreign keys pueden ser null por ahora)
     brand_id = Column(Integer, ForeignKey("brands.id"), nullable=True)
-    category_id = Column(Integer, ForeignKey("categories.id"), nullable=True)
+    category_id = Column(Integer, ForeignKey("categories.id"), nullable=True) # Departamento
     
     has_variants = Column(Boolean, default=False)
     is_active = Column(Boolean, default=True)
 
-    variants = relationship("ProductVariant", back_populates="product")
+    # Relaciones
+    department = relationship("Category") # Mapeamos category como department
+    variants = relationship("ProductVariant", back_populates="product", cascade="all, delete-orphan")
 
+# --- VARIANTES (SKU) ---
 class ProductVariant(Base):
     __tablename__ = "product_variants"
     __table_args__ = {'extend_existing': True}
@@ -50,14 +54,29 @@ class ProductVariant(Base):
     
     sku = Column(String, unique=True, index=True)
     barcode = Column(String, index=True, nullable=True)
-    variant_name = Column(String) # Ej: "Rojo/Grande" o "Estándar"
+    variant_name = Column(String) # Ej: "Estándar", "Rojo/Grande"
     
-    price = Column(Numeric(10, 2)) # Precio Venta
-    cost = Column(Numeric(10, 2))  # Costo
+    price = Column(Numeric(10, 2)) # Precio Base (Lista 1)
+    cost = Column(Numeric(10, 2))  # Costo Base
     
     product = relationship("Product", back_populates="variants")
+    prices = relationship("ProductPrice", back_populates="variant", cascade="all, delete-orphan")
 
-# --- AQUÍ ESTABA EL FALTANTE ---
+# --- NUEVO: PRECIOS ESCALONADOS ---
+class ProductPrice(Base):
+    __tablename__ = "product_prices"
+    __table_args__ = {'extend_existing': True}
+
+    id = Column(Integer, primary_key=True, index=True)
+    variant_id = Column(Integer, ForeignKey("product_variants.id"), nullable=False)
+    
+    price_name = Column(String) # Ej: "Mayoreo", "Distribuidor"
+    min_quantity = Column(Numeric(10, 2), default=1) # A partir de cuántas piezas
+    unit_price = Column(Numeric(10, 2), nullable=False)
+
+    variant = relationship("ProductVariant", back_populates="prices")
+
+# --- STOCK ---
 class StockOnHand(Base):
     __tablename__ = "stock_on_hand"
     __table_args__ = {'extend_existing': True}
@@ -67,5 +86,3 @@ class StockOnHand(Base):
     variant_id = Column(Integer, ForeignKey("product_variants.id"), nullable=False)
     
     qty_on_hand = Column(Numeric(10, 2), default=0.00)
-    
-    # location_id = ... (Para futuro multialmacén)
