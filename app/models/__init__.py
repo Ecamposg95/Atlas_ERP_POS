@@ -1,8 +1,17 @@
 from .base import Base
-from .store import Branch
-from .users import User, UserRole
+from .users import User, Branch, Role
+from .products import Product, ProductVariant, StockOnHand, Brand, Category, UnitOfMeasure
+from .inventory import InventoryMovement, MovementType
+# --- AQUÍ ESTÁ EL CAMBIO ---
+# Agregamos PaymentMethod y CashSessionStatus a la lista
+from .sales import (
+    SalesDocument, 
+    SalesLineItem, 
+    Payment, 
+    CashSession, 
+    DocumentStatus, 
+    DocumentType, 
+    PaymentMethod, 
+    CashSessionStatus
+)
 from .crm import Customer, CustomerLedgerEntry
-from .products import Product, ProductVariant, Brand, Category, UnitOfMeasure
-from .inventory import StockOnHand, InventoryMovement, MovementType
-from .sales import SalesDocument, SalesLineItem, DocumentType, DocumentStatus
-from .payments import Payment, CashSession, PaymentMethod, CashSessionStatus

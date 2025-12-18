@@ -1,80 +1,71 @@
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, Text, Numeric, Float
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, Numeric
 from sqlalchemy.orm import relationship
 from .base import Base
 
-# --- Entidades Auxiliares ---
-
+# --- Modelos Opcionales (Stubs para evitar error de importación) ---
 class Brand(Base):
     __tablename__ = "brands"
+    __table_args__ = {'extend_existing': True}
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, unique=True, index=True, nullable=False)
-    
-    products = relationship("Product", back_populates="brand")
+    name = Column(String, index=True)
 
 class Category(Base):
     __tablename__ = "categories"
+    __table_args__ = {'extend_existing': True}
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, unique=True, index=True, nullable=False)
-    # parent_id = Column(Integer, ForeignKey("categories.id"), nullable=True) # Para jerarquías futuras
-    
-    products = relationship("Product", back_populates="category")
+    name = Column(String, index=True)
 
 class UnitOfMeasure(Base):
-    __tablename__ = "uoms"
+    __tablename__ = "uom"
+    __table_args__ = {'extend_existing': True}
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, nullable=False) # e.g. "Pieza", "Kg", "Litro"
-    code = Column(String, unique=True, nullable=False) # e.g. "PZA", "KG"
+    name = Column(String, index=True)
+    code = Column(String, index=True)
 
-# --- Producto Padre (El Modelo) ---
+# --- Modelos Principales ---
 
 class Product(Base):
-    """
-    Define el concepto general (ej. 'Camisa Polo Nike').
-    No se vende directamente, actua como plantilla para las variantes.
-    """
     __tablename__ = "products"
-    
+    __table_args__ = {'extend_existing': True}
+
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, index=True, nullable=False)
-    description = Column(Text, nullable=True)
+    name = Column(String, index=True)
+    description = Column(String, nullable=True)
     
+    # Clasificación (Opcional, foreign keys pueden ser null por ahora)
     brand_id = Column(Integer, ForeignKey("brands.id"), nullable=True)
     category_id = Column(Integer, ForeignKey("categories.id"), nullable=True)
     
-    has_variants = Column(Boolean, default=False) # True si tiene tallas/colores
+    has_variants = Column(Boolean, default=False)
     is_active = Column(Boolean, default=True)
-    
-    # Impuestos (Simplificado por ahora)
-    tax_rate = Column(Float, default=0.16) # 0.16 para IVA general
 
-    brand = relationship("Brand", back_populates="products")
-    category = relationship("Category", back_populates="products")
-    variants = relationship("ProductVariant", back_populates="product", cascade="all, delete-orphan")
-
-# --- Variante de Producto (El SKU Vendible) ---
+    variants = relationship("ProductVariant", back_populates="product")
 
 class ProductVariant(Base):
-    """
-    El ítem tangible que se mueve en inventario (ej. 'Camisa Polo Nike - Roja - M').
-    Si el producto no tiene variantes, se crea una variante 'default' oculta.
-    """
     __tablename__ = "product_variants"
-    
+    __table_args__ = {'extend_existing': True}
+
     id = Column(Integer, primary_key=True, index=True)
     product_id = Column(Integer, ForeignKey("products.id"), nullable=False)
     
-    sku = Column(String, unique=True, index=True, nullable=False)
-    barcode = Column(String, unique=True, index=True, nullable=True)
+    sku = Column(String, unique=True, index=True)
+    barcode = Column(String, index=True, nullable=True)
+    variant_name = Column(String) # Ej: "Rojo/Grande" o "Estándar"
     
-    # Atributos específicos (JSON o columnas planas para simplicidad inicial)
-    variant_name = Column(String) # "Roja / M" o "Default"
+    price = Column(Numeric(10, 2)) # Precio Venta
+    cost = Column(Numeric(10, 2))  # Costo
     
-    cost = Column(Numeric(10, 2), default=0.00)
-    price = Column(Numeric(10, 2), default=0.00) # Precio base (puede ser sobreescrito por listas de precios)
-    
-    weight = Column(Float, nullable=True)
-    is_active = Column(Boolean, default=True)
-
     product = relationship("Product", back_populates="variants")
-    stock_points = relationship("StockOnHand", back_populates="variant")
-    movements = relationship("InventoryMovement", back_populates="variant")
+
+# --- AQUÍ ESTABA EL FALTANTE ---
+class StockOnHand(Base):
+    __tablename__ = "stock_on_hand"
+    __table_args__ = {'extend_existing': True}
+
+    id = Column(Integer, primary_key=True, index=True)
+    branch_id = Column(Integer, ForeignKey("branches.id"), nullable=False)
+    variant_id = Column(Integer, ForeignKey("product_variants.id"), nullable=False)
+    
+    qty_on_hand = Column(Numeric(10, 2), default=0.00)
+    
+    # location_id = ... (Para futuro multialmacén)

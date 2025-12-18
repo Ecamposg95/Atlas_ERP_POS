@@ -7,7 +7,7 @@ from app.models import (
     ProductVariant, StockOnHand, InventoryMovement, 
     SalesDocument, SalesLineItem, Payment, 
     User, DocumentType, DocumentStatus, MovementType,
-    Customer, CustomerLedgerEntry # <--- Nuevos imports
+    Customer, CustomerLedgerEntry, PaymentMethod # Aseguramos importar PaymentMethod
 )
 from app.schemas.sales import SaleCreate
 from app.security import get_current_user
@@ -38,13 +38,16 @@ def create_sale(
             StockOnHand.branch_id == current_user.branch_id
         ).first()
         
-        current_stock = stock_record.qty_on_hand if stock_record else 0.0
-        if current_stock < item.quantity:
+        current_stock = stock_record.qty_on_hand if stock_record else Decimal(0.0)
+        
+        # Convertimos item.quantity (float) a Decimal para operar
+        qty_dec = Decimal(str(item.quantity))
+
+        if current_stock < qty_dec:
             raise HTTPException(status_code=400, detail=f"Stock insuficiente: {variant.sku}")
 
         # Matemáticas
         unit_price = variant.price
-        qty_dec = Decimal(str(item.quantity))
         line_total = unit_price * qty_dec
         total_sale += line_total
         
@@ -52,26 +55,28 @@ def create_sale(
         new_line = SalesLineItem(
             variant_id=variant.id,
             description=f"{variant.sku} - {variant.variant_name}",
-            quantity=item.quantity,
+            quantity=item.quantity, # Aquí guardamos float (está bien para el registro)
             unit_price=unit_price,
             unit_cost=variant.cost,
             total_line=line_total
         )
         db_lines.append(new_line)
         
-        # Kardex
+        # Kardex y Resta de Stock
         if stock_record:
             qty_before = stock_record.qty_on_hand
-            stock_record.qty_on_hand -= item.quantity
+            
+            # CORRECCIÓN: Usamos qty_dec (Decimal) en lugar de item.quantity (float)
+            stock_record.qty_on_hand -= qty_dec 
             
             movement = InventoryMovement(
                 branch_id=current_user.branch_id,
                 variant_id=variant.id,
                 user_id=current_user.id,
                 movement_type=MovementType.SALE_OUT,
-                qty_change=-item.quantity,
+                qty_change=-qty_dec, # Decimal
                 qty_before=qty_before,
-                qty_after=qty_before - item.quantity,
+                qty_after=qty_before - qty_dec, # Decimal
                 reference="Venta POS",
                 notes="Salida venta"
             )
@@ -86,7 +91,8 @@ def create_sale(
     # Si no cubrió el total, ¿Autorizamos crédito?
     if remaining_balance > 0:
         if not sale_in.customer_id:
-            raise HTTPException(status_code=400, detail="Venta incompleta. Se requiere Cliente para dar crédito.")
+            # Si es público general y no paga completo, error (no se fía a desconocidos)
+            raise HTTPException(status_code=400, detail="Monto insuficiente. Se requiere Cliente para crédito.")
         
         customer = db.query(Customer).filter(Customer.id == sale_in.customer_id).first()
         if not customer:
@@ -96,7 +102,7 @@ def create_sale(
             raise HTTPException(status_code=400, detail=f"Cliente {customer.name} no tiene crédito autorizado.")
             
         # Verificar límite
-        new_balance = customer.current_balance + remaining_balance
+        new_balance = customer.current_balance + remaining_balance # current_balance debe ser Decimal en modelo
         if new_balance > customer.credit_limit:
              raise HTTPException(status_code=400, detail=f"Crédito insuficiente. Saldo actual: ${customer.current_balance}, Límite: ${customer.credit_limit}")
 
@@ -123,13 +129,14 @@ def create_sale(
         line.document_id = sales_doc.id
         db.add(line)
         
-    # Guardar Pagos recibidos (si hubo abono parcial)
+    # Guardar Pagos recibidos (si hubo abono parcial o total)
     for payment in sale_in.payments:
         if payment.amount > 0:
             new_payment = Payment(
                 sales_document_id=sales_doc.id,
                 amount=payment.amount,
                 method=payment.method,
+                created_by_id=current_user.id # Importante para cortes de caja
             )
             db.add(new_payment)
 

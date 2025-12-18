@@ -1,58 +1,30 @@
-import enum
-from sqlalchemy import Column, Integer, String, Float, ForeignKey, DateTime, Enum, Numeric, Text
-from sqlalchemy.orm import relationship
+from sqlalchemy import Column, Integer, String, ForeignKey, Enum, Numeric, DateTime
 from sqlalchemy.sql import func
 from .base import Base
+import enum
 
 class MovementType(str, enum.Enum):
-    PURCHASE_IN = "PURCHASE_IN"      # Compra
-    SALE_OUT = "SALE_OUT"            # Venta
-    ADJUSTMENT_IN = "ADJUSTMENT_IN"  # Ajuste positivo (inventario inicial)
-    ADJUSTMENT_OUT = "ADJUSTMENT_OUT"# Ajuste negativo (mermas)
-    TRANSFER_IN = "TRANSFER_IN"      # Traspaso (entrada)
-    TRANSFER_OUT = "TRANSFER_OUT"    # Traspaso (salida)
-    RETURN = "RETURN"                # Devolución cliente
-
-class StockOnHand(Base):
-    """
-    Caché de existencias actuales por Sucursal y Variante.
-    Se actualiza automáticamente al procesar movimientos.
-    """
-    __tablename__ = "stock_on_hand"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    branch_id = Column(Integer, ForeignKey("branches.id"), nullable=False)
-    variant_id = Column(Integer, ForeignKey("product_variants.id"), nullable=False)
-    
-    qty_on_hand = Column(Float, default=0.0)
-    qty_reserved = Column(Float, default=0.0) # Para pedidos no entregados
-
-    variant = relationship("ProductVariant", back_populates="stock_points")
-    # branch = relationship("Branch") # Asumiendo que definas esto en store.py si lo necesitas bidireccional
+    PURCHASE_IN = "PURCHASE_IN"      # Entrada por Compra
+    SALE_OUT = "SALE_OUT"            # Salida por Venta
+    ADJUSTMENT_IN = "ADJUSTMENT_IN"  # Ajuste Inventario (+)
+    ADJUSTMENT_OUT = "ADJUSTMENT_OUT"# Ajuste Inventario (-)
+    TRANSFER_IN = "TRANSFER_IN"
+    TRANSFER_OUT = "TRANSFER_OUT"
 
 class InventoryMovement(Base):
-    """
-    Kardex: Historial inmutable de cada cambio en el inventario.
-    """
     __tablename__ = "inventory_movements"
-    
+    __table_args__ = {'extend_existing': True}
+
     id = Column(Integer, primary_key=True, index=True)
-    
     branch_id = Column(Integer, ForeignKey("branches.id"), nullable=False)
     variant_id = Column(Integer, ForeignKey("product_variants.id"), nullable=False)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     
     movement_type = Column(Enum(MovementType), nullable=False)
+    qty_change = Column(Numeric(10, 2), nullable=False) # +10 o -5
+    qty_before = Column(Numeric(10, 2), nullable=False)
+    qty_after = Column(Numeric(10, 2), nullable=False)
     
-    qty_change = Column(Float, nullable=False) # Positivo o Negativo
-    qty_before = Column(Float, nullable=False) # Snapshot antes del movimiento
-    qty_after = Column(Float, nullable=False)  # Snapshot después del movimiento
-    
-    cost_at_time = Column(Numeric(10, 2), nullable=True) # Costo en el momento del movimiento
-    
-    reference = Column(String, nullable=True) # Ej. "Order #1024" o "PO #500"
-    notes = Column(Text, nullable=True)
-    
+    reference = Column(String, nullable=True) # ID Venta, ID Compra...
+    notes = Column(String, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-
-    variant = relationship("ProductVariant", back_populates="movements")

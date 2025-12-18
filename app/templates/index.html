@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Atlas ERP - POS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: { extend: { colors: { slate: { 850: '#172033' } } } }
+        }
+    </script>
+    <style>
+        .hidden { display: none; }
+        .modal { opacity: 0; visibility: hidden; transition: all 0.3s; }
+        .modal.active { opacity: 1; visibility: visible; }
+        .modal-content { transform: scale(0.95); transition: all 0.3s; }
+        .modal.active .modal-content { transform: scale(1); }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+        .pos-locked { filter: blur(4px) grayscale(50%); pointer-events: none; user-select: none; }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-900 dark:bg-slate-950 dark:text-slate-100 font-sans transition-colors duration-300 overflow-hidden">
+    
+    <div id="login-screen" class="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-100 to-indigo-200 dark:from-slate-950 dark:via-slate-900 dark:to-indigo-950 fixed inset-0 z-[100]">
+        <div class="w-full max-w-md bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-3xl shadow-2xl p-8">
+            <div class="flex justify-center mb-6">
+                <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-600 via-fuchsia-600 to-indigo-600 flex items-center justify-center text-white text-2xl font-bold shadow-lg">A</div>
+            </div>
+            <h1 class="text-2xl font-bold text-center mb-6">Atlas POS</h1>
+            <form id="login-form" class="space-y-4">
+                <input id="username" type="text" class="w-full px-4 py-3 bg-gray-50 dark:bg-slate-950 border border-gray-300 dark:border-slate-700 rounded-xl outline-none focus:border-purple-500" placeholder="Usuario" required>
+                <input id="pin" type="password" class="w-full px-4 py-3 bg-gray-50 dark:bg-slate-950 border border-gray-300 dark:border-slate-700 rounded-xl outline-none focus:border-purple-500" placeholder="PIN" required>
+                <p id="login-error" class="hidden text-sm text-red-500 text-center"></p>
+                <button type="submit" class="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-3 rounded-xl shadow-lg transition">Ingresar</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="main-layout" class="hidden h-screen flex bg-gray-100 dark:bg-slate-950">
+        
+        <div id="global-sidebar" class="h-full shrink-0 z-20 relative"></div>
+
+        <div class="flex-1 flex flex-col h-full overflow-hidden relative z-10">
+            
+            <nav class="bg-white/90 dark:bg-slate-900/90 border-b border-gray-200 dark:border-slate-800 backdrop-blur-sm shrink-0">
+                <div class="w-full px-6 h-20 flex justify-between items-center">
+                    <div class="flex items-center gap-4">
+                        <div id="session-status-badge" class="hidden px-3 py-1 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-bold rounded-full border border-emerald-500/20 flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                            <span>Turno Activo</span>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center gap-4">
+                        <button id="theme-toggle" class="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-slate-800 text-gray-500 dark:text-slate-400">
+                            🌗
+                        </button>
+                        <div class="flex gap-2 border-l pl-4 border-gray-200 dark:border-slate-700">
+                            <button id="open-session-btn" class="hidden px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg">Abrir Caja</button>
+                            <button id="close-session-btn" class="hidden px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold rounded-lg">Cerrar Caja</button>
+                            <button id="logout-button" class="p-2 text-red-400 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg" title="Salir">✕</button>
+                        </div>
+                    </div>
+                </div>
+            </nav>
+
+            <main id="pos-content-wrapper" class="flex-1 overflow-hidden p-6 flex gap-6 relative">
+                
+                <div class="flex-1 flex flex-col gap-6 h-full min-w-0">
+                    <div class="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-3xl p-4 shrink-0 shadow-sm">
+                        <div class="relative">
+                            <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
+                            <input id="search-input" type="text" class="w-full bg-gray-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-700 rounded-2xl pl-12 pr-4 py-3 font-bold focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Buscar producto por nombre o código...">
+                        </div>
+                    </div>
+                    
+                    <div id="search-results" class="flex-1 overflow-y-auto grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 content-start pb-20 custom-scrollbar">
+                        <div class="col-span-full text-center text-gray-400 mt-10 italic">Usa el buscador para agregar productos...</div>
+                    </div>
+                </div>
+
+                <div class="w-[400px] bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-3xl flex flex-col shadow-xl overflow-hidden h-full">
+                    <div class="px-6 py-4 border-b border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800/80 flex justify-between items-center">
+                        <h2 class="font-bold text-sm text-gray-800 dark:text-slate-100">Ticket Actual</h2>
+                        <button onclick="clearCart()" class="text-xs text-red-500 hover:text-red-400 font-bold">LIMPIAR</button>
+                    </div>
+                    
+                    <div class="flex-1 overflow-y-auto p-4 relative custom-scrollbar bg-gray-50/50 dark:bg-slate-950/50">
+                        <div id="ticket-items" class="space-y-3 text-sm"></div>
+                        <div id="ticket-placeholder" class="absolute inset-0 flex flex-col items-center justify-center text-gray-400 pointer-events-none opacity-50">
+                            <p class="text-sm font-medium italic">Carrito vacío</p>
+                        </div>
+                    </div>
+
+                    <div class="p-6 bg-white dark:bg-slate-900 border-t border-gray-200 dark:border-slate-800 space-y-3 shadow-lg z-10">
+                        <div class="flex justify-between text-2xl font-black pt-2 items-end">
+                            <span class="text-gray-800 dark:text-white text-lg">Total</span>
+                            <span id="ticket-total" class="text-indigo-600 dark:text-fuchsia-400 leading-none">$0.00</span>
+                        </div>
+                    </div>
+
+                    <div class="p-4 grid grid-cols-2 gap-4 bg-gray-50 dark:bg-slate-800/50 border-t border-gray-200 dark:border-slate-700">
+                        <button id="pay-cash-button" disabled class="bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-4 rounded-2xl shadow-lg transition active:scale-95 flex flex-col items-center justify-center">
+                            <span>Efectivo</span>
+                        </button>
+                        <button id="pay-card-button" disabled class="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-4 rounded-2xl shadow-lg transition active:scale-95 flex flex-col items-center justify-center">
+                            <span>Tarjeta</span>
+                        </button>
+                    </div>
+                </div>
+            </main>
+            
+            <div id="global-footer"></div>
+        </div>
+        
+    </div>
+
+    <div id="cash-session-modal" class="modal fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div class="modal-content bg-white dark:bg-slate-900 rounded-2xl max-w-sm w-full p-8 text-center border border-slate-700">
+            <h3 class="text-xl font-bold text-white mb-2">Abrir Turno</h3>
+            <p class="text-gray-400 mb-6">Fondo inicial en caja</p>
+            <form id="open-session-form">
+                <input id="opening-balance" type="number" class="w-full text-center text-3xl font-bold bg-slate-950 border border-slate-700 rounded-xl py-4 mb-6 text-white outline-none focus:border-emerald-500" placeholder="$0.00" required>
+                <button type="submit" class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold transition">INICIAR TURNO</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="cash-modal" class="modal fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div class="modal-content bg-white dark:bg-slate-900 rounded-3xl max-w-sm w-full p-8 border border-slate-700 relative">
+            <button onclick="hideModal('cash-modal')" class="absolute top-4 right-4 text-gray-500 hover:text-white">✕</button>
+            <div class="text-center mb-6">
+                <h3 class="text-xl font-bold text-white">Total a Cobrar</h3>
+                <p id="cash-modal-total" class="text-4xl font-black text-indigo-400 mt-2">$0.00</p>
+            </div>
+            <form id="cash-form" class="space-y-4">
+                <input id="amount-received" type="number" step="0.01" class="w-full text-center text-3xl font-bold bg-slate-950 border border-slate-700 rounded-xl py-4 text-white outline-none focus:border-emerald-500" placeholder="Recibido" required>
+                <div class="grid grid-cols-2 gap-2">
+                    <button type="button" class="quick-cash py-2 bg-slate-800 rounded-lg text-white font-bold hover:bg-slate-700" data-val="50">$50</button>
+                    <button type="button" class="quick-cash py-2 bg-slate-800 rounded-lg text-white font-bold hover:bg-slate-700" data-val="100">$100</button>
+                    <button type="button" class="quick-cash py-2 bg-slate-800 rounded-lg text-white font-bold hover:bg-slate-700" data-val="200">$200</button>
+                    <button type="button" class="quick-cash py-2 bg-slate-800 rounded-lg text-white font-bold hover:bg-slate-700" data-val="500">$500</button>
+                </div>
+                <button type="submit" class="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold text-lg shadow-lg transition">CONFIRMAR COBRO</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="/static/js/navbar.js"></script>
+
+    <script>
+        const API_URL = "http://127.0.0.1:8000/api";
+        let CART = [];
+        let CURRENT_PAYMENT_METHOD = 'CASH';
+
+        // --- AUTH ---
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const u = document.getElementById('username').value;
+            const p = document.getElementById('pin').value;
+            
+            try {
+                const body = new URLSearchParams({ username: u, password: p });
+                const res = await fetch(`${API_URL}/auth/login`, {
+                    method: 'POST', body: body, headers: {'Content-Type': 'application/x-www-form-urlencoded'}
+                });
+                if (!res.ok) throw new Error("Credenciales incorrectas");
+                const data = await res.json();
+                
+                // Guardar token y datos usuario para el navbar
+                sessionStorage.setItem('token', data.access_token);
+                const payload = JSON.parse(atob(data.access_token.split('.')[1]));
+                sessionStorage.setItem('CURRENT_USER', JSON.stringify(payload));
+                
+                location.reload();
+            } catch (err) {
+                const el = document.getElementById('login-error');
+                el.innerText = err.message; el.classList.remove('hidden');
+            }
+        });
+
+        // --- INICIO ---
+        document.addEventListener('DOMContentLoaded', async () => {
+            const token = sessionStorage.getItem('token');
+            if (token) {
+                document.getElementById('login-screen').classList.add('hidden');
+                document.getElementById('main-layout').classList.remove('hidden');
+                checkSession();
+            }
+            
+            // Toggle Tema
+            document.getElementById('theme-toggle').onclick = () => {
+                document.documentElement.classList.toggle('dark');
+            };
+            
+            // Logout
+            document.getElementById('logout-button').onclick = () => {
+                sessionStorage.clear(); location.reload();
+            };
+        });
+
+        // --- SESIONES CAJA ---
+        async function checkSession() {
+            const token = sessionStorage.getItem('token');
+            try {
+                const res = await fetch(`${API_URL}/cash/current`, { headers: {'Authorization': `Bearer ${token}`} });
+                const wrapper = document.getElementById('pos-content-wrapper');
+                const badge = document.getElementById('session-status-badge');
+                
+                if (res.status === 404) {
+                    // Sin sesión -> Bloquear y pedir apertura
+                    wrapper.classList.add('pos-locked');
+                    badge.classList.add('hidden');
+                    document.getElementById('cash-session-modal').classList.add('active');
+                } else if (res.ok) {
+                    // Sesión OK
+                    wrapper.classList.remove('pos-locked');
+                    badge.classList.remove('hidden');
+                    document.getElementById('search-input').focus();
+                }
+            } catch(e) {}
+        }
+
+        document.getElementById('open-session-form').onsubmit = async (e) => {
+            e.preventDefault();
+            const amount = parseFloat(document.getElementById('opening-balance').value);
+            const token = sessionStorage.getItem('token');
+            
+            const res = await fetch(`${API_URL}/cash/open`, {
+                method: 'POST',
+                headers: {'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json'},
+                body: JSON.stringify({ opening_balance: amount })
+            });
+            
+            if (res.ok) {
+                document.getElementById('cash-session-modal').classList.remove('active');
+                checkSession();
+            }
+        };
+
+        // --- PRODUCTOS ---
+        const searchInput = document.getElementById('search-input');
+        searchInput.addEventListener('input', debounce(async (e) => {
+            const q = e.target.value;
+            if (q.length < 2) return;
+            
+            const token = sessionStorage.getItem('token');
+            const res = await fetch(`${API_URL}/products/search?q=${q}`, { headers: {'Authorization': `Bearer ${token}`} });
+            const products = await res.json();
+            
+            const container = document.getElementById('search-results');
+            container.innerHTML = products.map(p => {
+                const price = p.variants[0]?.price || 0;
+                const sku = p.variants[0]?.sku || "??";
+                return `
+                <div onclick="addToCart('${sku}', ${price}, '${p.name}')" 
+                     class="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 p-4 rounded-2xl cursor-pointer hover:border-indigo-500 transition group">
+                    <div class="text-sm font-bold text-gray-800 dark:text-white mb-1">${p.name}</div>
+                    <div class="flex justify-between items-end">
+                        <span class="text-xs text-gray-500">${sku}</span>
+                        <span class="font-black text-lg text-emerald-500">$${price}</span>
+                    </div>
+                </div>`;
+            }).join('');
+        }, 300));
+
+        // --- CARRITO ---
+        function addToCart(sku, price, name) {
+            const existing = CART.find(i => i.sku === sku);
+            if(existing) existing.quantity++;
+            else CART.push({ sku, price, name, quantity: 1 });
+            renderCart();
+            searchInput.value = '';
+            document.getElementById('search-results').innerHTML = '';
+            searchInput.focus();
+        }
+
+        function renderCart() {
+            const container = document.getElementById('ticket-items');
+            const ph = document.getElementById('ticket-placeholder');
+            let total = 0;
+
+            if (CART.length === 0) {
+                container.innerHTML = '';
+                ph.classList.remove('hidden');
+                document.getElementById('pay-cash-button').disabled = true;
+                document.getElementById('pay-card-button').disabled = true;
+                document.getElementById('ticket-total').textContent = "$0.00";
+                return;
+            }
+
+            ph.classList.add('hidden');
+            container.innerHTML = CART.map((item, idx) => {
+                const sub = item.price * item.quantity;
+                total += sub;
+                return `
+                <div class="flex justify-between items-center py-2 border-b border-dashed border-slate-700">
+                    <div>
+                        <div class="font-bold text-white">${item.name}</div>
+                        <div class="text-xs text-gray-400">$${item.price} x ${item.quantity}</div>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <span class="font-bold text-indigo-400">$${sub.toFixed(2)}</span>
+                        <button onclick="removeFromCart(${idx})" class="text-red-400 font-bold hover:text-red-300">✕</button>
+                    </div>
+                </div>`;
+            }).join('');
+
+            document.getElementById('ticket-total').textContent = `$${total.toFixed(2)}`;
+            document.getElementById('pay-cash-button').disabled = false;
+            document.getElementById('pay-card-button').disabled = false;
+        }
+
+        window.removeFromCart = (idx) => { CART.splice(idx, 1); renderCart(); };
+        window.clearCart = () => { CART = []; renderCart(); };
+
+        // --- PAGO ---
+        document.getElementById('pay-cash-button').onclick = () => {
+            const total = CART.reduce((sum, i) => sum + (i.price * i.quantity), 0);
+            document.getElementById('cash-modal-total').textContent = `$${total.toFixed(2)}`;
+            document.getElementById('amount-received').value = '';
+            document.getElementById('cash-modal').classList.add('active');
+            CURRENT_PAYMENT_METHOD = 'CASH';
+            setTimeout(() => document.getElementById('amount-received').focus(), 100);
+        };
+        
+        window.hideModal = (id) => document.getElementById(id).classList.remove('active');
+
+        // Botones rápidos de pago
+        document.querySelectorAll('.quick-cash').forEach(btn => {
+            btn.onclick = () => {
+                document.getElementById('amount-received').value = btn.dataset.val;
+                document.getElementById('amount-received').focus();
+            };
+        });
+
+        document.getElementById('cash-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const received = parseFloat(document.getElementById('amount-received').value);
+            const total = CART.reduce((sum, i) => sum + (i.price * i.quantity), 0);
+            const token = sessionStorage.getItem('token');
+
+            if (received < total) return alert("Monto insuficiente");
+
+            try {
+                const payload = {
+                    items: CART.map(i => ({ sku: i.sku, quantity: i.quantity })),
+                    payments: [{ method: CURRENT_PAYMENT_METHOD, amount: received }]
+                };
+
+                const res = await fetch(`${API_URL}/sales/`, {
+                    method: 'POST',
+                    headers: {'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json'},
+                    body: JSON.stringify(payload)
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    const change = received - data.total;
+                    alert(`¡Venta Exitosa!\nCambio: $${change.toFixed(2)}`);
+                    hideModal('cash-modal');
+                    clearCart();
+                } else {
+                    const err = await res.json();
+                    alert("Error: " + err.detail);
+                }
+            } catch (e) { alert("Error de conexión"); }
+        });
+
+        function debounce(fn, ms) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
+    </script>
+</body>
+</html>
