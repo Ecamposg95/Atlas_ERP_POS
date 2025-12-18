@@ -1,6 +1,10 @@
 from pydantic import BaseModel, EmailStr
 from typing import Optional
 from datetime import datetime
+from enum import Enum
+from decimal import Decimal
+
+# --- Parte 1: Clientes ---
 
 class CustomerBase(BaseModel):
     name: str
@@ -22,7 +26,28 @@ class CustomerRead(CustomerBase):
     is_active: bool
     created_at: datetime
     
-    # Opcional: Podríamos incluir saldo actual aquí en el futuro
+    # Campo calculado para mostrar saldo actual al leer el cliente
+    current_balance: Decimal = Decimal("0.00")
     
     class Config:
         from_attributes = True
+
+# --- Parte 2: Pagos y Abonos ---
+
+class PaymentMethodSchema(str, Enum):
+    CASH = "CASH"
+    CARD = "CARD"
+    TRANSFER = "TRANSFER"
+    OTHER = "OTHER"
+
+class CustomerPaymentCreate(BaseModel):
+    amount: Decimal
+    method: PaymentMethodSchema
+    reference: Optional[str] = None # Para folios de transferencia
+    notes: Optional[str] = None
+
+class PaymentResponse(BaseModel):
+    customer_id: int
+    amount_paid: Decimal
+    new_balance: Decimal
+    transaction_id: str
