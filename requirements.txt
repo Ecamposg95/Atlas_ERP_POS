@@ -4,8 +4,11 @@ sqlalchemy
 pydantic
 python-multipart
 python-jose[cryptography]
-passlib[bcrypt]
 email-validator
+jinja2==3.1.4
+passlib[bcrypt]==1.7.4
+bcrypt==3.2.0
+
 # Librerías de impresión para Linux
 python-escpos
 pyusb

@@ -1,22 +1,19 @@
 from fastapi import FastAPI, Request
-from fastapi.staticfiles import StaticFiles # <--- NUEVO
-from fastapi.templating import Jinja2Templates # <--- NUEVO
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import engine
 from app.models import Base 
 
 # Routers
-from app.routers import auth, products, inventory, sales, crm, cash
+from app.routers import auth, products, inventory, sales, crm, cash, printer # <--- AGREGADO
 
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Atlas ERP & POS")
 
-# --- 1. Montar Archivos Estáticos (CSS/JS) ---
-# Esto permite acceder a http://localhost:8000/static/css/estilo.css
+# --- Archivos Estáticos y Templates ---
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
-
-# --- 2. Configurar Motor de Plantillas ---
 templates = Jinja2Templates(directory="app/templates")
 
 # Config CORS
@@ -35,9 +32,8 @@ app.include_router(inventory.router, prefix="/api/inventory", tags=["Inventario"
 app.include_router(sales.router, prefix="/api/sales", tags=["Ventas POS"])
 app.include_router(crm.router, prefix="/api/customers", tags=["CRM Clientes"])
 app.include_router(cash.router, prefix="/api/cash", tags=["Corte de Caja"])
+app.include_router(printer.router, prefix="/api/printer", tags=["Impresora"]) # <--- AGREGADO
 
-# --- 3. Ruta Principal (El Frontend) ---
 @app.get("/")
 def read_root(request: Request):
-    # Busca el archivo 'index.html' en la carpeta app/templates
     return templates.TemplateResponse("index.html", {"request": request})
