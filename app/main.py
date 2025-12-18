@@ -2,8 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import engine
 from app.models import Base 
-from app.routers import auth, products, inventory, sales # <--- Agregar sales
-
+from app.routers import auth, products, inventory, sales, crm # <--- Agregar crm
 # Importamos los routers que acabamos de crear
 from app.routers import auth, products
 
@@ -28,8 +27,9 @@ app.add_middleware(
 # --- AQUI ESTA LA MAGIA: Registramos los endpoints ---
 app.include_router(auth.router, prefix="/api/auth", tags=["Autenticación"])
 app.include_router(products.router, prefix="/api/products", tags=["Catálogo"])
-app.include_router(inventory.router, prefix="/api/inventory", tags=["Inventario"]) # <--- Agregar
-app.include_router(sales.router, prefix="/api/sales", tags=["Ventas POS"]) # <--- Agregar
+app.include_router(inventory.router, prefix="/api/inventory", tags=["Inventario"]) 
+app.include_router(sales.router, prefix="/api/sales", tags=["Ventas POS"]) 
+app.include_router(crm.router, prefix="/api/customers", tags=["CRM Clientes"]) 
 @app.get("/")
 def health_check():
     return {

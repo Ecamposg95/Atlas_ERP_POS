@@ -1,12 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from datetime import datetime, timezone
-from decimal import Decimal # <--- ¡IMPORTANTE! Importar Decimal
+from datetime import datetime
+from decimal import Decimal
 from app.database import get_db
 from app.models import (
     ProductVariant, StockOnHand, InventoryMovement, 
     SalesDocument, SalesLineItem, Payment, 
-    User, DocumentType, DocumentStatus, MovementType
+    User, DocumentType, DocumentStatus, MovementType,
+    Customer, CustomerLedgerEntry # <--- Nuevos imports
 )
 from app.schemas.sales import SaleCreate
 from app.security import get_current_user
@@ -19,22 +20,19 @@ def create_sale(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    # 1. Validaciones previas
     if not sale_in.items:
         raise HTTPException(status_code=400, detail="El ticket está vacío")
 
-    # --- INICIO DE TRANSACCIÓN ---
-    total_sale = Decimal("0.00") # Inicializar como Decimal
+    # --- 1. Cálculos y Stock ---
+    total_sale = Decimal("0.00")
     db_lines = []
     
-    # 2. Procesar cada ITEM
     for item in sale_in.items:
-        # A. Buscar producto
         variant = db.query(ProductVariant).filter(ProductVariant.sku == item.sku).first()
         if not variant:
             raise HTTPException(status_code=404, detail=f"SKU '{item.sku}' no encontrado")
         
-        # B. Verificar Stock
+        # Validar Stock
         stock_record = db.query(StockOnHand).filter(
             StockOnHand.variant_id == variant.id,
             StockOnHand.branch_id == current_user.branch_id
@@ -42,32 +40,30 @@ def create_sale(
         
         current_stock = stock_record.qty_on_hand if stock_record else 0.0
         if current_stock < item.quantity:
-            raise HTTPException(status_code=400, detail=f"Stock insuficiente para '{variant.sku}'. Disponible: {current_stock}")
+            raise HTTPException(status_code=400, detail=f"Stock insuficiente: {variant.sku}")
 
-        # C. Calcular dineros (CORRECCIÓN CRÍTICA AQUÍ)
-        unit_price = variant.price # Esto es Decimal
-        quantity_decimal = Decimal(str(item.quantity)) # Convertimos float a Decimal
-        
-        line_total = unit_price * quantity_decimal  # Ahora Decimal * Decimal funciona
+        # Matemáticas
+        unit_price = variant.price
+        qty_dec = Decimal(str(item.quantity))
+        line_total = unit_price * qty_dec
         total_sale += line_total
         
-        # D. Preparar Línea de Venta
+        # Línea de venta
         new_line = SalesLineItem(
             variant_id=variant.id,
             description=f"{variant.sku} - {variant.variant_name}",
-            quantity=item.quantity, # Guardamos float en BD (compatible)
+            quantity=item.quantity,
             unit_price=unit_price,
             unit_cost=variant.cost,
             total_line=line_total
         )
         db_lines.append(new_line)
         
-        # E. Actualizar Inventario (Stock y Kardex)
+        # Kardex
         if stock_record:
             qty_before = stock_record.qty_on_hand
             stock_record.qty_on_hand -= item.quantity
             
-            # Kardex
             movement = InventoryMovement(
                 branch_id=current_user.branch_id,
                 variant_id=variant.id,
@@ -77,45 +73,80 @@ def create_sale(
                 qty_before=qty_before,
                 qty_after=qty_before - item.quantity,
                 reference="Venta POS",
-                notes=f"Salida por venta"
+                notes="Salida venta"
             )
             db.add(movement)
 
-    # 3. Validar Pagos
-    # Convertimos los montos de los pagos a Decimal también por seguridad
+    # --- 2. Análisis Financiero (Crédito) ---
     total_paid = sum(Decimal(str(p.amount)) for p in sale_in.payments)
+    remaining_balance = total_sale - total_paid
     
-    if total_paid < total_sale:
-        raise HTTPException(status_code=400, detail=f"Falta dinero. Total: ${total_sale}, Recibido: ${total_paid}")
+    doc_status = DocumentStatus.PAID
+    
+    # Si no cubrió el total, ¿Autorizamos crédito?
+    if remaining_balance > 0:
+        if not sale_in.customer_id:
+            raise HTTPException(status_code=400, detail="Venta incompleta. Se requiere Cliente para dar crédito.")
+        
+        customer = db.query(Customer).filter(Customer.id == sale_in.customer_id).first()
+        if not customer:
+            raise HTTPException(status_code=404, detail="Cliente no encontrado")
+            
+        if not customer.has_credit:
+            raise HTTPException(status_code=400, detail=f"Cliente {customer.name} no tiene crédito autorizado.")
+            
+        # Verificar límite
+        new_balance = customer.current_balance + remaining_balance
+        if new_balance > customer.credit_limit:
+             raise HTTPException(status_code=400, detail=f"Crédito insuficiente. Saldo actual: ${customer.current_balance}, Límite: ${customer.credit_limit}")
 
-    # 4. Crear DOCUMENTO DE VENTA
+        # Todo OK -> La venta queda "Pendiente de Pago"
+        doc_status = DocumentStatus.PENDING
+
+    # --- 3. Guardar Documentos ---
     sales_doc = SalesDocument(
         doc_type=DocumentType.INVOICE,
-        status=DocumentStatus.PAID,
+        status=doc_status,
         branch_id=current_user.branch_id,
         seller_id=current_user.id,
         customer_id=sale_in.customer_id,
         total_amount=total_sale,
         subtotal=total_sale,
         series="A",
-        folio=1
+        folio=1 # TODO: Folios dinámicos
     )
     db.add(sales_doc)
     db.flush() 
     
-    # 5. Guardar Líneas
+    # Guardar líneas
     for line in db_lines:
         line.document_id = sales_doc.id
         db.add(line)
         
-    # 6. Guardar Pagos
+    # Guardar Pagos recibidos (si hubo abono parcial)
     for payment in sale_in.payments:
-        new_payment = Payment(
+        if payment.amount > 0:
+            new_payment = Payment(
+                sales_document_id=sales_doc.id,
+                amount=payment.amount,
+                method=payment.method,
+            )
+            db.add(new_payment)
+
+    # --- 4. Registrar Deuda (Si aplica) ---
+    if remaining_balance > 0:
+        # Aumentar saldo del cliente
+        customer = db.query(Customer).filter(Customer.id == sale_in.customer_id).first()
+        customer.current_balance += remaining_balance
+        
+        # Crear movimiento en Ledger
+        ledger = CustomerLedgerEntry(
+            customer_id=customer.id,
             sales_document_id=sales_doc.id,
-            amount=payment.amount,
-            method=payment.method,
+            amount=remaining_balance, # Positivo = Deuda
+            description=f"Crédito por Venta #{sales_doc.id}"
         )
-        db.add(new_payment)
+        db.add(ledger)
 
     db.commit()
     db.refresh(sales_doc)
@@ -124,5 +155,6 @@ def create_sale(
         "status": "success",
         "ticket_id": sales_doc.id,
         "total": sales_doc.total_amount,
-        "items_sold": len(db_lines)
+        "paid": total_paid,
+        "credit_debt": remaining_balance if remaining_balance > 0 else 0
     }
