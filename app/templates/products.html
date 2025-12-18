@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Catálogo - Atlas ERP</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+        darkMode: 'class',
+        theme: {
+            extend: {
+                colors: { slate: { 850: '#172033', 950: '#020617' } }
+            }
+        }
+    }
+  </script>
+  <style>
+    .hidden { display: none; }
+    .modal { transition: opacity 0.2s ease, visibility 0.2s ease; opacity: 0; visibility: hidden; }
+    .modal.active { opacity: 1; visibility: visible; }
+    .modal-content { transition: transform 0.2s ease; transform: scale(0.95); }
+    .modal.active .modal-content { transform: scale(1); }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
+  </style>
+</head>
+<body class="bg-gray-100 text-gray-900 dark:bg-slate-950 dark:text-slate-100 font-sans transition-colors duration-300 h-screen flex overflow-hidden">
+
+    <div id="global-sidebar"></div>
+
+    <main class="flex-1 flex flex-col min-w-0 bg-gray-100 dark:bg-slate-950 relative overflow-hidden">
+        
+        <header class="h-16 border-b border-gray-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur flex justify-between items-center px-6 shrink-0 z-10">
+            <div>
+                <h1 class="text-lg font-bold text-gray-800 dark:text-white">Gestión de Productos</h1>
+                <p class="text-[10px] text-gray-500 dark:text-slate-400 uppercase tracking-widest font-semibold">Catálogo General</p>
+            </div>
+            
+            <div class="flex items-center gap-4">
+                <button id="theme-toggle" class="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-800 text-slate-500 transition">
+                    <span id="icon-sun" class="hidden">☀️</span><span id="icon-moon">🌙</span>
+                </button>
+
+                <div class="h-6 w-px bg-gray-300 dark:bg-slate-700 mx-2"></div>
+
+                <div class="text-right hidden sm:block">
+                    <p class="text-[10px] text-slate-400 uppercase font-bold" id="user-role-display">ROL</p>
+                    <p class="text-xs font-bold text-slate-700 dark:text-slate-200" id="user-name-display">Usuario</p>
+                </div>
+            </div>
+        </header>
+
+        <div class="flex-1 overflow-y-auto p-6 custom-scrollbar flex flex-col gap-6">
+            
+            <div class="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
+                <div class="relative flex-1 max-w-xl">
+                    <span class="absolute inset-y-0 left-3 flex items-center text-slate-400">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    </span>
+                    <input id="search-input" type="text" placeholder="Buscar por nombre, SKU o código..." class="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 text-sm focus:ring-2 focus:ring-violet-500 outline-none transition shadow-sm">
+                </div>
+
+                <div class="flex flex-wrap items-center gap-2">
+                    <button id="export-button" class="flex items-center gap-2 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 px-4 py-2.5 rounded-xl text-xs font-bold hover:bg-gray-50 dark:hover:bg-slate-700 transition shadow-sm">
+                        <svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                        Exportar CSV
+                    </button>
+                    
+                    <button id="toggle-view-button" class="flex items-center gap-2 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 px-4 py-2.5 rounded-xl text-xs font-bold hover:bg-gray-50 dark:hover:bg-slate-700 transition shadow-sm">
+                        <span id="view-icon">🗂️</span> <span id="view-label">Vista Cards</span>
+                    </button>
+
+                    <button onclick="openModal()" class="flex items-center gap-2 bg-violet-600 hover:bg-violet-500 text-white px-5 py-2.5 rounded-xl text-xs font-bold shadow-lg shadow-violet-500/20 transition transform active:scale-95 ml-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                        Nuevo Producto
+                    </button>
+                </div>
+            </div>
+
+            <section class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-4 shadow-sm flex flex-col justify-between h-24">
+                    <p class="text-[10px] uppercase tracking-widest text-slate-500 font-bold">Total Productos</p>
+                    <div class="flex items-end justify-between">
+                        <p id="stat-total" class="text-3xl font-black text-slate-800 dark:text-slate-50">0</p>
+                        <span class="text-xs text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded">Activos</span>
+                    </div>
+                </div>
+                <div class="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-4 shadow-sm flex flex-col justify-between h-24">
+                    <p class="text-[10px] uppercase tracking-widest text-slate-500 font-bold">Sin Stock</p>
+                    <div class="flex items-end justify-between">
+                        <p id="stat-no-stock" class="text-3xl font-black text-rose-500">0</p>
+                        <span class="text-xs text-rose-600 bg-rose-100 dark:bg-rose-900/20 px-2 py-1 rounded">Agotados</span>
+                    </div>
+                </div>
+                <div class="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-4 shadow-sm flex flex-col justify-between h-24">
+                    <p class="text-[10px] uppercase tracking-widest text-slate-500 font-bold">Valor Inventario</p>
+                    <div class="flex items-end justify-between">
+                        <p id="stat-value" class="text-xl font-black text-emerald-500">$0.00</p>
+                        <span class="text-xs text-emerald-600 bg-emerald-100 dark:bg-emerald-900/20 px-2 py-1 rounded">Costo</span>
+                    </div>
+                </div>
+                <div class="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-4 shadow-sm flex flex-col justify-between h-24">
+                    <p class="text-[10px] uppercase tracking-widest text-slate-500 font-bold">Recientes</p>
+                    <div class="flex items-end justify-between">
+                        <p id="stat-new" class="text-3xl font-black text-violet-500">0</p>
+                        <span class="text-xs text-violet-600 bg-violet-100 dark:bg-violet-900/20 px-2 py-1 rounded">7 días</span>
+                    </div>
+                </div>
+            </section>
+
+            <div class="relative min-h-[400px]">
+                
+                <div id="table-view" class="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm">
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200 dark:divide-slate-800">
+                            <thead class="bg-gray-50 dark:bg-slate-950/50">
+                                <tr>
+                                    <th class="px-6 py-4 text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider">SKU / Barras</th>
+                                    <th class="px-6 py-4 text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider">Producto</th>
+                                    <th class="px-6 py-4 text-right text-[10px] font-bold text-slate-500 uppercase tracking-wider">Precio</th>
+                                    <th class="px-6 py-4 text-right text-[10px] font-bold text-slate-500 uppercase tracking-wider">Costo</th>
+                                    <th class="px-6 py-4 text-center text-[10px] font-bold text-slate-500 uppercase tracking-wider">Stock</th>
+                                    <th class="px-6 py-4 text-center text-[10px] font-bold text-slate-500 uppercase tracking-wider">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="products-table-body" class="bg-white dark:bg-slate-900 divide-y divide-gray-200 dark:divide-slate-800 text-sm">
+                                </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="cards-view" class="hidden grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    </div>
+
+            </div>
+
+        </div>
+
+        <div id="global-footer"></div>
+
+    </main>
+
+    <div id="product-modal" class="modal fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div class="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-lg p-6 shadow-2xl border border-gray-200 dark:border-slate-700">
+            <div class="flex justify-between items-center mb-6">
+                <h2 id="modal-title" class="text-xl font-bold text-gray-800 dark:text-white">Nuevo Producto</h2>
+                <button onclick="closeModal()" class="text-gray-400 hover:text-white">✕</button>
+            </div>
+            
+            <form id="product-form" class="space-y-4">
+                <input type="hidden" id="prod-id">
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-xs font-bold text-gray-500 uppercase mb-1 block">SKU *</label>
+                        <div class="flex gap-2">
+                            <input id="prod-sku" type="text" required class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-gray-300 dark:border-slate-700 rounded-lg outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 transition font-mono text-sm">
+                            <button type="button" onclick="generateSKU()" class="px-2 bg-gray-200 dark:bg-slate-800 rounded-lg text-xs font-bold hover:bg-gray-300 dark:hover:bg-slate-700">Auto</button>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="text-xs font-bold text-gray-500 uppercase mb-1 block">Código Barras</label>
+                        <input id="prod-barcode" type="text" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-gray-300 dark:border-slate-700 rounded-lg outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 transition font-mono text-sm">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="text-xs font-bold text-gray-500 uppercase mb-1 block">Nombre Producto *</label>
+                    <input id="prod-name" type="text" required class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-gray-300 dark:border-slate-700 rounded-lg outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 transition">
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-xs font-bold text-gray-500 uppercase mb-1 block">Precio Venta *</label>
+                        <div class="relative">
+                            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">$</span>
+                            <input id="prod-price" type="number" step="0.01" required class="w-full pl-6 px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-gray-300 dark:border-slate-700 rounded-lg outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 font-bold text-emerald-600 dark:text-emerald-400">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="text-xs font-bold text-gray-500 uppercase mb-1 block">Costo *</label>
+                        <div class="relative">
+                            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">$</span>
+                            <input id="prod-cost" type="number" step="0.01" required class="w-full pl-6 px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-gray-300 dark:border-slate-700 rounded-lg outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500">
+                        </div>
+                    </div>
+                </div>
+
+                <div id="stock-field-container">
+                    <label class="text-xs font-bold text-gray-500 uppercase mb-1 block">Stock Inicial</label>
+                    <input id="prod-stock" type="number" step="1" value="0" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-gray-300 dark:border-slate-700 rounded-lg outline-none focus:border-violet-500 transition">
+                    <p class="text-[10px] text-gray-400 mt-1">* Solo editable al crear. Ajustes posteriores en Inventario.</p>
+                </div>
+
+                <div class="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-200 dark:border-slate-800">
+                    <button type="button" onclick="closeModal()" class="px-4 py-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg font-bold transition">Cancelar</button>
+                    <button type="submit" class="px-6 py-2 bg-violet-600 hover:bg-violet-500 text-white rounded-lg font-bold shadow-lg transition transform active:scale-95">Guardar Producto</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="/static/js/navbar.js"></script>
+    <script src="/static/js/products.js"></script>
+</body>
+</html>

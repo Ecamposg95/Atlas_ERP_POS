@@ -37,3 +37,7 @@ app.include_router(printer.router, prefix="/api/printer", tags=["Impresora"]) # 
 @app.get("/")
 def read_root(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
+
+@app.get("/products")
+def read_products_page(request: Request):
+    return templates.TemplateResponse("products.html", {"request": request})

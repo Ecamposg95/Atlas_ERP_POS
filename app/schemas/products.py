@@ -1,33 +1,53 @@
-from pydantic import BaseModel
 from typing import Optional, List
+from pydantic import BaseModel
 from decimal import Decimal
 
-# --- Datos para crear un producto simple ---
-class ProductCreate(BaseModel):
+# --- Esquemas Base ---
+class ProductBase(BaseModel):
     name: str
+    description: Optional[str] = None
+    brand_id: Optional[int] = None
+    category_id: Optional[int] = None
+
+class ProductVariantBase(BaseModel):
     sku: str
     barcode: Optional[str] = None
-    price: Decimal # Precio de venta
-    cost: Decimal  # Costo
-    
-    # Opcionales
-    category_id: Optional[int] = None
-    brand_id: Optional[int] = None
-
-# --- Datos para leer/devolver al frontend ---
-class ProductVariantRead(BaseModel):
-    id: int
-    sku: str
+    variant_name: str = "Estándar"
     price: Decimal
-    stock: float = 0.0 
+    cost: Decimal
 
+# --- Esquema para CREAR (Input) ---
+class ProductCreate(ProductBase):
+    # Datos de la variante principal
+    sku: str
+    barcode: Optional[str] = None
+    price: Decimal
+    cost: Decimal
+    # Opcional: Stock inicial al crear
+    initial_stock: Decimal = Decimal("0.00") 
+
+# --- Esquema para EDITAR (Input) ---
+class ProductUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    sku: Optional[str] = None
+    price: Optional[Decimal] = None
+    cost: Optional[Decimal] = None
+    is_active: Optional[bool] = None
+
+# --- Esquema para LEER (Output) ---
+class ProductVariantRead(ProductVariantBase):
+    id: int
     class Config:
         from_attributes = True
 
-class ProductRead(BaseModel):
+class ProductRead(ProductBase):
     id: int
-    name: str
+    is_active: bool
     variants: List[ProductVariantRead] = []
+    
+    # Campo calculado para facilitar el frontend
+    stock_total: Optional[Decimal] = Decimal(0) 
 
     class Config:
         from_attributes = True
