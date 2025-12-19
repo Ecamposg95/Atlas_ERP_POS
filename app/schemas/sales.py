@@ -17,10 +17,12 @@ class SaleItemCreate(BaseModel):
 class PaymentCreate(BaseModel):
     method: PaymentMethodSchema
     amount: Decimal
+    reference: Optional[str] = None  # <--- ¡AQUÍ ESTÁ LA CORRECCIÓN!
 
 class SaleCreate(BaseModel):
     # Si es null, es "Cliente Público"
     customer_id: Optional[int] = None 
     
-    items: List[SaleItemCreate]
+    # CORREGIDO: Debe coincidir con el nombre de la clase de arriba
+    items: List[SaleItemCreate] 
     payments: List[PaymentCreate]

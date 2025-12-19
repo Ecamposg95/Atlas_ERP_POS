@@ -1,20 +1,24 @@
 from pydantic import BaseModel
-from typing import Optional
-from enum import Enum
+from typing import Optional, List
+from decimal import Decimal
+from datetime import datetime
 
-# Replicamos el Enum del modelo para validación
-class MovementTypeSchema(str, Enum):
-    PURCHASE_IN = "PURCHASE_IN"      # Compra
-    ADJUSTMENT_IN = "ADJUSTMENT_IN"  # Ajuste positivo
-    ADJUSTMENT_OUT = "ADJUSTMENT_OUT"# Ajuste negativo (Merma)
-
-class InventoryAdjustmentCreate(BaseModel):
-    sku: str
-    quantity: float # Cuánto entra o sale
-    movement_type: MovementTypeSchema
+# Input para crear un ajuste manual
+class AdjustmentCreate(BaseModel):
+    variant_id: int
+    quantity: Decimal # Positivo para entrada, Negativo para salida
+    reason: str       # "Compra", "Merma", "Inventario Inicial"
     notes: Optional[str] = None
 
-class InventoryResponse(BaseModel):
-    sku: str
-    new_stock: float
-    message: str
+# Output para leer el Kardex
+class MovementRead(BaseModel):
+    id: int
+    movement_type: str
+    qty_change: Decimal
+    qty_after: Decimal
+    reference: Optional[str]
+    created_at: datetime
+    user_name: str # Extraemos el nombre del usuario
+
+    class Config:
+        from_attributes = True
