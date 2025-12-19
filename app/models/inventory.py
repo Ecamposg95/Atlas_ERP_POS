@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, ForeignKey, Enum, Numeric, DateTime
 from sqlalchemy.sql import func
-from .base import Base
+from app.database import Base
 import enum
 
 class MovementType(str, enum.Enum):

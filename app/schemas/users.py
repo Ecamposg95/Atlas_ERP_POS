@@ -1,31 +1,31 @@
+from pydantic import BaseModel, EmailStr
 from typing import Optional
-from pydantic import BaseModel
-from app.models.users import Role
 
-# Base común
+# --- DEFINICIÓN DE CLASES (Sin self-imports) ---
+
 class UserBase(BaseModel):
     username: str
+    email: Optional[EmailStr] = None
     full_name: Optional[str] = None
-    role: Role = Role.CAJERO
+    role: str = "seller" # O usa tu Enum si lo tienes definido
+    branch_id: Optional[int] = None
     is_active: bool = True
 
-# Para crear usuarios (necesita password/PIN)
 class UserCreate(UserBase):
     password: str
+    # branch_id ya se hereda de UserBase, así que ya puedes asignarlo al crear
 
-# Para leer usuarios (devuelve ID, pero NO el password)
+class UserUpdate(BaseModel):
+    username: Optional[str] = None
+    email: Optional[EmailStr] = None
+    full_name: Optional[str] = None
+    role: Optional[str] = None
+    branch_id: Optional[int] = None
+    password: Optional[str] = None
+    is_active: Optional[bool] = None
+
 class UserRead(UserBase):
     id: int
-    branch_id: Optional[int] = None
     
     class Config:
         from_attributes = True
-
-# Esquemas para el Token JWT
-class Token(BaseModel):
-    access_token: str
-    token_type: str
-
-class TokenData(BaseModel):
-    username: Optional[str] = None
-    role: Optional[str] = None

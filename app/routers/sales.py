@@ -14,6 +14,8 @@ from app.models import (
 )
 from app.schemas.sales import SaleCreate
 from app.security import get_current_user
+# --- NUEVA IMPORTACIÓN PARA FOLIOS ---
+from app.utils.folios import get_next_folio 
 
 router = APIRouter()
 
@@ -25,6 +27,7 @@ def create_sale(
 ):
     """
     Registra una nueva venta, descuenta stock, maneja créditos y pagos.
+    Genera folios consecutivos automáticamente por sucursal.
     """
     if not sale_in.items:
         raise HTTPException(status_code=400, detail="El ticket está vacío")
@@ -127,6 +130,11 @@ def create_sale(
         doc_status = DocumentStatus.PENDING
 
     # --- 3. Guardar Documentos en BD ---
+    
+    # 3.1 OBTENER SIGUIENTE FOLIO DISPONIBLE
+    current_series = "A" # Puedes parametrizar esto por caja o sucursal si deseas
+    next_folio_number = get_next_folio(db, branch_id=current_user.branch_id, series=current_series)
+
     sales_doc = SalesDocument(
         doc_type=DocumentType.INVOICE,
         status=doc_status,
@@ -135,8 +143,8 @@ def create_sale(
         customer_id=sale_in.customer_id,
         total_amount=total_sale,
         subtotal=total_sale, # Ajustar si manejas impuestos separados
-        series="A",
-        folio=1 # TODO: Implementar lógica de folios consecutivos dinámicos
+        series=current_series,    # Serie dinámica
+        folio=next_folio_number   # <--- Folio consecutivo real
     )
     db.add(sales_doc)
     db.flush() # Obtenemos el ID del documento
@@ -169,7 +177,7 @@ def create_sale(
             customer_id=customer.id,
             sales_document_id=sales_doc.id,
             amount=remaining_debt, # Monto positivo = Incrementa la deuda
-            description=f"Crédito por Venta #{sales_doc.id}",
+            description=f"Crédito por Venta #{sales_doc.series}-{sales_doc.folio}",
             entry_type="DEBT" # Define un tipo si tu modelo lo requiere
         )
         db.add(ledger)
@@ -178,7 +186,7 @@ def create_sale(
     db.commit()
     db.refresh(sales_doc)
 
-    # --- 5. CÁLCULO FINAL PARA LA RESPUESTA (LA CORRECCIÓN ESTÁ AQUÍ) ---
+    # --- 5. CÁLCULO FINAL PARA LA RESPUESTA ---
 
     # Calcular el cambio (vuelto). Si pagaron de más (balance_difference es negativo).
     change_amount = Decimal("0.00")
@@ -187,14 +195,13 @@ def create_sale(
         change_amount = abs(balance_difference)
 
     # Devolvemos un diccionario plano.
-    # IMPORTANTE: Convertimos los Decimals a float para que sean JSON serializable estándar.
     return {
         "status": "success",
         "message": "Venta registrada exitosamente",
-        "sale_id": sales_doc.id,        # <--- ESTA ES LA CLAVE QUE BUSCA TU JS
-        # "ticket_id": sales_doc.id,    # Puedes mantener esta como alias si lo deseas
+        "sale_id": sales_doc.id,
+        "folio": f"{sales_doc.series}-{sales_doc.folio}", # Retornamos el folio legible (Ej: A-1024)
         "total": float(sales_doc.total_amount),
         "paid": float(total_paid),
-        "change": float(change_amount), # <--- EL MONTO DEL CAMBIO
+        "change": float(change_amount),
         "credit_debt": float(remaining_debt) if remaining_debt > 0 else 0.0
     }

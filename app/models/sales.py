@@ -2,8 +2,7 @@ import enum
 from sqlalchemy import Column, Integer, String, Float, ForeignKey, DateTime, Enum, Numeric
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
-from .base import Base
-
+from app.database import Base
 # --- Enums ---
 class DocumentType(str, enum.Enum):
     QUOTE = "QUOTE"       # Cotización

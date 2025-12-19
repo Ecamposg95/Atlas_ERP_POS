@@ -1,6 +1,11 @@
+# app/models/products.py
 from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, Numeric
 from sqlalchemy.orm import relationship
-from .base import Base
+
+# --- CORRECCIÓN CRÍTICA ---
+# Debe ser 'app.database' para que init_db reconozca las tablas
+from app.database import Base 
+# --------------------------
 
 # --- Usaremos Category como "Departamento" ---
 class Category(Base):

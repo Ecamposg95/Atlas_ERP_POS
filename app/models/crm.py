@@ -1,17 +1,26 @@
+# app/models/crm.py
 from sqlalchemy import Column, Integer, String, Boolean, Numeric, ForeignKey, DateTime
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
-from .base import Base
+# --- CORRECCIÓN CRÍTICA: Usar la Base de app.database ---
+from app.database import Base 
 
 class Customer(Base):
     __tablename__ = "customers"
+    __table_args__ = {'extend_existing': True}
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, index=True)
-    tax_id = Column(String, index=True, nullable=True)
+    
+    # Datos Fiscales (Agregados para que init_db funcione)
+    tax_id = Column(String, index=True, nullable=True) # RFC
+    tax_system = Column(String, nullable=True)         # Régimen Fiscal
+    zip_code = Column(String, nullable=True)           # CP
+    
     email = Column(String, nullable=True)
     phone = Column(String, nullable=True)
     address = Column(String, nullable=True)
+    notes = Column(String, nullable=True)
     
     is_active = Column(Boolean, default=True)
 
@@ -33,6 +42,7 @@ class CustomerLedgerEntry(Base):
     Negativo (-) = Deuda baja (Pago/Abono)
     """
     __tablename__ = "customer_ledger_entries"
+    __table_args__ = {'extend_existing': True}
 
     id = Column(Integer, primary_key=True, index=True)
     customer_id = Column(Integer, ForeignKey("customers.id"), nullable=False)
