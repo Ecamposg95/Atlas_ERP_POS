@@ -1,7 +1,9 @@
+# app/routers/customers.py
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
 from typing import List
+from decimal import Decimal
 
 from app.database import get_db
 from app.models import Customer, CustomerLedgerEntry
@@ -156,3 +158,37 @@ def get_customer_statement(
         .all()
         
     return entries
+
+@router.post("/{customer_id}/pay", response_model=LedgerEntryResponse)
+def register_customer_payment(
+    customer_id: int,
+    amount: Decimal,
+    reference: str = "Abono a cuenta",
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Registra un abono/pago de un cliente y actualiza su saldo.
+    """
+    customer = db.query(Customer).filter(Customer.id == customer_id).first()
+    if not customer:
+        raise HTTPException(404, "Cliente no encontrado")
+
+    if amount <= 0:
+        raise HTTPException(400, "El monto del pago debe ser mayor a cero")
+
+    # 1. Actualizar saldo (restar el abono)
+    customer.current_balance -= amount
+
+    # 2. Registrar en el Ledger (Kardex de dinero)
+    new_entry = CustomerLedgerEntry(
+        customer_id=customer.id,
+        amount=-amount,  # Negativo porque reduce la deuda
+        description=f"PAGO RECIBIDO: {reference}",
+        # created_by=current_user.id  <-- Opcional para auditoría
+    )
+    
+    db.add(new_entry)
+    db.commit()
+    db.refresh(new_entry)
+    return new_entry

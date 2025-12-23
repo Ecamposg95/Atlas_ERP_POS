@@ -1,3 +1,4 @@
+# app/routers/cash.py
 from typing import Optional  # <--- IMPORTACIÓN AGREGADA
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session

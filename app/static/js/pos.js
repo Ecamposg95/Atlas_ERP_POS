@@ -1,254 +1,372 @@
-/**
- * js/pos.js - Versión Final (Corrección SKU + Respuesta Backend)
- */
-const API_URL = "/api";
-let token = sessionStorage.getItem('token');
-let allProducts = [];
-let cart = [];
+// app/static/js/pos.js
+import { apiFetch } from "./api.js";
 
-document.addEventListener('DOMContentLoaded', () => {
-    if (!token) return; // Navbar maneja redirect
+const els = {
+    cashStatus: document.getElementById("cashStatus"),
+    sessionPill: document.getElementById("sessionPill"),
+    btnLogout: document.getElementById("btnLogout"),
 
-    loadProducts();
+    btnOpenCash: document.getElementById("btnOpenCash"),
+    btnCloseCash: document.getElementById("btnCloseCash"),
 
-    const searchInput = document.getElementById('pos-search');
-    if (searchInput) {
-        searchInput.addEventListener('input', (e) => filterProducts(e.target.value));
-        searchInput.focus();
-    }
+    searchInput: document.getElementById("searchInput"),
+    btnClearSearch: document.getElementById("btnClearSearch"),
+    suggestions: document.getElementById("suggestions"),
 
-    // Reloj simple
-    setInterval(() => {
-        const el = document.getElementById('clock-display');
-        if (el) el.textContent = new Date().toLocaleTimeString();
-    }, 1000);
-});
+    cartTbody: document.getElementById("cartTbody"),
+    cartMeta: document.getElementById("cartMeta"),
+    subtotal: document.getElementById("subtotal"),
+    total: document.getElementById("total"),
 
-async function loadProducts() {
-    try {
-        const res = await fetch(`${API_URL}/products/?limit=1000`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (!res.ok) throw new Error("Error API");
+    paymentMethod: document.getElementById("paymentMethod"),
+    cashReceived: document.getElementById("cashReceived"),
+    changeDue: document.getElementById("changeDue"),
+    cashWarn: document.getElementById("cashWarn"),
 
-        allProducts = await res.json();
-        renderProducts(allProducts);
-    } catch (e) {
-        console.error(e);
-        const grid = document.getElementById('products-grid');
-        if (grid) grid.innerHTML = '<p class="text-red-500 p-4">Error cargando productos.</p>';
-    }
-}
+    btnPay: document.getElementById("btnPay"),
+    btnVoid: document.getElementById("btnVoid"),
 
-function renderProducts(products) {
-    const grid = document.getElementById('products-grid');
-    if (!grid) return;
-
-    if (products.length === 0) {
-        grid.innerHTML = '<p class="col-span-full text-center text-gray-500">No hay productos.</p>';
-        return;
-    }
-
-    grid.innerHTML = products.map(p => {
-        // SEGURIDAD: Validar existencia de variante
-        const v = (p.variants && p.variants.length > 0) ? p.variants[0] : null;
-        if (!v) return ''; // Saltar productos rotos
-
-        const price = parseFloat(v.price || 0);
-        const stock = p.stock_total || 0;
-
-        return `
-        <div onclick="addToCart(${p.id})" class="bg-white p-3 rounded shadow cursor-pointer hover:bg-blue-50 border border-gray-200 h-28 flex flex-col justify-between select-none transition-transform active:scale-95">
-            <div>
-                <div class="flex justify-between text-xs text-gray-500 mb-1">
-                    <span>${v.sku || 'N/A'}</span>
-                    <span class="${stock > 0 ? 'text-green-600' : 'text-red-600'} font-bold">${stock}</span>
-                </div>
-                <h3 class="font-bold text-sm leading-tight line-clamp-2">${p.name}</h3>
-            </div>
-            <div class="text-right font-black text-lg">$${price.toFixed(2)}</div>
-        </div>`;
-    }).join('');
-}
-
-function filterProducts(q) {
-    const term = q.toLowerCase();
-    const filtered = allProducts.filter(p => {
-        const v = p.variants[0] || {};
-        // Búsqueda por Nombre o SKU
-        return p.name.toLowerCase().includes(term) || (v.sku && v.sku.toLowerCase().includes(term));
-    });
-
-    // Auto-add si es código exacto (Enter o escaneo rápido)
-    const exact = filtered.find(p => p.variants[0]?.sku.toLowerCase() === term || p.variants[0]?.barcode === term);
-    if (exact && filtered.length === 1) {
-        addToCart(exact.id);
-        document.getElementById('pos-search').value = '';
-        renderProducts(allProducts);
-    } else {
-        renderProducts(filtered);
-    }
-}
-
-// --- CARRITO ---
-window.addToCart = (id) => {
-    const prod = allProducts.find(p => p.id === id);
-    const v = prod.variants[0];
-
-    const existing = cart.find(i => i.id === v.id);
-    if (existing) {
-        existing.qty++;
-    } else {
-        cart.push({
-            id: v.id,
-            name: prod.name,
-            price: parseFloat(v.price),
-            qty: 1,
-            sku: v.sku // Guardamos el SKU aquí para usarlo al enviar
-        });
-    }
-    renderCart();
+    msg: document.getElementById("posMsg"),
 };
+
+let cashSession = null; // /api/cash/status -> objeto o null
+let cart = [];          // { product, qty, unit_price, sku }
+
+function money(n) {
+    const x = Number(n || 0);
+    return x.toLocaleString("es-MX", { style: "currency", currency: "MXN" });
+}
+
+function setMsg(t) { els.msg.textContent = t || ""; }
+
+function isCashOpen(session) {
+    if (!session) return false;
+    const st = String(session.status || "").toUpperCase();
+    return st === "OPEN" && (session.closed_at === null || session.closed_at === undefined);
+}
+
+function getBestPrice(product) {
+    if (product?.price != null) return Number(product.price);
+    if (product?.sale_price != null) return Number(product.sale_price);
+    if (product?.base_price != null) return Number(product.base_price);
+    if (product?.unit_price != null) return Number(product.unit_price);
+
+    const prices = product?.prices;
+    if (Array.isArray(prices) && prices.length) {
+        const p0 = prices[0];
+        const v = p0?.price ?? p0?.amount ?? p0?.sale_price ?? p0?.unit_price ?? p0?.value ?? 0;
+        return Number(v || 0);
+    }
+
+    const variants = product?.variants;
+    if (Array.isArray(variants) && variants.length) {
+        const v0 = variants[0];
+        if (v0?.price != null) return Number(v0.price);
+        if (v0?.sale_price != null) return Number(v0.sale_price);
+    }
+
+    return 0;
+}
+
+function getTotal() {
+    return cart.reduce((a, x) => a + Number(x.unit_price || 0) * Number(x.qty || 0), 0);
+}
+
+function updateChangeAndWarnings() {
+    const method = els.paymentMethod.value;
+    const total = getTotal();
+    const received = Number(els.cashReceived.value || 0);
+
+    if (method === "CASH") {
+        const change = received - total;
+        els.changeDue.textContent = money(Math.max(0, change));
+
+        if (received > 0 && received < total) {
+            els.cashWarn.textContent = "Efectivo insuficiente.";
+            els.cashWarn.className = "muted danger";
+        } else {
+            els.cashWarn.textContent = "";
+            els.cashWarn.className = "muted";
+        }
+    } else {
+        els.changeDue.textContent = money(0);
+        els.cashWarn.textContent = "";
+        els.cashWarn.className = "muted";
+    }
+}
+
+async function refreshCashStatus() {
+    cashSession = await apiFetch("/api/cash/status");
+    const open = isCashOpen(cashSession);
+
+    els.cashStatus.textContent = open ? "Caja: ABIERTA" : "Caja: CERRADA (requiere apertura)";
+    els.btnOpenCash.disabled = open;
+    els.btnCloseCash.disabled = !open;
+    els.btnPay.disabled = !open;
+}
+
+async function openCash() {
+    const opening = prompt("Saldo inicial (apertura):", "0");
+    if (opening === null) return;
+
+    const opening_balance = Number(opening);
+
+    try {
+        await apiFetch("/api/cash/open", {
+            method: "POST",
+            body: JSON.stringify({ opening_balance }),
+        });
+
+        setMsg("Caja abierta.");
+        await refreshCashStatus();
+    } catch (e) {
+        setMsg(`No se pudo abrir caja: ${String(e.message || e)}`);
+        console.error("OPEN CASH ERROR:", e);
+    }
+}
+
+async function closeCash() {
+    const closing = prompt("Saldo final (cierre):", "0");
+    if (closing === null) return;
+
+    const closing_balance = Number(closing);
+    const notes = prompt("Notas (opcional):", "") ?? "";
+
+    try {
+        await apiFetch("/api/cash/close", {
+            method: "POST",
+            body: JSON.stringify({ closing_balance, notes }),
+        });
+
+        setMsg("Caja cerrada.");
+        await refreshCashStatus();
+    } catch (e) {
+        setMsg(`No se pudo cerrar caja: ${String(e.message || e)}`);
+        console.error("CLOSE CASH ERROR:", e);
+    }
+}
+
+function computeTotals() {
+    const total = getTotal();
+    els.subtotal.textContent = money(total);
+    els.total.textContent = money(total);
+    els.cartMeta.textContent = `${cart.reduce((a, x) => a + x.qty, 0)} ítems`;
+    updateChangeAndWarnings();
+}
 
 function renderCart() {
-    const list = document.getElementById('cart-list');
-    list.innerHTML = '';
+    els.cartTbody.innerHTML = "";
 
-    let total = 0;
+    cart.forEach((line, idx) => {
+        const name = line.product?.name ?? "Producto";
+        const sku = line.sku ?? "";
+        const price = Number(line.unit_price || 0);
 
-    cart.forEach((item, idx) => {
-        const subtotal = item.price * item.qty;
-        total += subtotal;
-
-        list.innerHTML += `
-        <li class="p-3 flex justify-between items-center hover:bg-gray-50 border-b">
-            <div class="flex-1">
-                <div class="font-bold text-sm">${item.name}</div>
-                <div class="text-xs text-gray-500 font-mono">${item.sku} | $${item.price.toFixed(2)} x ${item.qty}</div>
-            </div>
-            <div class="text-right">
-                <div class="font-bold">$${subtotal.toFixed(2)}</div>
-                <div class="text-xs mt-1">
-                    <button onclick="updateQty(${idx}, -1)" class="px-2 bg-gray-200 rounded hover:bg-red-200 font-bold">-</button>
-                    <button onclick="updateQty(${idx}, 1)" class="px-2 bg-gray-200 rounded hover:bg-green-200 font-bold">+</button>
-                </div>
-            </div>
-        </li>`;
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+      <td>
+        <div style="font-weight:900;">${name}</div>
+        <div style="opacity:.65;font-size:12px;">SKU: ${sku}</div>
+      </td>
+      <td class="right">
+        <input data-idx="${idx}" class="qtyInput" value="${line.qty}" inputmode="numeric"
+               style="width:70px; text-align:right;" />
+      </td>
+      <td class="right">${money(price)}</td>
+      <td class="right">
+        <button data-idx="${idx}" class="rmBtn" title="Quitar">X</button>
+      </td>
+    `;
+        els.cartTbody.appendChild(tr);
     });
 
-    document.getElementById('cart-total').textContent = `$${total.toFixed(2)}`;
-    window.currentTotal = total;
+    document.querySelectorAll(".qtyInput").forEach((inp) => {
+        inp.addEventListener("change", (e) => {
+            const i = Number(e.target.dataset.idx);
+            cart[i].qty = Math.max(1, Number(e.target.value || 1));
+            computeTotals();
+            renderCart();
+        });
+    });
+
+    document.querySelectorAll(".rmBtn").forEach((btn) => {
+        btn.addEventListener("click", (e) => {
+            cart.splice(Number(e.target.dataset.idx), 1);
+            computeTotals();
+            renderCart();
+        });
+    });
 }
 
-window.updateQty = (idx, delta) => {
-    cart[idx].qty += delta;
-    if (cart[idx].qty <= 0) cart.splice(idx, 1);
+function addToCart(product) {
+    console.log("PRODUCT RAW:", product);
+
+    const id = product?.id ?? product?.product_id;
+    if (id == null) { setMsg("Producto inválido (sin id)."); return; }
+
+    // Fallback para no bloquear pruebas si tu catálogo viene sin sku
+    const sku = String(product?.sku || product?.barcode || `ID-${id}` || "").trim();
+    const unit_price = getBestPrice(product);
+
+    const found = cart.find((x) => (x.product?.id ?? x.product?.product_id) === id);
+    if (found) found.qty += 1;
+    else cart.push({ product, qty: 1, unit_price, sku });
+
+    computeTotals();
     renderCart();
-};
+}
 
-// --- PAGOS Y PROCESAMIENTO ---
-window.handleDirectPayment = async (method) => {
-    if (cart.length === 0) {
-        mostrarError("El ticket está vacío");
+let searchTimer = null;
+
+async function searchProducts(q) {
+    const data = await apiFetch(`/api/products/search?q=${encodeURIComponent(q)}`);
+    return Array.isArray(data) ? data : (data.items || []);
+}
+
+function renderSuggestions(items) {
+    if (!items.length) {
+        els.suggestions.style.display = "none";
+        els.suggestions.innerHTML = "";
         return;
     }
 
-    const input = document.getElementById('payment-input');
-    let val = parseFloat(input.value);
+    els.suggestions.style.display = "block";
+    els.suggestions.innerHTML = "";
 
-    // Si no ingresó monto, asumimos pago exacto
-    if (!val || val <= 0) val = window.currentTotal;
+    items.forEach((p) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
 
-    // Validación básica de monto en Frontend
-    if (val < window.currentTotal && method === 'CASH') {
-        mostrarError(`Monto insuficiente. Faltan $${(window.currentTotal - val).toFixed(2)}`);
-        return;
-    }
+        const name = p.name ?? "Producto";
+        const sku = String(p.sku || p.barcode || "").trim();
+        const price = getBestPrice(p);
 
-    const payments = [{ method: method, amount: val }];
+        btn.textContent = `${name}${sku ? " · " + sku : ""} · ${money(price)}`;
+        btn.addEventListener("click", () => {
+            addToCart(p);
+            els.searchInput.value = "";
+            renderSuggestions([]);
+            els.searchInput.focus();
+        });
 
-    // NOTA: El cambio real lo calcula el backend, pero lo estimamos aquí para payload si fuera necesario
-    const estimatedChange = val - window.currentTotal;
+        els.suggestions.appendChild(btn);
+    });
+}
 
-    const saleData = {
-        items: cart.map(i => ({
-            variant_id: i.id,
-            sku: i.sku,          // Corregido: Enviamos el SKU
-            quantity: i.qty,
-            unit_price: i.price,
-            subtotal: i.qty * i.price
-        })),
-        payments: payments,
-        total_amount: window.currentTotal,
-        change_given: Math.max(0, estimatedChange), // Informativo
-        customer_id: null // Aquí iría lógica de cliente si existiera
+async function submitSale() {
+    if (!isCashOpen(cashSession)) { setMsg("Caja cerrada: abre caja para cobrar."); return; }
+    if (!cart.length) { setMsg("Carrito vacío."); return; }
+
+    const method = els.paymentMethod.value;
+    const total = getTotal();
+
+    const received = Number(els.cashReceived.value || 0);
+    const change = method === "CASH" ? Math.max(0, received - total) : 0;
+
+    if (method === "CASH" && received < total) { setMsg("Efectivo insuficiente."); return; }
+
+    const items = cart.map((x) => ({
+        product_id: x.product.id ?? x.product.product_id,
+        sku: x.sku,
+        quantity: x.qty,
+        unit_price: Number(x.unit_price || 0),
+    }));
+
+    const payments = [
+        { method, amount: total, cash_received: method === "CASH" ? received : null, change },
+    ];
+
+    // Incluimos branch_id/cash_session_id por si tu backend lo requiere
+    const payload = {
+        total,
+        items,
+        payments,
+        branch_id: cashSession?.branch_id ?? null,
+        cash_session_id: cashSession?.id ?? null,
     };
 
+    console.log("SALE PAYLOAD:", payload);
+
     try {
-        const res = await fetch(`${API_URL}/sales/`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify(saleData)
-        });
+        const sale = await apiFetch("/api/sales/", { method: "POST", body: JSON.stringify(payload) });
 
-        const data = await res.json();
-
-        if (res.ok && data.status === 'success') {
-            // --- AQUÍ ESTÁ LA CORRECCIÓN CLAVE ---
-            // Usamos los datos reales retornados por Python
-            const ticketId = data.sale_id;
-            const cambioReal = parseFloat(data.change);
-
-            // Mostrar Éxito (SweetAlert o Alert normal)
-            mostrarExito(ticketId, cambioReal);
-
-            // Resetear UI
-            cart = [];
-            input.value = '';
-            renderCart();
-            loadProducts(); // Recargar stock visualmente
-        } else {
-            // Manejar error del backend
-            console.error(data);
-            mostrarError(data.detail || "Error al procesar la venta");
-        }
+        cart = [];
+        els.cashReceived.value = "";
+        computeTotals();
+        renderCart();
+        setMsg(`Venta registrada. Folio: ${sale?.id ?? sale?.sale_id ?? "OK"}`);
     } catch (e) {
-        console.error(e);
-        mostrarError("Error de conexión con el servidor");
-    }
-};
-
-// Helpers para alertas (Detecta si existe SweetAlert o usa nativo)
-function mostrarExito(ticketId, cambio) {
-    if (typeof Swal !== 'undefined') {
-        Swal.fire({
-            title: `Venta Exitosa #${ticketId}`,
-            html: `
-                <div style="font-size: 1.2em;">
-                    Pago registrado.<br>
-                    <b>Cambio: $${cambio.toFixed(2)}</b>
-                </div>
-            `,
-            icon: 'success',
-            timer: 3000,
-            showConfirmButton: false
-        });
-    } else {
-        alert(`✅ Venta Exitosa #${ticketId}\nCambio: $${cambio.toFixed(2)}`);
+        setMsg(`Error al cobrar: ${String(e.message || e)}`);
+        console.error("SALE ERROR:", e);
     }
 }
 
-function mostrarError(mensaje) {
-    if (typeof Swal !== 'undefined') {
-        Swal.fire({
-            title: 'Atención',
-            text: mensaje,
-            icon: 'warning'
-        });
-    } else {
-        alert("⚠️ " + mensaje);
-    }
+function clearAll() {
+    cart = [];
+    els.searchInput.value = "";
+    els.cashReceived.value = "";
+    renderSuggestions([]);
+    computeTotals();
+    renderCart();
+    setMsg("");
 }
+
+function logout() {
+    localStorage.removeItem("access_token");
+    window.location.href = "/login";
+}
+
+/* INIT */
+document.addEventListener("DOMContentLoaded", async () => {
+    els.sessionPill.textContent = "Sesión activa";
+    try {
+        setMsg("Inicializando POS...");
+        await refreshCashStatus();
+        computeTotals();
+        renderCart();
+        setMsg("");
+    } catch (e) {
+        setMsg(`Error inicializando POS: ${String(e.message || e)}`);
+    }
+});
+
+/* EVENTS */
+els.btnLogout?.addEventListener("click", logout);
+els.btnOpenCash?.addEventListener("click", openCash);
+els.btnCloseCash?.addEventListener("click", closeCash);
+
+els.btnPay?.addEventListener("click", async () => {
+    setMsg("Procesando venta...");
+    await submitSale();
+});
+
+els.btnVoid?.addEventListener("click", clearAll);
+
+els.btnClearSearch?.addEventListener("click", () => {
+    els.searchInput.value = "";
+    renderSuggestions([]);
+    els.searchInput.focus();
+});
+
+els.paymentMethod?.addEventListener("change", () => {
+    if (els.paymentMethod.value !== "CASH") els.cashReceived.value = "";
+    updateChangeAndWarnings();
+});
+
+els.cashReceived?.addEventListener("input", updateChangeAndWarnings);
+
+els.searchInput?.addEventListener("input", (e) => {
+    const q = e.target.value.trim();
+    clearTimeout(searchTimer);
+
+    if (q.length < 2) { renderSuggestions([]); return; }
+
+    searchTimer = setTimeout(async () => {
+        try {
+            const items = await searchProducts(q);
+            renderSuggestions(items);
+        } catch {
+            renderSuggestions([]);
+        }
+    }, 200);
+});

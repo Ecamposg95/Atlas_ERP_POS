@@ -1,68 +1,265 @@
-<!DOCTYPE html>
+<!-- app/templates/pos.html -->
+<!doctype html>
 <html lang="es">
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>POS - Atlas ERP</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Atlas POS</title>
+
     <style>
-        /* Ajuste para que el grid funcione bien */
-        #products-grid {
-            align-content: start;
+        body {
+            font-family: system-ui;
+            margin: 0;
+            background: #f6f7fb;
+        }
+
+        .topbar {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background: #fff;
+            border-bottom: 1px solid #e5e7eb;
+            padding: 10px 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .brand {
+            font-weight: 900;
+        }
+
+        .muted {
+            opacity: .72;
+            font-size: 13px;
+        }
+
+        .pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            border: 1px solid #e5e7eb;
+            padding: 6px 10px;
+            border-radius: 999px;
+            font-size: 12px;
+            background: #fff;
+        }
+
+        .wrap {
+            display: grid;
+            grid-template-columns: 1fr 480px;
+            gap: 12px;
+            padding: 12px;
+        }
+
+        .card {
+            background: #fff;
+            border: 1px solid #e5e7eb;
+            border-radius: 16px;
+            padding: 12px;
+            box-shadow: 0 10px 35px rgba(0, 0, 0, .05);
+        }
+
+        .row {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        input,
+        button,
+        select {
+            padding: 12px;
+            border-radius: 12px;
+            border: 1px solid #e5e7eb;
+            font-size: 14px;
+        }
+
+        button {
+            cursor: pointer;
+            font-weight: 800;
+        }
+
+        .btn-primary {
+            background: #111;
+            color: #fff;
+            border-color: #111;
+        }
+
+        .btn-muted {
+            background: #fff;
+            color: #111;
+            border-color: #e5e7eb;
+        }
+
+        .big {
+            font-size: 18px;
+            font-weight: 900;
+        }
+
+        .suggest {
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+
+        .suggest button {
+            width: 100%;
+            border: 0;
+            border-bottom: 1px solid #f1f5f9;
+            text-align: left;
+            padding: 12px;
+            background: #fff;
+        }
+
+        .suggest button:last-child {
+            border-bottom: 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th,
+        td {
+            padding: 10px 8px;
+            border-bottom: 1px solid #f1f5f9;
+            font-size: 14px;
+            vertical-align: top;
+        }
+
+        th {
+            text-align: left;
+            font-size: 12px;
+            opacity: .7;
+        }
+
+        .right {
+            text-align: right;
+        }
+
+        .danger {
+            color: #b91c1c;
+            font-weight: 800;
+        }
+
+        hr {
+            border: 0;
+            border-top: 1px solid #f1f5f9;
         }
     </style>
 </head>
 
-<body class="bg-gray-100 h-screen flex overflow-hidden">
+<body>
+    <div class="topbar">
+        <div>
+            <div class="brand">Atlas ERP & POS</div>
+            <div id="cashStatus" class="muted">Validando caja...</div>
+        </div>
+        <div class="row">
+            <span class="pill" id="sessionPill">Sesión activa</span>
+            <button id="btnLogout" class="btn-muted">Salir</button>
+        </div>
+    </div>
 
-    <div id="global-sidebar"></div>
+    <div class="wrap">
+        <!-- Izquierda -->
+        <div class="card">
+            <div class="row" style="justify-content:space-between;">
+                <div>
+                    <div class="big">Ventas POS</div>
+                    <div class="muted">Buscar y agregar productos al carrito.</div>
+                </div>
+                <div class="row">
+                    <button id="btnOpenCash" class="btn-muted">Abrir caja</button>
+                    <button id="btnCloseCash" class="btn-muted">Cerrar caja</button>
+                </div>
+            </div>
 
-    <main class="flex-1 flex w-full">
-        <div class="flex-1 flex flex-col border-r border-gray-300">
-            <div class="p-4 bg-white border-b">
-                <input id="pos-search" type="text" placeholder="Buscar producto..."
-                    class="w-full p-3 border rounded text-lg bg-gray-50">
+            <div style="height:12px;"></div>
+
+            <div class="row">
+                <input id="searchInput" placeholder="Buscar por nombre, SKU o código..." style="flex:1;"
+                    autocomplete="off" />
+                <button id="btnClearSearch" class="btn-muted">Limpiar</button>
             </div>
-            <div id="products-grid" class="flex-1 overflow-y-auto p-4 grid grid-cols-3 gap-3 bg-gray-100">
-            </div>
+
+            <div id="suggestions" class="suggest" style="display:none;"></div>
+
+            <div style="height:12px;"></div>
+            <div class="muted">Operación rápida: escribe 2+ caracteres y toca una sugerencia para agregar.</div>
+
+            <div style="height:10px;"></div>
+            <div id="posMsg" class="muted"></div>
         </div>
 
-        <div class="w-[500px] flex flex-col bg-white shadow-2xl z-10">
-            <div class="p-4 bg-slate-800 text-white flex justify-between">
-                <h2 class="font-bold text-xl">Ticket de Venta</h2>
-                <span id="clock-display" class="font-mono">00:00</span>
+        <!-- Derecha -->
+        <div class="card">
+            <div class="row" style="justify-content:space-between;">
+                <div class="big">Carrito</div>
+                <div id="cartMeta" class="muted">0 ítems</div>
             </div>
 
-            <div class="flex-1 overflow-y-auto p-2" id="cart-container">
-                <ul id="cart-list" class="divide-y"></ul>
+            <div style="margin-top:10px; max-height: 44vh; overflow:auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Producto</th>
+                            <th class="right" style="width:90px;">Cant.</th>
+                            <th class="right" style="width:110px;">Precio</th>
+                            <th class="right" style="width:40px;"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="cartTbody"></tbody>
+                </table>
             </div>
 
-            <div class="p-4 bg-gray-50 border-t">
-                <div class="flex justify-between items-end mb-4">
-                    <span class="text-sm font-bold uppercase text-gray-500">Total</span>
-                    <span id="cart-total" class="text-5xl font-black text-slate-800">$0.00</span>
+            <div style="margin-top:12px;">
+                <div class="row" style="justify-content:space-between;">
+                    <span>Subtotal</span><span id="subtotal">$0.00</span>
                 </div>
+                <div class="row" style="justify-content:space-between;">
+                    <span>Total</span><span id="total" class="big">$0.00</span>
+                </div>
+            </div>
 
-                <div class="mb-4">
-                    <input id="payment-input" type="number" placeholder="Monto recibido"
-                        class="w-full p-3 text-right text-2xl font-bold border rounded border-slate-300">
-                </div>
+            <div style="height:12px;"></div>
+            <hr />
+            <div style="height:12px;"></div>
 
-                <div class="grid grid-cols-3 gap-2 h-16">
-                    <button onclick="handleDirectPayment('CASH')"
-                        class="bg-green-600 text-white font-bold rounded hover:bg-green-500">EFECTIVO</button>
-                    <button onclick="handleDirectPayment('CARD')"
-                        class="bg-blue-600 text-white font-bold rounded hover:bg-blue-500">TARJETA</button>
-                    <button onclick="handleDirectPayment('TRANSFER')"
-                        class="bg-purple-600 text-white font-bold rounded hover:bg-purple-500">TRANSF.</button>
-                </div>
+            <div class="row">
+                <select id="paymentMethod" style="flex:1;">
+                    <option value="CASH">Efectivo</option>
+                    <option value="CARD">Tarjeta</option>
+                    <option value="TRANSFER">Transferencia</option>
+                </select>
+                <input id="cashReceived" placeholder="Recibido" inputmode="decimal" style="width:160px;" />
+            </div>
+
+            <div class="row" style="justify-content:space-between; margin-top:10px;">
+                <span class="muted">Cambio</span>
+                <span id="changeDue" class="big">$0.00</span>
+            </div>
+
+            <div id="cashWarn" class="muted" style="margin-top:6px;"></div>
+
+            <div class="row" style="margin-top:12px;">
+                <button id="btnPay" class="btn-primary" style="flex:1;">Cobrar</button>
+                <button id="btnVoid" class="btn-muted">Vaciar</button>
             </div>
         </div>
-    </main>
+    </div>
 
-    <script src="/static/js/navbar.js"></script>
-    <script src="/static/js/pos.js"></script>
+    <script>
+        // Guard: si no hay token, mandar a login
+        if (!localStorage.getItem("access_token")) window.location.href = "/login";
+    </script>
+
+    <!-- IMPORTANTE: módulo ES -->
+    <script type="module" src="/static/js/pos.js"></script>
 </body>
 
 </html>

@@ -1,3 +1,4 @@
+# app/routers/products.py
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from sqlalchemy.orm import Session
 from typing import List

@@ -3,35 +3,25 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
+
 from app.database import engine
 from app.models import Base 
-
-# --- IMPORTACIÓN DE ROUTERS ---
-# Asegúrate de que existan los archivos en app/routers/
 from app.routers import (
-    auth, 
-    products, 
-    inventory, 
-    sales, 
-    cash, 
-    printer, 
-    users,      # Nuevo
-    customers,  # Nuevo (CRUD Clientes)
-    branches,   # Nuevo
-    departments # Nuevo
-    # crm       # (Opcional: Si tienes lógica extra de CRM, impórtalo aquí)
+    auth, users, branches, departments, products, 
+    inventory, sales, cash, customers, reports,
+    printer, returns, documents, quotes
 )
 
-# Crear tablas en BD (Si no existen)
+# 1. CREACIÓN AUTOMÁTICA DE TABLAS
 Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="Atlas ERP & POS")
+app = FastAPI(
+    title="Atlas ERP & POS",
+    description="Sistema robusto de administración de recursos y punto de venta",
+    version="2.0.0"
+)
 
-# --- Archivos Estáticos y Templates ---
-app.mount("/static", StaticFiles(directory="app/static"), name="static")
-templates = Jinja2Templates(directory="app/templates")
-
-# Config CORS (Permitir todo para desarrollo local)
+# 2. CONFIGURACIÓN DE CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"], 
@@ -40,53 +30,52 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# --- API ROUTERS (Backend) ---
-# Aquí registramos todas las rutas que definimos en los otros archivos
+# 3. ARCHIVOS ESTÁTICOS Y TEMPLATES
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
+templates = Jinja2Templates(directory="app/templates")
 
-# 1. Seguridad y Usuarios
-app.include_router(auth.router, prefix="/api/auth", tags=["Autenticación"])
-app.include_router(users.router, prefix="/api/users", tags=["Usuarios"])
+# 4. REGISTRO DE ROUTERS (BACKEND API)
+app.include_router(auth.router, prefix="/api/auth", tags=["🔑 Autenticación"])
+app.include_router(users.router, prefix="/api/users", tags=["👤 Usuarios"])
+app.include_router(branches.router, prefix="/api/branches", tags=["🏢 Sucursales"])
+app.include_router(departments.router, prefix="/api/departments", tags=["📂 Departamentos"])
+app.include_router(products.router, prefix="/api/products", tags=["📦 Catálogo de Productos"])
+app.include_router(inventory.router, prefix="/api/inventory", tags=["🔄 Inventario & Kardex"])
+app.include_router(sales.router, prefix="/api/sales", tags=["🛒 Ventas POS"])
+app.include_router(cash.router, prefix="/api/cash", tags=["💰 Control de Caja (Turnos)"])
+app.include_router(returns.router, prefix="/api/returns", tags=["📦 Devoluciones"])
+app.include_router(quotes.router, prefix="/api/quotes", tags=["📄 Cotizaciones"])
+app.include_router(customers.router, prefix="/api/customers", tags=["👥 Clientes (CRM)"])
+app.include_router(documents.router, prefix="/api/documents", tags=["📄 Documentos"])
+app.include_router(reports.router, prefix="/api/reports", tags=["📊 Reportes & Auditoría"])
+app.include_router(printer.router, prefix="/api/printer", tags=["🖨️ Hardware / Impresora"])
 
-# 2. Operativos y Ventas
-app.include_router(products.router, prefix="/api/products", tags=["Catálogo"])
-app.include_router(inventory.router, prefix="/api/inventory", tags=["Inventario"])
-app.include_router(sales.router, prefix="/api/sales", tags=["Ventas POS"])
-app.include_router(cash.router, prefix="/api/cash", tags=["Corte de Caja"])
+# --- 5. RUTAS DE NAVEGACIÓN (FRONTEND) ---
 
-# 3. Administración y Clientes
-app.include_router(customers.router, prefix="/api/customers", tags=["Clientes"]) # Antes crm
-app.include_router(branches.router, prefix="/api/branches", tags=["Sucursales"])
-app.include_router(departments.router, prefix="/api/departments", tags=["Departamentos"])
-
-# 4. Hardware
-app.include_router(printer.router, prefix="/api/printer", tags=["Impresora"])
-
-
-# --- RUTAS DE PÁGINAS (Frontend - Jinja2) ---
-
-# 1. Login
-@app.get("/login", response_class=HTMLResponse)
-async def login_page(request: Request):
-    return templates.TemplateResponse("login.html", {"request": request})
-
-# 2. Dashboard (Home)
 @app.get("/", response_class=HTMLResponse)
-async def read_root(request: Request):
+@app.get("/index", response_class=HTMLResponse)
+async def index_page(request: Request):
+    """Dashboard Principal"""
     return templates.TemplateResponse("index.html", {"request": request})
 
-# 3. Punto de Venta (POS)
+@app.get("/login", response_class=HTMLResponse)
+async def login_page(request: Request):
+    """Página de acceso - Cambiado a auth.html según tu plan"""
+    return templates.TemplateResponse("auth.html", {"request": request})
+
 @app.get("/pos", response_class=HTMLResponse)
 async def pos_page(request: Request):
     return templates.TemplateResponse("pos.html", {"request": request})
 
-# 4. Catálogo de Productos
-@app.get("/products", response_class=HTMLResponse)
-async def read_products_page(request: Request):
-    return templates.TemplateResponse("products.html", {"request": request})
+# Ruta para el módulo de cotizaciones independiente
+@app.get("/quotes", response_class=HTMLResponse)
+async def quotes_page(request: Request):
+    return templates.TemplateResponse("quotes.html", {"request": request})
 
-# 5. (Opcional) Página de Admin/Usuarios
-# Podrías crear un admin.html en el futuro
-@app.get("/admin", response_class=HTMLResponse)
-async def admin_page(request: Request):
-    # Por ahora reutilizamos index o creas un admin.html
-    return templates.TemplateResponse("index.html", {"request": request})
+# --- 6. MANEJO DE ERRORES ---
+@app.exception_handler(404)
+async def not_found_exception_handler(request: Request, exc):
+    # Si es una petición API, devolver JSON. Si es navegador, devolver HTML.
+    if request.url.path.startswith("/api/"):
+        return JSONResponse(status_code=404, content={"detail": "Recurso no encontrado"})
+    return templates.TemplateResponse("404.html", {"request": request}, status_code=404)

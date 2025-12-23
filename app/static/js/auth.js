@@ -1,55 +1,43 @@
-/**
- * app/static/js/auth.js
- * Gestiona la sesión, protección de rutas y decodificación de usuario.
- */
+// app/static/js/auth.js
+const form = document.getElementById("loginForm");
+const msg = document.getElementById("loginMsg");
 
-// Configuración Global
-const AUTH_REDIRECT = "/login";
-const PUBLIC_ROUTES = ["/login", "/register"]; // Rutas que no requieren token
+function setMsg(t) { if (msg) msg.textContent = t || ""; }
 
-// 1. Ejecución Inmediata (Autoprotección)
-(function protectRoute() {
-    const token = sessionStorage.getItem('token');
-    const path = window.location.pathname;
+if (localStorage.getItem("access_token")) {
+    window.location.href = "/pos";
+}
 
-    // Si estamos en una ruta pública, no hacemos nada
-    if (PUBLIC_ROUTES.includes(path)) return;
+form?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    setMsg("Autenticando...");
 
-    // Si no hay token, fuera
-    if (!token) {
-        console.warn("Acceso denegado: No token found");
-        window.location.href = AUTH_REDIRECT;
-    }
-})();
+    const username = form.username.value.trim();
+    const password = form.password.value;
 
-// 2. Funciones Públicas (Globales)
-window.auth = {
-    // Cerrar sesión
-    logout: () => {
-        sessionStorage.clear();
-        window.location.href = AUTH_REDIRECT;
-    },
+    const data = new URLSearchParams();
+    data.append("username", username);
+    data.append("password", password);
 
-    // Obtener header de autorización
-    getHeader: () => {
-        const token = sessionStorage.getItem('token');
-        return { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
-    },
+    try {
+        const res = await fetch("/api/auth/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: data,
+        });
 
-    // Obtener datos del usuario (Decodificando el Payload del JWT sin librería externa)
-    getUser: () => {
-        const token = sessionStorage.getItem('token');
-        if (!token) return null;
-        try {
-            const base64Url = token.split('.')[1];
-            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-            const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function (c) {
-                return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-            }).join(''));
-            return JSON.parse(jsonPayload);
-        } catch (e) {
-            console.error("Error parsing token", e);
-            return null;
+        if (!res.ok) {
+            const txt = await res.text();
+            throw new Error(txt || "Credenciales inválidas");
         }
+
+        const json = await res.json();
+        if (!json?.access_token) throw new Error("Respuesta inválida: falta access_token");
+
+        localStorage.setItem("access_token", json.access_token);
+        setMsg("OK. Redirigiendo...");
+        window.location.href = "/pos";
+    } catch (err) {
+        setMsg(`Error: ${String(err.message || err)}`);
     }
-};
+});

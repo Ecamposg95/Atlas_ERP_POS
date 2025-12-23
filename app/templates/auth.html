@@ -1,0 +1,102 @@
+<!-- app/templates/auth.html -->
+<!doctype html>
+<html lang="es">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Atlas ERP & POS — Login</title>
+    <style>
+        body {
+            font-family: system-ui;
+            margin: 0;
+            background: #f6f7fb;
+        }
+
+        .wrap {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+
+        .card {
+            width: 100%;
+            max-width: 420px;
+            background: #fff;
+            border: 1px solid #e5e7eb;
+            border-radius: 16px;
+            padding: 18px;
+            box-shadow: 0 10px 35px rgba(0, 0, 0, .06);
+        }
+
+        .h {
+            font-size: 20px;
+            font-weight: 900;
+            margin: 0 0 6px;
+        }
+
+        .p {
+            margin: 0 0 14px;
+            opacity: .7;
+            font-size: 13px;
+        }
+
+        label {
+            display: block;
+            font-size: 13px;
+            margin: 10px 0 6px;
+            opacity: .8;
+        }
+
+        input,
+        button {
+            width: 100%;
+            padding: 12px;
+            border-radius: 12px;
+            border: 1px solid #e5e7eb;
+            font-size: 14px;
+        }
+
+        button {
+            cursor: pointer;
+            font-weight: 900;
+            background: #111;
+            color: #fff;
+            border-color: #111;
+        }
+
+        .msg {
+            margin-top: 10px;
+            font-size: 13px;
+            opacity: .85;
+            min-height: 18px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="wrap">
+        <div class="card">
+            <h1 class="h">Acceso</h1>
+            <p class="p">Inicia sesión para entrar al POS.</p>
+
+            <form id="loginForm">
+                <label>Usuario</label>
+                <input name="username" autocomplete="username" required />
+
+                <label>Contraseña</label>
+                <input name="password" type="password" autocomplete="current-password" required />
+
+                <div style="height:12px;"></div>
+                <button type="submit">Entrar</button>
+                <div id="loginMsg" class="msg"></div>
+            </form>
+        </div>
+    </div>
+
+    <script type="module" src="/static/js/auth.js"></script>
+</body>
+
+</html>

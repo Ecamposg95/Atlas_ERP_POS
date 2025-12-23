@@ -1,3 +1,4 @@
+# app/routers/inventory.py
 from typing import List  # <--- ESTA ERA LA LÍNEA QUE FALTABA
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session

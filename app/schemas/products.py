@@ -1,3 +1,4 @@
+# app/schemas/products.py
 from typing import Optional, List
 from pydantic import BaseModel
 from decimal import Decimal

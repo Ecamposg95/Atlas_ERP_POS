@@ -38,3 +38,5 @@ from .sales import (
 # 6. Clientes
 from .crm import Customer, CustomerLedgerEntry
 # (Si cambiaste el nombre del archivo a 'customers.py', cambia '.crm' por '.customers')
+
+from .returns import SaleReturn, SaleReturnItem
