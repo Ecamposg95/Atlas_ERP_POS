@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from datetime import datetime
 from decimal import Decimal
-from typing import Dict, Any
+from typing import Dict, Any, List, Optional
 
 # Asegúrate de que estas importaciones coincidan con la estructura de tu proyecto
 from app.database import get_db
@@ -13,12 +13,32 @@ from app.models import (
     User, DocumentType, DocumentStatus, MovementType,
     Customer, CustomerLedgerEntry, PaymentMethod
 )
-from app.schemas.sales import SaleCreate
+from app.schemas.sales import SaleCreate, SaleRead
 from app.security import get_current_user
 # --- NUEVA IMPORTACIÓN PARA FOLIOS ---
 from app.utils.folios import get_next_folio 
 
 router = APIRouter()
+
+@router.get("/", response_model=List[SaleRead])
+def read_sales(
+    skip: int = 0,
+    limit: int = 100,
+    start_date: Optional[datetime] = None,
+    end_date: Optional[datetime] = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    query = db.query(SalesDocument).filter(SalesDocument.branch_id == current_user.branch_id)
+    
+    if start_date:
+        query = query.filter(SalesDocument.created_at >= start_date)
+    if end_date:
+        query = query.filter(SalesDocument.created_at <= end_date)
+        
+    # Order by newest first
+    sales = query.order_by(SalesDocument.created_at.desc()).offset(skip).limit(limit).all()
+    return sales
 
 @router.post("/", response_model=Dict[str, Any])
 def create_sale(

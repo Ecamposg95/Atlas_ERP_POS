@@ -1,5 +1,5 @@
 # app/routers/cash.py
-from typing import Optional  # <--- IMPORTACIÓN AGREGADA
+from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import func, desc
@@ -24,6 +24,18 @@ def get_current_session(
         CashSession.status == CashSessionStatus.OPEN
     ).first()
     return session
+
+@router.get("/history", response_model=List[CashSessionRead])
+def read_cash_history(
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Historial de cortes de caja de la sucursal"""
+    return db.query(CashSession).filter(
+        CashSession.branch_id == current_user.branch_id
+    ).order_by(CashSession.opened_at.desc()).offset(skip).limit(limit).all()
 
 @router.post("/open", response_model=CashSessionRead)
 def open_session(

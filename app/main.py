@@ -64,6 +64,16 @@ async def index_page(request: Request):
     """Dashboard Principal"""
     return templates.TemplateResponse("index.html", {"request": request})
 
+@app.get("/users", response_class=HTMLResponse)
+async def users_page(request: Request):
+    """Gestión de Usuarios"""
+    return templates.TemplateResponse("users.html", {"request": request})
+
+@app.get("/cash-history", response_class=HTMLResponse)
+async def cash_history_page(request: Request):
+    """Historial de Cortes de Caja"""
+    return templates.TemplateResponse("cash_history.html", {"request": request})
+
 @app.get("/login", response_class=HTMLResponse)
 async def login_page(request: Request):
     """Página de acceso - Cambiado a auth.html según tu plan"""
@@ -73,6 +83,10 @@ async def login_page(request: Request):
 async def pos_page(request: Request):
     return templates.TemplateResponse("pos.html", {"request": request})
 
+@app.get("/customers", response_class=HTMLResponse)
+async def customers_page(request: Request):
+    return templates.TemplateResponse("customers.html", {"request": request})
+
 @app.get("/products", response_class=HTMLResponse)
 async def products_page(request: Request):
     """Gestión de productos"""
@@ -80,7 +94,8 @@ async def products_page(request: Request):
 
 @app.get("/sales", response_class=HTMLResponse)
 async def sales_page(request: Request):
-    return templates.TemplateResponse("wip.html", {"request": request, "title": "Ventas"})
+    """Historial de Ventas"""
+    return templates.TemplateResponse("sales.html", {"request": request})
 
 @app.get("/customers", response_class=HTMLResponse)
 async def customers_page(request: Request):
@@ -95,6 +110,10 @@ async def reports_page(request: Request):
 @app.get("/quotes", response_class=HTMLResponse)
 async def quotes_page(request: Request):
     return templates.TemplateResponse("quotes.html", {"request": request})
+
+@app.get("/quotes/new", response_class=HTMLResponse)
+async def quotes_new_page(request: Request):
+    return templates.TemplateResponse("quote_maker.html", {"request": request})
 
 # --- 6. MANEJO DE ERRORES ---
 @app.exception_handler(404)

@@ -1,0 +1,315 @@
+{% extends "base.html" %}
+
+{% block title %}Crear Cotización - Atlas ERP{% endblock %}
+
+{% block content %}
+<!-- HEADER QUOTE MAKER -->
+<header
+    class="h-16 border-b border-white/5 bg-slate-900/50 backdrop-blur-md flex justify-between items-center px-6 shrink-0 z-10 sticky top-0">
+    <div class="flex items-center gap-4">
+        <div>
+            <h1 class="text-lg font-bold text-white tracking-tight">Nueva Cotización</h1>
+            <p class="text-xs text-slate-400">Modo: Cotizador</p>
+        </div>
+    </div>
+    <div class="flex items-center gap-2">
+        <a href="/quotes"
+            class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-lg shadow-sm transition">Ver
+            Lista</a>
+    </div>
+</header>
+
+<!-- MAIN CONTENT WRAPPER -->
+<div id="pos-content-wrapper" class="flex-1 flex gap-6 p-6 overflow-hidden h-full relative">
+
+    <!-- LEFT COLUMN: SEARCH & PRODUCTS -->
+    <div class="flex-1 flex flex-col gap-4 overflow-hidden min-w-[300px]">
+
+        <!-- Product Search -->
+        <div class="glass-card rounded-2xl flex-1 flex flex-col overflow-hidden min-h-[300px]">
+            <div class="px-4 py-3 border-b border-white/5 bg-slate-900/30 shrink-0">
+                <div class="relative">
+                    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                        </svg>
+                    </span>
+                    <input id="search-input" type="text"
+                        class="w-full bg-slate-950/50 border border-slate-700/50 rounded-xl pl-9 pr-3 py-2.5 text-sm md:text-base text-white focus:ring-2 focus:ring-primary-500 outline-none transition-all placeholder-slate-600"
+                        placeholder="Buscar producto..." autofocus>
+                </div>
+            </div>
+            <div id="search-results" class="flex-1 overflow-y-auto p-2 space-y-2 custom-scrollbar"></div>
+        </div>
+
+    </div>
+
+    <!-- RIGHT COLUMN: TICKET (CART) -->
+    <div
+        class="w-[350px] xl:w-[420px] glass-card rounded-2xl flex flex-col overflow-hidden shrink-0 shadow-2xl shadow-black/50">
+        <!-- Ticket Header -->
+        <div class="px-5 py-4 border-b border-white/5 bg-slate-900/50 flex justify-between items-center shrink-0">
+            <h2 class="font-bold text-sm text-slate-200">Detalle de Cotización</h2>
+            <button id="clear-cart-btn"
+                class="text-[10px] text-rose-400 hover:text-rose-300 font-bold uppercase tracking-wider">Limpiar</button>
+        </div>
+
+        <!-- Items Area -->
+        <div class="flex-1 overflow-y-auto p-4 relative custom-scrollbar bg-slate-950/30">
+            <div id="ticket-items" class="space-y-3"></div>
+            <!-- Placeholder -->
+            <div id="ticket-placeholder"
+                class="absolute inset-0 flex flex-col items-center justify-center text-slate-600 space-y-4 pointer-events-none opacity-50">
+                <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+                    </path>
+                </svg>
+                <p class="text-xs font-medium italic">Agrega productos</p>
+            </div>
+        </div>
+
+        <!-- Customer Selection (Optional) -->
+        <div class="px-5 py-3 bg-slate-900/50 border-t border-white/5 shrink-0 z-10">
+            <label class="text-[10px] text-slate-500 font-bold uppercase block mb-1">Cliente (Opcional)</label>
+            <select id="customer-select"
+                class="w-full bg-slate-950 border border-slate-700 rounded-lg text-xs text-white p-2">
+                <option value="">Publico General</option>
+            </select>
+        </div>
+
+        <!-- Summary -->
+        <div class="p-5 bg-slate-900/80 border-t border-white/5 space-y-2 shrink-0 z-10 backdrop-blur-md">
+            <div class="flex justify-between text-xs text-slate-400"><span>Subtotal</span><span id="ticket-subtotal"
+                    class="font-medium text-slate-200">$0.00</span></div>
+            <div class="flex justify-between text-xs text-slate-400"><span>Impuestos</span><span id="ticket-taxes"
+                    class="font-medium text-slate-200">$0.00</span></div>
+            <div class="flex justify-between text-xl font-black pt-2 border-t border-dashed border-white/10 items-end">
+                <span class="text-white text-base">Total Estimado</span>
+                <span id="ticket-total" class="text-emerald-400 leading-none">$0.00</span>
+            </div>
+        </div>
+
+        <!-- Action Button -->
+        <div class="p-4 bg-slate-950/50 border-t border-white/5 shrink-0">
+            <button id="save-quote-btn" disabled
+                class="w-full bg-primary-600 hover:bg-primary-500 disabled:opacity-30 disabled:cursor-not-allowed text-white font-bold py-3.5 rounded-xl shadow-lg shadow-primary-900/20 transition transform active:scale-95 flex items-center justify-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4">
+                    </path>
+                </svg>
+                <span>Guardar y Generar PDF</span>
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const API_BASE_URL = 'http://127.0.0.1:8000';
+        const ACCESS_TOKEN = sessionStorage.getItem('ACCESS_TOKEN');
+        let cart = [];
+
+        if (!ACCESS_TOKEN) window.location.href = '/auth';
+
+        async function apiFetch(endpoint, options = {}) {
+            const headers = { 'Authorization': `Bearer ${ACCESS_TOKEN}`, ...options.headers };
+            if (options.body) headers['Content-Type'] = 'application/json';
+            const res = await fetch(`${API_BASE_URL}${endpoint}`, { ...options, headers });
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({ detail: res.statusText }));
+                throw new Error(err.detail);
+            }
+            return res.status === 204 ? null : res.json();
+        }
+
+        // LOAD CUSTOMERS
+        (async () => {
+            try {
+                const customers = await apiFetch('/api/crm/');
+                const sel = document.getElementById('customer-select');
+                customers.forEach(c => {
+                    const opt = document.createElement('option');
+                    opt.value = c.id;
+                    opt.textContent = c.name;
+                    sel.appendChild(opt);
+                });
+            } catch (e) { console.error('Error loading customers'); }
+        })();
+
+        // --- CART LOGIC (Simplified from POS) ---
+        window.addToCart = function (product, qty = 1) {
+            const existing = cart.find(i => i.id === product.id);
+            if (existing) {
+                existing.qty += qty;
+            } else {
+                let price = 0;
+                if (product.prices && product.prices.length > 0) price = product.prices[0].unit_price;
+                else if (product.variants && product.variants.length > 0) price = product.variants[0].price;
+
+                cart.push({
+                    id: product.id,
+                    name: product.name,
+                    sku: product.sku || product.variants?.[0]?.sku || '-',
+                    unit_price: Number(price),
+                    qty: qty
+                });
+            }
+            renderCart();
+            document.getElementById('search-input').value = '';
+            document.getElementById('search-results').innerHTML = '';
+            document.getElementById('search-input').focus();
+        };
+
+        window.updateItem = function (id, delta) {
+            const item = cart.find(i => i.id === id);
+            if (!item) return;
+            item.qty += delta;
+            if (item.qty <= 0) cart = cart.filter(i => i.id !== id);
+            renderCart();
+        };
+
+        document.getElementById('clear-cart-btn').onclick = () => {
+            if (cart.length && confirm('¿Limpiar cotización?')) {
+                cart = [];
+                renderCart();
+            }
+        };
+
+        function renderCart() {
+            const ph = document.getElementById('ticket-placeholder');
+            const items = document.getElementById('ticket-items');
+            const btn = document.getElementById('save-quote-btn');
+
+            if (cart.length === 0) {
+                ph.classList.remove('opacity-0', 'pointer-events-none');
+                items.innerHTML = '';
+                btn.disabled = true;
+                ['subtotal', 'taxes', 'total'].forEach(id => document.getElementById(`ticket-${id}`).textContent = '$0.00');
+                return;
+            }
+
+            ph.classList.add('opacity-0', 'pointer-events-none');
+            items.innerHTML = '';
+            let total = 0;
+
+            cart.forEach(i => {
+                const lineTotal = i.unit_price * i.qty;
+                total += lineTotal;
+                const row = document.createElement('div');
+                row.className = 'flex justify-between items-center py-2 border-b border-dashed border-white/5 last:border-0';
+                row.innerHTML = `
+                    <div class="flex-1 min-w-0 pr-2">
+                        <div class="font-medium text-slate-200 truncate text-xs mb-0.5">${i.name}</div>
+                        <div class="text-[10px] text-slate-500">$${i.unit_price.toFixed(2)}</div>
+                    </div>
+                    <div class="flex items-center bg-slate-800 rounded-lg p-0.5 gap-1 mx-2">
+                        <button class="w-6 h-6 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 rounded transition font-bold text-xs" onclick="updateItem(${i.id}, -1)">-</button>
+                        <span class="w-6 text-center font-bold text-xs text-white">${i.qty}</span>
+                        <button class="w-6 h-6 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 rounded transition font-bold text-xs" onclick="updateItem(${i.id}, 1)">+</button>
+                    </div>
+                    <div class="w-16 text-right font-bold text-slate-200 text-sm">$${lineTotal.toFixed(2)}</div>
+                `;
+                items.appendChild(row);
+            });
+
+            document.getElementById('ticket-subtotal').textContent = fmtMoney(total);
+            document.getElementById('ticket-total').textContent = fmtMoney(total);
+            btn.disabled = false;
+        }
+
+        // --- SEARCH ---
+        const searchInput = document.getElementById('search-input');
+        searchInput.addEventListener('input', debounce(async (e) => {
+            const q = e.target.value.trim();
+            const results = document.getElementById('search-results');
+            if (q.length < 2) { results.innerHTML = ''; return; }
+
+            try {
+                const prods = await apiFetch(`/api/products/search?q=${encodeURIComponent(q)}`);
+                results.innerHTML = prods.map(p => {
+                    let displayPrice = 0;
+                    if (p.prices && p.prices.length > 0) displayPrice = p.prices[0].unit_price;
+                    else if (p.variants && p.variants.length > 0) displayPrice = p.variants[0].price;
+
+                    const prodStr = encodeURIComponent(JSON.stringify(p));
+                    return `
+                    <div class="p-2 hover:bg-slate-800 rounded-xl cursor-pointer flex justify-between items-center group transition border border-transparent hover:border-slate-700" onclick="handleSearchClick('${prodStr}')">
+                        <div class="min-w-0">
+                            <div class="text-xs font-bold text-slate-300 group-hover:text-white truncate">${p.name}</div>
+                            <div class="text-[10px] text-slate-500">${p.variants?.[0]?.sku || '-'}</div>
+                        </div>
+                        <div class="font-bold text-xs text-emerald-400 bg-emerald-900/20 px-2 py-0.5 rounded ml-2">$${Number(displayPrice).toFixed(2)}</div>
+                    </div>`
+                }).join('');
+            } catch (e) { }
+        }, 300));
+
+        window.handleSearchClick = function (prodEncoded) {
+            const prod = JSON.parse(decodeURIComponent(prodEncoded));
+            addToCart(prod, 1);
+        };
+
+        // --- SUBMIT QUOTE ---
+        document.getElementById('save-quote-btn').onclick = async function () {
+            const btn = this;
+            if (btn.disabled) return;
+
+            const customerId = document.getElementById('customer-select').value;
+            const payload = {
+                customer_id: customerId ? parseInt(customerId) : null,
+                items: cart.map(i => ({ sku: i.sku, quantity: i.qty })),
+                payments: [] // Quote default
+            };
+
+            btn.disabled = true;
+            btn.innerHTML = 'Generando...';
+
+            try {
+                // Correct Endpoint: POST /api/quotes/
+                const res = await apiFetch('/api/quotes/', {
+                    method: 'POST',
+                    body: JSON.stringify(payload)
+                });
+
+                // Download PDF
+                await downloadPDF(res.quote_id, res.folio);
+
+                alert('Cotización generada exitosamente.');
+                cart = [];
+                renderCart();
+            } catch (e) {
+                alert(`Error: ${e.message}`);
+            }
+
+            btn.innerHTML = `
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path></svg>
+                <span>Guardar y Generar PDF</span>
+            `;
+            btn.disabled = false;
+        };
+
+        async function downloadPDF(id, folio) {
+            const res = await fetch(`${API_BASE_URL}/api/quotes/${id}/pdf`, {
+                headers: { 'Authorization': `Bearer ${ACCESS_TOKEN}` }
+            });
+            if (!res.ok) throw new Error('Error al descargar PDF');
+            const blob = await res.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Cotizacion_${folio}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+        }
+
+        function fmtMoney(val) { return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(val); }
+        function debounce(fn, ms) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
+    });
+</script>
+{% endblock %}

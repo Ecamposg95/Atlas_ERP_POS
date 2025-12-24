@@ -287,6 +287,33 @@ def update_product(
                     unit_price=p_price.unit_price,
                 ))
 
+        # 2. Add/Sync Extra Variants
+        # Strategy: We will delete non-main variants and recreate them from the list, 
+        # unless we want to be smarter. For simplicity: Delete all EXCEPT main, then add new ones.
+        # Main variant is 'v' (variants[0]).
+        
+        if prod_in.extra_variants is not None:
+             # Delete all variants of this product where id != v.id
+             db.query(ProductVariant).filter(
+                 ProductVariant.product_id == product.id,
+                 ProductVariant.id != v.id
+             ).delete()
+             
+             for extra in prod_in.extra_variants:
+                 if extra.sku == v.sku: continue # Skip if matches main
+                 
+                 # Check global SKU uniqueness (optional but recommended)
+                 # existing = db.query(ProductVariant).filter(ProductVariant.sku == extra.sku).first()
+                 # if existing: raise ...
+                 
+                 db.add(ProductVariant(
+                    product_id=product.id,
+                    sku=extra.sku,
+                    variant_name=extra.variant_name,
+                    price=extra.price,
+                    cost=extra.cost or v.cost
+                 ))
+
     db.commit()
     return {"msg": "Actualizado correctamente"}
 
@@ -347,6 +374,80 @@ def search_products(
 # -----------------------------
 # 6. Carga masiva CSV/Excel
 # -----------------------------
+# -----------------------------
+# 6. Exportar Excel
+# -----------------------------
+@router.get("/export/excel")
+def export_products_excel(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    # Query flattening variants
+    products = (
+        db.query(Product)
+        .options(
+            joinedload(Product.variants).joinedload(ProductVariant.prices),
+            joinedload(Product.department),
+        )
+        .filter(Product.is_active == True)
+        .all()
+    )
+
+    data = []
+    for p in products:
+        # Use first variant for flattened logic
+        v = p.variants[0] if p.variants else None
+        
+        row = {
+            "SKU": v.sku if v else "",
+            "Nombre": p.name,
+            "Departamento": p.department.name if p.department else "General",
+            "Costo": float(v.cost) if v else 0.0,
+            "Precio Base": float(v.price) if v else 0.0,
+            "Stock": 0, # Placeholder, logic below
+            "Unidad": p.unit,
+            "Codigo Barras": v.barcode if v else "",
+            "Descripcion": p.description or ""
+        }
+
+        # Stock logic (sum of all branches or current branch?) -> Best to show current branch
+        if v:
+            stock = db.query(StockOnHand).filter(
+                StockOnHand.variant_id == v.id,
+                StockOnHand.branch_id == current_user.branch_id
+            ).first()
+            row["Stock"] = float(stock.qty_on_hand) if stock else 0.0
+
+            # Tiered Prices (Flatten up to 3)
+            # Layout: P1 Nombre, P1 Min, P1 Precio, P2...
+            prices = sorted(v.prices, key=lambda x: x.unit_price, reverse=True) # or by order?
+            for i, price in enumerate(prices[:5]): # Limit to 5 tiers
+                idx = i + 1
+                row[f"P{idx} Nombre"] = price.price_name
+                row[f"P{idx} Min"] = float(price.min_quantity)
+                row[f"P{idx} Precio"] = float(price.unit_price)
+
+    data.append(row)
+
+    df = pd.DataFrame(data)
+    
+    # Save to buffer
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False, sheet_name='Productos')
+    
+    output.seek(0)
+    
+    headers = {
+        'Content-Disposition': 'attachment; filename="productos_atlas.xlsx"'
+    }
+    from fastapi.responses import StreamingResponse
+    return StreamingResponse(output, media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', headers=headers)
+
+
+# -----------------------------
+# 7. Carga masiva (Refactorizada)
+# -----------------------------
 @router.post("/upload")
 async def upload_products(
     file: UploadFile = File(...),
@@ -358,118 +459,164 @@ async def upload_products(
     is_excel = filename.endswith((".xlsx", ".xlsm", ".xls"))
 
     if not (is_csv or is_excel):
-        raise HTTPException(status_code=400, detail=f"Formato no válido. Usa .xlsx/.xlsm/.xls o .csv. Recibido: {file.filename}")
+        raise HTTPException(status_code=400, detail=f"Formato inválido. Use Excel o CSV.")
 
     contents = await file.read()
     if not contents:
-        raise HTTPException(status_code=400, detail="El archivo está vacío.")
+        raise HTTPException(status_code=400, detail="Archivo vacío.")
 
-    # Leer archivo
     try:
         if is_csv:
-            try:
-                df = pd.read_csv(io.BytesIO(contents))
-            except UnicodeDecodeError:
-                df = pd.read_csv(io.BytesIO(contents), encoding="latin-1")
+            df = pd.read_csv(io.BytesIO(contents))
         else:
             df = pd.read_excel(io.BytesIO(contents), engine="openpyxl")
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"No se pudo leer el archivo: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Error leyendo archivo: {str(e)}")
 
-    # Normalizar columnas
+    # Normalize cols
     df.columns = [str(c).lower().strip() for c in df.columns]
-
-    # Mapeo deptos existentes
+    
+    # Cache departments
     dept_map = {c.name.lower(): c.id for c in db.query(Category).all()}
 
     created_count = 0
+    updated_count = 0
     failed_count = 0
 
     for _, row in df.iterrows():
         try:
-            raw_sku = row.get("sku", "")
-            raw_name = row.get("nombre", "")
+            # Check basic fields
+            raw_sku = str(row.get("sku", "")).strip()
+            raw_name = str(row.get("nombre", "")).strip()
 
-            sku = _safe_str(raw_sku)
-            name = _safe_str(raw_name)
+            if not raw_sku or raw_sku.lower() == "nan": 
+                continue # Skip empty rows
 
-            if not sku or not name:
-                continue
-
-            # SKU único
-            if db.query(ProductVariant).filter(ProductVariant.sku == sku).first():
-                failed_count += 1
-                continue
-
-            # Departamento
-            raw_dept = row.get("departamento", "General")
-            dept_name = _safe_str(raw_dept) or "General"
-
-            dept_id = dept_map.get(dept_name.lower())
+            # Find or Create Product logic
+            # Using SKU as key
+            existing_variant = db.query(ProductVariant).filter(ProductVariant.sku == raw_sku).first()
+            
+            # --- PREPARE DATA ---
+            # Department
+            raw_dept = str(row.get("departamento", "General")).strip()
+            if raw_dept.lower() == "nan" or not raw_dept: raw_dept = "General"
+            
+            dept_id = dept_map.get(raw_dept.lower())
             if not dept_id:
-                new_dept = Category(name=dept_name)
+                new_dept = Category(name=raw_dept)
                 db.add(new_dept)
                 db.flush()
                 dept_id = new_dept.id
-                dept_map[dept_name.lower()] = dept_id
+                dept_map[raw_dept.lower()] = dept_id
 
-            # Crear producto
-            prod = Product(
-                name=name,
-                description=_safe_str(row.get("descripcion", "")),
-                unit=_safe_str(row.get("unidad", "pza")) or "pza",
-                category_id=dept_id,
-                has_variants=True,
-                is_active=True,
-            )
-            db.add(prod)
-            db.flush()
+            price_base = _safe_decimal(row.get("precio base", row.get("precio", 0)))
+            cost = _safe_decimal(row.get("costo", 0))
+            is_new = False
+            
+            if existing_variant:
+                # Update
+                prod = existing_variant.product
+                prod.name = raw_name if raw_name else prod.name
+                prod.category_id = dept_id
+                
+                existing_variant.price = price_base
+                existing_variant.cost = cost
+                updated_count += 1
+                variant = existing_variant
+            else:
+                # Create
+                if not raw_name: raw_name = "Producto sin Nombre"
+                
+                prod = Product(
+                    name=raw_name,
+                    description=str(row.get("descripcion", "")),
+                    unit=str(row.get("unidad", "pza")),
+                    category_id=dept_id,
+                    has_variants=True,
+                    is_active=True
+                )
+                db.add(prod)
+                db.flush()
+                
+                variant = ProductVariant(
+                    product_id=prod.id,
+                    sku=raw_sku,
+                    barcode=str(row.get("codigo barras", "")) or None,
+                    variant_name="Estándar",
+                    price=price_base,
+                    cost=cost
+                )
+                db.add(variant)
+                db.flush()
+                created_count += 1
+                is_new = True
 
-            price = _safe_decimal(row.get("precio", 0), default=Decimal(0))
-            cost = _safe_decimal(row.get("costo", 0), default=Decimal(0))
+            # --- STOCK ---
+            # Only update stock if provided and > 0, usually for initial load. 
+            # Or if user specifically wants to reset stock? Let's assume input is "Initial Stock" or "Adjustment"
+            # For simplicity, if stock column exists and is different, we adjust.
+            input_stock = _safe_decimal(row.get("stock", -1)) # -1 sentinel
+            
+            if input_stock >= 0:
+                # Check current stock
+                stock_record = db.query(StockOnHand).filter(
+                    StockOnHand.variant_id == variant.id, 
+                    StockOnHand.branch_id == current_user.branch_id
+                ).first()
+                
+                if not stock_record:
+                    stock_record = StockOnHand(
+                        branch_id=current_user.branch_id, 
+                        variant_id=variant.id, 
+                        qty_on_hand=0
+                    )
+                    db.add(stock_record)
+                    db.flush()
+                
+                diff = input_stock - stock_record.qty_on_hand
+                if diff != 0:
+                     stock_record.qty_on_hand = input_stock
+                     # Log movement
+                     reason = "Carga Masiva (Inicial)" if is_new else "Carga Masiva (Ajuste)"
+                     db.add(InventoryMovement(
+                        branch_id=current_user.branch_id,
+                        variant_id=variant.id,
+                        user_id=current_user.id,
+                        movement_type=MovementType.ADJUSTMENT_IN if diff > 0 else MovementType.ADJUSTMENT_OUT,
+                        qty_change=abs(diff),
+                        qty_before=stock_record.qty_on_hand - diff,
+                        qty_after=input_stock,
+                        reference="Excel Upload",
+                        notes=reason
+                    ))
 
-            barcode = _safe_str(row.get("codigo_barras", "")) or None
-
-            # Crear variante estándar
-            variant = ProductVariant(
-                product_id=prod.id,
-                sku=sku,
-                barcode=barcode,
-                variant_name="Estándar",
-                price=price,
-                cost=cost,
-            )
-            db.add(variant)
-            db.flush()
-
-            # Stock
-            stock_qty = _safe_decimal(row.get("stock", 0), default=Decimal(0))
-
-            db.add(StockOnHand(
-                branch_id=current_user.branch_id,
-                variant_id=variant.id,
-                qty_on_hand=stock_qty,
-            ))
-
-            if stock_qty > 0:
-                db.add(InventoryMovement(
-                    branch_id=current_user.branch_id,
-                    variant_id=variant.id,
-                    user_id=current_user.id,
-                    movement_type=MovementType.ADJUSTMENT_IN,
-                    qty_change=stock_qty,
-                    qty_before=Decimal(0),
-                    qty_after=stock_qty,
-                    reference="Carga Masiva",
-                    notes=f"Archivo: {file.filename}",
-                ))
-
-            created_count += 1
+            # --- TIERED PRICES ---
+            # Parse dynamic columns p1 nombre, p1 min, p1 precio, etc.
+            # We first clear existing tiers if we detect new ones to avoid dups? 
+            # Or maybe only if 'p1 nombre' is present?
+            # Let's replace only if columns exist.
+            
+            has_tier_cols = any(c.startswith("p1") for c in df.columns)
+            if has_tier_cols:
+                # Delete existing
+                db.query(ProductPrice).filter(ProductPrice.variant_id == variant.id).delete()
+                
+                for i in range(1, 6): # Up to 5
+                    p_name = row.get(f"p{i} nombre")
+                    p_min = row.get(f"p{i} min")
+                    p_val = row.get(f"p{i} precio")
+                    
+                    if p_name and not pd.isna(p_name) and p_val and not pd.isna(p_val):
+                        db.add(ProductPrice(
+                            variant_id=variant.id,
+                            price_name=str(p_name),
+                            min_quantity=_safe_decimal(p_min, 1),
+                            unit_price=_safe_decimal(p_val, 0)
+                        ))
 
         except Exception as e:
-            # Log local para debug (no romper toda la carga)
-            print(f"[UPLOAD_PRODUCTS] Error fila: {e}")
+            print(f"Error row: {e}")
             failed_count += 1
 
     db.commit()
-    return {"created_count": created_count, "failed_count": failed_count}
+    return {"created": created_count, "updated": updated_count, "failed": failed_count}

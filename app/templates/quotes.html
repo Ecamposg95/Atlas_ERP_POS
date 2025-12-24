@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+
+{% block title %}Cotizaciones - Atlas ERP{% endblock %}
+
+{% block content %}
+<div class="space-y-6 animate-fade-in">
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+            <h1 class="text-3xl font-bold text-white tracking-tight">Cotizaciones</h1>
+            <p class="text-slate-400 mt-1">Gestión de presupuestos y conversiones a venta</p>
+        </div>
+
+        <!-- Future: Create Quote Button (Currently handled via POS logic update or specialized form) -->
+        <!-- <button onclick="window.location.href='/pos?mode=quote'" ...>Nueva Cotización</button> -->
+    </div>
+
+    <!-- Table -->
+    <div class="glass-card rounded-2xl overflow-hidden border border-white/5">
+        <div class="p-4 border-b border-white/5 bg-slate-900/50 flex gap-4">
+            <div class="relative flex-1 max-w-md">
+                <span class="absolute left-3 top-2.5 text-slate-500">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                </span>
+                <input id="search-input" type="text" placeholder="Buscar por cliente o folio..."
+                    class="w-full pl-10 pr-4 py-2 bg-slate-950 border border-slate-700/50 rounded-xl text-sm text-white focus:ring-2 focus:ring-primary-500 outline-none transition">
+            </div>
+
+            <div class="flex items-center gap-2">
+                <select id="filter-status"
+                    class="bg-slate-900/50 border border-white/10 rounded-xl px-4 py-2 text-slate-200 text-sm focus:ring-2 focus:ring-primary-500 outline-none transition">
+                    <option value="ALL">Todos los Estados</option>
+                    <option value="PENDING">Pendientes</option>
+                    <option value="COMPLETED">Completadas (Venta)</option>
+                    <option value="CANCELLED">Canceladas</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-slate-900/50 text-slate-400 text-xs uppercase tracking-wider border-b border-white/5">
+                        <th class="p-4 font-semibold">Folio</th>
+                        <th class="p-4 font-semibold">Cliente</th>
+                        <th class="p-4 font-semibold">Fecha</th>
+                        <th class="p-4 font-semibold text-right">Monto Total</th>
+                        <th class="p-4 font-semibold text-center">Estado</th>
+                        <th class="p-4 font-semibold text-center">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="quotes-body" class="text-sm divide-y divide-white/5">
+                    <tr>
+                        <td colspan="6" class="p-8 text-center text-slate-500 italic">Cargando cotizaciones...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const API_BASE = 'http://127.0.0.1:8000';
+    const ACCESS_TOKEN = sessionStorage.getItem('ACCESS_TOKEN');
+
+    async function loadQuotes() {
+        const status = document.getElementById('filter-status').value;
+        const tbody = document.getElementById('quotes-body');
+
+        // This requires an endpoint that lists SalesDocuments where doc_type=QUOTE
+        // The current `app/routers/sales.py` usually lists INVOICES.
+        // I might need to verify if `GET /api/sales/` supports doc_type filtering or if I need to fetch all and filter client side.
+        // Assuming I can filter or the backend returns all documents mixed and I filter here.
+
+        try {
+            const res = await fetch(`${API_BASE}/api/sales/`, { // Reusing sales endpoint?
+                headers: { 'Authorization': `Bearer ${ACCESS_TOKEN}` }
+            });
+
+            if (!res.ok) throw new Error('Error cargando documentos');
+
+            let data = await res.json();
+
+            // Filter only QUOTES
+            let quotes = data.filter(d => d.doc_type === 'QUOTE');
+
+            if (status !== 'ALL') {
+                quotes = quotes.filter(q => q.status === status);
+            }
+
+            renderQuotes(quotes);
+
+        } catch (e) {
+            console.error(e);
+            tbody.innerHTML = '<tr><td colspan="6" class="p-8 text-center text-rose-500">Error al cargar datos. Verifique si el endpoint de ventas devuelve cotizaciones.</td></tr>';
+        }
+    }
+
+    function renderQuotes(data) {
+        const tbody = document.getElementById('quotes-body');
+        if (!data.length) {
+            tbody.innerHTML = '<tr><td colspan="6" class="p-8 text-center text-slate-500 italic">No se encontraron cotizaciones</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = data.map(q => {
+            let statusColor = 'bg-slate-700 text-slate-300';
+            if (q.status === 'PENDING') statusColor = 'bg-amber-500/20 text-amber-500';
+            if (q.status === 'COMPLETED') statusColor = 'bg-emerald-500/20 text-emerald-500';
+            if (q.status === 'CANCELLED') statusColor = 'bg-rose-500/20 text-rose-500';
+
+            return `
+            <tr class="hover:bg-slate-800/50 transition border-b border-slate-800/50">
+                <td class="p-4 font-mono text-primary-400 font-bold">${q.series || 'Q'}-${q.folio}</td>
+                <td class="p-4 font-bold text-white">${q.customer_name || 'Publico General'}</td>
+                <td class="p-4 text-slate-400">${new Date(q.created_at).toLocaleDateString()}</td>
+                <td class="p-4 text-right font-bold text-white">$${Number(q.total_amount).toFixed(2)}</td>
+                <td class="p-4 text-center">
+                    <span class="px-2 py-1 rounded text-xs font-bold ${statusColor}">${q.status}</span>
+                </td>
+                <td class="p-4 text-center flex justify-center gap-2">
+                    <button onclick="downloadPDF(${q.id}, '${q.folio}')" class="text-slate-400 hover:text-white transition" title="Descargar PDF">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                    </button>
+                    ${q.status === 'PENDING' ? `
+                    <button onclick="convertToSale(${q.id})" class="text-emerald-400 hover:text-emerald-300 transition" title="Convertir a Venta">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
+                    </button>
+                    ` : ''}
+                </td>
+            </tr>
+            `;
+        }).join('');
+    }
+
+    async function downloadPDF(id, folio) {
+        try {
+            const res = await fetch(`${API_BASE}/api/quotes/${id}/pdf`, {
+                headers: { 'Authorization': `Bearer ${ACCESS_TOKEN}` }
+            });
+            if (!res.ok) throw new Error('Error generando PDF');
+            const blob = await res.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Cotizacion_${folio}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+        } catch (e) { alert('No se pudo descargar el PDF'); }
+    }
+
+    async function convertToSale(id) {
+        if (!confirm('¿Estás seguro de convertir esta cotización en una venta real? Se descontará stock.')) return;
+
+        try {
+            const res = await fetch(`${API_BASE}/api/quotes/${id}/convert-to-sale`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${ACCESS_TOKEN}` }
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.detail || 'Error al convertir');
+
+            alert(`Venta generada exitosamente: Folio ${data.new_folio}`);
+            loadQuotes();
+        } catch (e) {
+            alert(e.message);
+        }
+    }
+
+    document.getElementById('filter-status').addEventListener('change', loadQuotes);
+    document.getElementById('search-input').addEventListener('input', (e) => {
+        // Simple client side filter reuse logic
+        // Ideally reload with query param, but for now simple text filter
+        const val = e.target.value.toLowerCase();
+        const rows = document.querySelectorAll('#quotes-body tr');
+        rows.forEach(r => {
+            r.style.display = r.innerText.toLowerCase().includes(val) ? '' : 'none';
+        });
+    });
+
+    loadQuotes();
+</script>
+{% endblock %}

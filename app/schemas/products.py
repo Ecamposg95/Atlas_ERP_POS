@@ -35,7 +35,12 @@ class ProductVariantRead(BaseModel):
     class Config:
         from_attributes = True
 
-# --- Producto Crear/Editar (Input) ---
+class ProductVariantCreate(BaseModel):
+    sku: str
+    variant_name: str
+    price: Decimal
+    cost: Optional[Decimal] = 0
+
 class ProductCreate(BaseModel):
     name: str
     description: Optional[str] = None
@@ -54,6 +59,9 @@ class ProductCreate(BaseModel):
     
     # Lista de precios extra (Mayoreo, etc)
     prices: List[ProductPriceCreate] = [] 
+    
+    # Extra Variants
+    extra_variants: List[ProductVariantCreate] = []
 
 class ProductUpdate(BaseModel):
     name: Optional[str] = None
@@ -67,6 +75,9 @@ class ProductUpdate(BaseModel):
     
     # Para editar, reemplazamos la lista de precios completa
     prices: Optional[List[ProductPriceCreate]] = None 
+    
+    # Reemplazamos variantes extra (excepto la principal que se maneja con sku/price arriba)
+    extra_variants: Optional[List[ProductVariantCreate]] = None
 
 # --- Producto Lectura (Output) ---
 class StockLevel(BaseModel):

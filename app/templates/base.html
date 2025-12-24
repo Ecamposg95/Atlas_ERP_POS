@@ -14,7 +14,12 @@
                 extend: {
                     colors: {
                         slate: { 850: '#172033', 950: '#020617' },
-                        primary: { 500: '#8b5cf6', 600: '#7c3aed' }
+                        primary: {
+                            500: '#2EA98C',
+                            600: '#17876E',
+                            700: '#085543',
+                            900: '#0B4539'
+                        }
                     },
                     fontFamily: { sans: ['Inter', 'sans-serif'] }
                 }
@@ -58,7 +63,7 @@
             top: 0;
             bottom: 0;
             width: 3px;
-            background: #8b5cf6;
+            background: #2EA98C;
             transform: scaleY(0);
             transition: transform 0.3s;
         }
@@ -70,7 +75,7 @@
 
         .nav-item:hover,
         .nav-item.active {
-            background: rgba(139, 92, 246, 0.1);
+            background: rgba(46, 169, 140, 0.1);
             color: white;
         }
 
@@ -121,17 +126,17 @@
 <body class="bg-slate-950 text-slate-100 transition-colors duration-300 overflow-hidden">
 
     <!-- Wrapper Principal -->
-    <div id="app-root" class="flex h-screen w-full dashboard-bg opacity-0 transition-opacity duration-500">
+    <div id="app-root" class="flex h-screen w-full bg-slate-950 opacity-0 transition-opacity duration-500">
 
         <!-- Sidebar -->
         <aside class="w-20 lg:w-64 flex flex-col glass-panel z-20 transition-all duration-300">
             <!-- Logo -->
             <div class="h-16 flex items-center justify-center border-b border-white/5">
                 <div
-                    class="w-10 h-10 bg-gradient-to-br from-violet-600 to-indigo-600 rounded-xl flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-violet-900/20">
-                    DX
+                    class="w-10 h-10 bg-gradient-to-br from-primary-600 to-primary-900 rounded-xl flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-primary-900/20">
+                    AT
                 </div>
-                <span class="hidden lg:block ml-3 font-bold text-white tracking-tight">DataX POS</span>
+                <span class="hidden lg:block ml-3 font-bold text-white tracking-tight">Atlas POS</span>
             </div>
 
             <!-- Navegación -->
@@ -165,6 +170,66 @@
                     <span class="hidden lg:block ml-3 font-medium text-sm">Productos</span>
                 </a>
 
+                <a href="/sales"
+                    class="nav-item flex items-center px-4 py-3 text-slate-400 rounded-xl group {% if request.path == '/sales' %}active text-white{% endif %}">
+                    <svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01">
+                        </path>
+                    </svg>
+                    <span class="hidden lg:block ml-3 font-medium text-sm">Ventas</span>
+                </a>
+
+                <a href="/cash-history"
+                    class="nav-item flex items-center px-4 py-3 text-slate-400 rounded-xl group {% if request.path == '/cash-history' %}active text-white{% endif %}">
+                    <svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z">
+                        </path>
+                    </svg>
+                    <span class="hidden lg:block ml-3 font-medium text-sm">Cortes de Caja</span>
+                </a>
+
+                <a href="/users"
+                    class="nav-item flex items-center px-4 py-3 text-slate-400 rounded-xl group {% if request.path == '/users' %}active text-white{% endif %}">
+                    <svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z">
+                        </path>
+                    </svg>
+                    <span class="hidden lg:block ml-3 font-medium text-sm">Usuarios</span>
+                </a>
+
+                <a href="/customers"
+                    class="nav-item flex items-center px-4 py-3 text-slate-400 rounded-xl group {% if request.path == '/customers' %}active text-white{% endif %}">
+                    <svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z">
+                        </path>
+                    </svg>
+                    <span class="hidden lg:block ml-3 font-medium text-sm">Clientes CRM</span>
+                </a>
+
+                <a href="/inventory"
+                    class="nav-item flex items-center px-4 py-3 text-slate-400 rounded-xl group {% if request.path == '/inventory' %}active text-white{% endif %}">
+                    <svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01">
+                        </path>
+                    </svg>
+                    <span class="hidden lg:block ml-3 font-medium text-sm">Inventario</span>
+                </a>
+
+                <a href="/quotes"
+                    class="nav-item flex items-center px-4 py-3 text-slate-400 rounded-xl group {% if request.path == '/quotes' %}active text-white{% endif %}">
+                    <svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+                        </path>
+                    </svg>
+                    <span class="hidden lg:block ml-3 font-medium text-sm">Cotizaciones</span>
+                </a>
+
                 <div class="my-4 border-t border-white/5 mx-4"></div>
 
                 <a href="#" id="logout-btn"
@@ -195,11 +260,42 @@
 
         <!-- Main Content -->
         <main class="flex-1 flex flex-col min-w-0 relative h-full overflow-hidden">
-            <!-- Topbar mobile-only or Breadcrumbs could go here -->
+            <!-- Global Header -->
+            <header
+                class="h-14 bg-slate-900/50 backdrop-blur border-b border-white/5 flex items-center justify-end px-6 shrink-0 z-20">
+                <button id="theme-toggle"
+                    class="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-colors focus:outline-none">
+                    <!-- Sun Icon (Light Mode) -->
+                    <svg id="icon-light" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z">
+                        </path>
+                    </svg>
+                    <!-- Moon Icon (Dark Mode) -->
+                    <svg id="icon-dark" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M20.354 24.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z">
+                        </path>
+                    </svg>
+                    <span class="sr-only">Cambiar Tema</span>
+                </button>
+            </header>
 
-            <div class="flex-1 overflow-hidden relative">
-                {% block content %}{% endblock %}
+            <div class="flex-1 overflow-hidden relative flex flex-col">
+                <div class="flex-1 overflow-y-auto custom-scrollbar relative">
+                    {% block content %}{% endblock %}
+                </div>
             </div>
+
+            <!-- Footer -->
+            <footer
+                class="h-8 bg-slate-950 border-t border-white/5 flex items-center justify-between px-4 text-[10px] text-slate-500 shrink-0 z-20">
+                <div>
+                    Powered by <span class="font-bold text-primary-500">Atlas Tecnologias</span> & <span
+                        class="font-bold text-primary-500">Smartsite Co</span>
+                </div>
+                <div id="footer-clock" class="font-mono font-medium">--/--/---- --:--:--</div>
+            </footer>
         </main>
     </div>
 
@@ -238,6 +334,50 @@
                 sessionStorage.clear();
                 window.location.href = '/auth';
             });
+
+            // 5. Theme Toggle Logic
+            const themeToggleBtn = document.getElementById('theme-toggle');
+            const iconLight = document.getElementById('icon-light');
+            const iconDark = document.getElementById('icon-dark');
+            const htmlClass = document.documentElement.classList;
+
+            // Init Theme
+            const storedTheme = localStorage.getItem('theme');
+            const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            let isDark = storedTheme === 'dark' || (!storedTheme && systemDark);
+
+            function updateThemeUI() {
+                if (isDark) {
+                    htmlClass.add('dark');
+                    iconLight.classList.remove('hidden');
+                    iconDark.classList.add('hidden');
+                } else {
+                    htmlClass.remove('dark');
+                    iconLight.classList.add('hidden');
+                    iconDark.classList.remove('hidden');
+                }
+            }
+            updateThemeUI();
+
+            themeToggleBtn?.addEventListener('click', () => {
+                isDark = !isDark;
+                localStorage.setItem('theme', isDark ? 'dark' : 'light');
+                updateThemeUI();
+            });
+
+            // 6. Footer Clock
+            const clockEl = document.getElementById('footer-clock');
+            function updateClock() {
+                if (clockEl) {
+                    const now = new Date();
+                    clockEl.textContent = now.toLocaleString('es-MX', {
+                        day: '2-digit', month: '2-digit', year: 'numeric',
+                        hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true
+                    });
+                }
+            }
+            setInterval(updateClock, 1000);
+            updateClock();
         });
     </script>
     {% block scripts %}{% endblock %}

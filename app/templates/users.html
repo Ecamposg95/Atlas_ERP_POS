@@ -1,0 +1,242 @@
+{% extends "base.html" %}
+
+{% block title %}Usuarios - Atlas ERP{% endblock %}
+
+{% block content %}
+<div class="space-y-6 animate-fade-in">
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+            <h1 class="text-3xl font-bold text-white tracking-tight">Gestión de Usuarios</h1>
+            <p class="text-slate-400 mt-1">Administra el equipo y sus accesos</p>
+        </div>
+
+        <button id="new-user-btn"
+            class="px-5 py-2.5 bg-primary-600 hover:bg-primary-500 text-white rounded-xl shadow-lg shadow-primary-600/20 font-bold text-sm transition transform active:scale-95 flex items-center gap-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+            </svg>
+            Nuevo Usuario
+        </button>
+    </div>
+
+    <!-- Users Grid -->
+    <div id="users-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <!-- Loaded via JS -->
+    </div>
+</div>
+
+<!-- Create/Edit Modal -->
+<div id="user-modal"
+    class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-slate-900 rounded-3xl shadow-2xl max-w-lg w-full p-8 border border-white/10 relative">
+        <button id="close-modal-btn"
+            class="absolute top-4 right-4 text-slate-500 hover:text-white transition">✕</button>
+
+        <h3 id="modal-title" class="text-xl font-bold mb-6 text-white">Nuevo Usuario</h3>
+
+        <form id="user-form" class="space-y-4">
+            <input type="hidden" id="user-id">
+
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="label">Nombre Usuario</label>
+                    <input type="text" id="username" class="input" required>
+                </div>
+                <div>
+                    <label class="label">Rol</label>
+                    <select id="role" class="input bg-slate-950">
+                        <option value="admin">Administrador</option>
+                        <option value="cashier">Cajero</option>
+                        <option value="manager">Gerente</option>
+                    </select>
+                </div>
+            </div>
+
+            <div>
+                <label class="label">Nombre Completo</label>
+                <input type="text" id="full_name" class="input" required>
+            </div>
+
+            <div>
+                <label class="label">Email (Opcional)</label>
+                <input type="email" id="email" class="input">
+            </div>
+
+            <div class="pt-2">
+                <label class="label">Contraseña / PIN</label>
+                <input type="password" id="password" class="input" placeholder="Dejar vacío para mantener actual">
+                <p class="text-[10px] text-slate-500 mt-1">Min. 4 caracteres</p>
+            </div>
+
+            <div class="flex items-center gap-2 pt-2">
+                <input type="checkbox" id="is_active" checked
+                    class="w-4 h-4 rounded bg-slate-800 border-slate-700 text-primary-600 focus:ring-0">
+                <label for="is_active" class="text-sm text-slate-300">Usuario Activo</label>
+            </div>
+
+            <button type="submit"
+                class="w-full py-3 bg-violet-600 hover:bg-violet-500 text-white rounded-xl font-bold shadow-lg mt-4 transition">Guardar
+                Usuario</button>
+        </form>
+    </div>
+</div>
+
+<style>
+    .label {
+        @apply block text-xs font-bold text-slate-500 uppercase mb-1 ml-1;
+    }
+
+    .input {
+        @apply w-full px-4 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-white focus:border-primary-500 outline-none transition;
+    }
+</style>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const API_BASE = 'http://127.0.0.1:8000';
+        const ACCESS_TOKEN = sessionStorage.getItem('ACCESS_TOKEN');
+        if (!ACCESS_TOKEN) window.location.href = '/auth';
+
+        // --- FETCH USERS ---
+        async function loadUsers() {
+            const grid = document.getElementById('users-grid');
+            grid.innerHTML = '<p class="text-slate-500 col-span-full text-center">Cargando...</p>';
+
+            try {
+                const res = await fetch(`${API_BASE}/api/users/`, {
+                    headers: { 'Authorization': `Bearer ${ACCESS_TOKEN}` }
+                });
+                if (!res.ok) throw new Error('Error cargando usuarios');
+                const users = await res.json();
+                renderUsers(users);
+            } catch (e) {
+                grid.innerHTML = `<p class="text-rose-500 col-span-full text-center">${e.message}</p>`;
+            }
+        }
+
+        function renderUsers(users) {
+            const grid = document.getElementById('users-grid');
+            if (users.length === 0) {
+                grid.innerHTML = '<p class="text-slate-500 col-span-full text-center">No hay usuarios registrados</p>';
+                return;
+            }
+
+            grid.innerHTML = users.map(u => {
+                const uEnc = encodeURIComponent(JSON.stringify(u));
+                const colors = {
+                    admin: 'bg-rose-500/10 text-rose-400 border-rose-500/20',
+                    manager: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+                    cashier: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                }[u.role] || 'bg-slate-500/10 text-slate-400';
+
+                return `
+                <div class="glass-card p-6 rounded-2xl border border-white/5 hover:border-white/10 transition group relative">
+                    <div class="flex items-start justify-between mb-4">
+                        <div class="w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center text-xl font-bold text-slate-300">
+                            ${u.username.substring(0, 2).toUpperCase()}
+                        </div>
+                        <span class="px-2 py-1 rounded text-[10px] uppercase font-bold border ${colors}">
+                            ${u.role}
+                        </span>
+                    </div>
+                    
+                    <h3 class="text-lg font-bold text-white mb-0.5">${u.full_name || u.username}</h3>
+                    <p class="text-xs text-slate-500 mb-4">@${u.username}</p>
+
+                    <div class="flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full ${u.is_active ? 'bg-emerald-500' : 'bg-rose-500'}"></span>
+                        <span class="text-xs text-slate-400">${u.is_active ? 'Activo' : 'Inactivo'}</span>
+                    </div>
+
+                    <div class="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition">
+                        <button onclick="editUser('${uEnc}')" class="p-2 hover:bg-slate-700 rounded-lg text-slate-400 hover:text-white transition">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                        </button>
+                    </div>
+                </div>
+                `;
+            }).join('');
+        }
+
+        // --- MODAL LOGIC ---
+        const modal = document.getElementById('user-modal');
+        const form = document.getElementById('user-form');
+        let isEdit = false;
+
+        document.getElementById('new-user-btn').onclick = () => {
+            isEdit = false;
+            document.getElementById('modal-title').textContent = 'Nuevo Usuario';
+            form.reset();
+            document.getElementById('user-id').value = '';
+            document.getElementById('password').required = true;
+            modal.classList.remove('hidden');
+        };
+
+        window.editUser = function (uEnc) {
+            isEdit = true;
+            const u = JSON.parse(decodeURIComponent(uEnc));
+            document.getElementById('modal-title').textContent = 'Editar Usuario';
+
+            document.getElementById('user-id').value = u.id;
+            document.getElementById('username').value = u.username;
+            document.getElementById('full_name').value = u.full_name || '';
+            document.getElementById('email').value = u.email || '';
+            document.getElementById('role').value = u.role;
+            document.getElementById('is_active').checked = u.is_active;
+
+            document.getElementById('password').required = false;
+            document.getElementById('password').value = '';
+
+            modal.classList.remove('hidden');
+        };
+
+        document.getElementById('close-modal-btn').onclick = () => modal.classList.add('hidden');
+
+        form.onsubmit = async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('user-id').value;
+            const payload = {
+                username: document.getElementById('username').value,
+                full_name: document.getElementById('full_name').value,
+                email: document.getElementById('email').value,
+                role: document.getElementById('role').value,
+                is_active: document.getElementById('is_active').checked,
+                branch_id: 1 // Hardcoded for now, or fetch from current user
+            };
+
+            const pass = document.getElementById('password').value;
+            if (pass) payload.password = pass;
+
+            try {
+                const url = isEdit ? `${API_BASE}/api/users/${id}` : `${API_BASE}/api/users/`;
+                const method = isEdit ? 'PUT' : 'POST';
+
+                const res = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Authorization': `Bearer ${ACCESS_TOKEN}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.detail || 'Error al guardar');
+                }
+
+                modal.classList.add('hidden');
+                loadUsers();
+            } catch (e) {
+                alert(e.message);
+            }
+        };
+
+        loadUsers();
+    });
+</script>
+{% endblock %}

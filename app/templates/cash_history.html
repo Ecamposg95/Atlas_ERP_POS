@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+
+{% block title %}Cortes de Caja - Atlas ERP{% endblock %}
+
+{% block content %}
+<div class="space-y-6 animate-fade-in">
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+            <h1 class="text-3xl font-bold text-white tracking-tight">Historial de Caja</h1>
+            <p class="text-slate-400 mt-1">Auditoría de turnos y cierres</p>
+        </div>
+
+        <button onclick="loadHistory()"
+            class="p-2.5 bg-slate-800 text-slate-300 rounded-xl hover:bg-slate-700 transition">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15">
+                </path>
+            </svg>
+        </button>
+    </div>
+
+    <!-- History Table -->
+    <div class="glass-card rounded-2xl overflow-hidden border border-white/5">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-slate-900/50 text-slate-400 text-xs uppercase tracking-wider border-b border-white/5">
+                        <th class="p-4 font-semibold">ID</th>
+                        <th class="p-4 font-semibold">Usuario</th>
+                        <th class="p-4 font-semibold">Apertura</th>
+                        <th class="p-4 font-semibold">Cierre</th>
+                        <th class="p-4 font-semibold text-right">Inicio</th>
+                        <th class="p-4 font-semibold text-right">Fin</th>
+                        <th class="p-4 font-semibold text-right">Diferencia</th>
+                        <th class="p-4 font-semibold text-center">Estado</th>
+                    </tr>
+                </thead>
+                <tbody id="history-body" class="text-sm divide-y divide-white/5">
+                    <tr>
+                        <td colspan="8" class="p-8 text-center text-slate-500 italic">Cargando...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const API_BASE = 'http://127.0.0.1:8000';
+        const ACCESS_TOKEN = sessionStorage.getItem('ACCESS_TOKEN');
+        if (!ACCESS_TOKEN) window.location.href = '/auth';
+
+        window.loadHistory = async () => {
+            const tbody = document.getElementById('history-body');
+            tbody.innerHTML = '<tr><td colspan="8" class="p-8 text-center text-slate-500 italic">Cargando...</td></tr>';
+
+            try {
+                const res = await fetch(`${API_BASE}/api/cash/history`, {
+                    headers: { 'Authorization': `Bearer ${ACCESS_TOKEN}` }
+                });
+                if (!res.ok) throw new Error('Error al cargar historial');
+                const data = await res.json();
+                renderTable(data);
+            } catch (e) {
+                tbody.innerHTML = `<tr><td colspan="8" class="p-8 text-center text-rose-500 font-bold">${e.message}</td></tr>`;
+            }
+        };
+
+        function renderTable(sessions) {
+            const tbody = document.getElementById('history-body');
+            if (sessions.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="p-8 text-center text-slate-500 italic">No hay historial disponible</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = sessions.map(s => {
+                const openDate = new Date(s.opened_at).toLocaleString('es-MX');
+                const closeDate = s.closed_at ? new Date(s.closed_at).toLocaleString('es-MX') : '-';
+
+                const diff = s.difference || 0;
+                let diffClass = 'text-slate-400';
+                if (diff < 0) diffClass = 'text-rose-400 font-bold';
+                if (diff > 0) diffClass = 'text-emerald-400 font-bold';
+
+                const statusBadge = s.status === 'OPEN'
+                    ? '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">ABIERTO</span>'
+                    : '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-700 text-slate-400">CERRADO</span>';
+
+                return `
+                <tr class="hover:bg-slate-800/50 transition">
+                    <td class="p-4 font-mono text-slate-400">#${s.id}</td>
+                    <td class="p-4 text-slate-300 font-medium">UI: ${s.user_id}</td>
+                    <td class="p-4 text-slate-400 text-xs">${openDate}</td>
+                    <td class="p-4 text-slate-400 text-xs">${closeDate}</td>
+                    <td class="p-4 text-right text-slate-300">$${s.opening_balance.toFixed(2)}</td>
+                    <td class="p-4 text-right text-slate-300">${s.closing_balance ? '$' + s.closing_balance.toFixed(2) : '-'}</td>
+                    <td class="p-4 text-right ${diffClass}">${diff !== 0 ? '$' + diff.toFixed(2) : '-'}</td>
+                    <td class="p-4 text-center">${statusBadge}</td>
+                </tr>
+                `;
+            }).join('');
+        }
+
+        loadHistory();
+    });
+</script>
+{% endblock %}

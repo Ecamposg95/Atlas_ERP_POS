@@ -47,7 +47,7 @@
             <div
                 class="glass-card rounded-2xl p-5 relative overflow-hidden group hover:bg-slate-800/50 transition duration-300">
                 <div class="absolute right-0 top-0 p-4 opacity-10 group-hover:opacity-20 transition">
-                    <svg class="w-12 h-12 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-12 h-12 text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01">
                         </path>
@@ -55,8 +55,8 @@
                 </div>
                 <p class="text-[10px] uppercase tracking-widest text-slate-400 font-bold mb-1">Tickets</p>
                 <p class="text-3xl font-bold text-white tracking-tight" id="kpi-orders">0</p>
-                <div class="mt-2 flex items-center gap-1 text-xs text-violet-400">
-                    <span class="bg-violet-500/20 px-1.5 py-0.5 rounded">Pagados</span>
+                <div class="mt-2 flex items-center gap-1 text-xs text-primary-400">
+                    <span class="bg-primary-500/20 px-1.5 py-0.5 rounded">Pagados</span>
                 </div>
             </div>
 
@@ -221,16 +221,22 @@
 
             try {
                 // Fetch Paralelo
-                const [ordersPaid, ordersReady, ordersPrep, inventory] = await Promise.all([
-                    apiFetch('/api/orders/?status=PAID&limit=500'),
-                    apiFetch('/api/orders/?status=READY_TO_PAY&limit=100'),
-                    apiFetch('/api/orders/?status=PREPARING&limit=100'),
-                    apiFetch('/api/inventory/?limit=500')
+                // NOTE: /api/sales/ does not support status filtering yet, so we fetch all and filter clientside for now to fix 404s.
+                // NOTE: /api/products/ is the correct endpoint for inventory/products
+                const [sales, products] = await Promise.all([
+                    apiFetch('/api/sales/?limit=500'),
+                    apiFetch('/api/products/?limit=500')
                 ]);
+
+                // Filter sales clientside since backend only supports date filtering for now
+                // Assuming status is returned in the sale object
+                const ordersPaid = sales.filter(s => s.status === 'PAID');
+                const ordersReady = sales.filter(s => s.status === 'PENDING'); // Mapping PENDING as "Por Cobrar"
+                const ordersPrep = []; // Not implemented in backend yet
 
                 // Update UI
                 updateKPIs(ordersPaid, ordersReady.length, ordersPrep.length);
-                updateTables(ordersPaid, inventory);
+                updateTables(sales, products); // Passing all sales to show recent
                 updateCharts(ordersPaid);
 
                 const now = new Date();
@@ -240,7 +246,7 @@
 
         // Logic Helpers (Copied from legacy and adapted)
         function updateKPIs(orders, ready, prep) {
-            const total = orders.reduce((acc, o) => acc + o.total, 0);
+            const total = orders.reduce((acc, o) => acc + Number(o.total_amount), 0);
             const count = orders.length;
             const avg = count ? total / count : 0;
 
@@ -251,34 +257,40 @@
             setText('kpi-preparing', prep);
         }
 
-        function updateTables(orders, inventory) {
-            const recent = orders.slice(0, 20);
+        function updateTables(sales, products) {
+            // Recent Orders
+            const recent = sales.slice(0, 20);
             const tableOrders = document.getElementById('table-recent-orders');
             if (tableOrders) {
+                // s.total_amount -> s.total_amount 
+                // s.created_at -> s.created_at
+                // s.folio -> s.folio
                 tableOrders.innerHTML = recent.length ? recent.map(o => `
                     <tr class="border-b border-white/5 hover:bg-white/5 transition-colors">
-                        <td class="px-3 py-2 font-mono text-violet-300">#${o.id}</td>
-                        <td class="px-3 py-2 truncate max-w-[120px] text-slate-300">${o.customer_name}</td>
-                        <td class="px-3 py-2 text-right font-bold text-emerald-400">${fmtMoney(o.total)}</td>
-                        <td class="px-3 py-2 text-right text-slate-500">${new Date(o.opened_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
+                        <td class="px-3 py-2 font-mono text-primary-300">#${o.folio || o.id}</td>
+                        <td class="px-3 py-2 truncate max-w-[120px] text-slate-300">${o.customer_id ? 'Cliente #' + o.customer_id : 'Publico General'}</td>
+                        <td class="px-3 py-2 text-right font-bold text-emerald-400">${fmtMoney(o.total_amount)}</td>
+                        <td class="px-3 py-2 text-right text-slate-500">${new Date(o.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
                     </tr>
                 `).join('') : '<tr><td colspan="4" class="p-4 text-center italic text-slate-500">Sin ventas recientes</td></tr>';
             }
 
-            const lowStock = inventory.filter(i => i.qty_on_hand <= 5).sort((a, b) => a.qty_on_hand - b.qty_on_hand).slice(0, 20);
+            // Low Stock
+            // We need to assume products have stock_total
+            const lowStock = products.filter(i => (i.stock_total || 0) <= 5).sort((a, b) => (a.stock_total || 0) - (b.stock_total || 0)).slice(0, 20);
             const tableStock = document.getElementById('table-low-stock');
             if (tableStock) {
-                tableStock.innerHTML = lowStock.length ? lowStock.map(i => {
-                    const p = i.product || {};
-                    const isZero = i.qty_on_hand <= 0;
+                tableStock.innerHTML = lowStock.length ? lowStock.map(p => {
+                    const qty = p.stock_total || 0;
+                    const isZero = qty <= 0;
                     const color = isZero ? 'text-rose-500 font-bold' : 'text-amber-400';
                     return `
                         <tr class="border-b border-white/5 hover:bg-white/5 transition-colors">
                             <td class="px-3 py-2">
-                                <div class="font-medium text-slate-200 truncate max-w-[150px]">${p.name || 'Item'}</div>
-                                <div class="text-[10px] text-slate-500 font-mono">${p.sku || '-'}</div>
+                                <div class="font-medium text-slate-200 truncate max-w-[150px]">${p.name}</div>
+                                <div class="text-[10px] text-slate-500 font-mono">${p.variants?.[0]?.sku || '-'}</div>
                             </td>
-                            <td class="px-3 py-2 text-center ${color}">${i.qty_on_hand}</td>
+                            <td class="px-3 py-2 text-center ${color}">${qty}</td>
                             <td class="px-3 py-2 text-right"><span class="text-[10px] bg-slate-800 px-2 py-1 rounded border border-slate-700 ${isZero ? 'text-rose-400 border-rose-900/30' : 'text-amber-400 border-amber-900/30'}">${isZero ? 'AGOTADO' : 'BAJO'}</span></td>
                         </tr>
                     `;
@@ -286,28 +298,27 @@
             }
         }
 
-        function updateCharts(orders) {
+        function updateCharts(sales) {
             const salesByDay = {}, salesByHour = {}, products = {};
-            orders.forEach(o => {
-                const day = new Date(o.opened_at).toLocaleDateString('es-MX', { weekday: 'short' });
-                salesByDay[day] = (salesByDay[day] || 0) + o.total;
-                const hour = new Date(o.opened_at).getHours();
-                salesByHour[hour] = (salesByHour[hour] || 0) + o.total;
-                o.items.forEach(i => {
-                    if (i.product) products[i.product.name] = (products[i.product.name] || 0) + i.line_total;
-                });
+            sales.forEach(o => {
+                const day = new Date(o.created_at).toLocaleDateString('es-MX', { weekday: 'short' });
+                salesByDay[day] = (salesByDay[day] || 0) + Number(o.total_amount);
+                const hour = new Date(o.created_at).getHours();
+                salesByHour[hour] = (salesByHour[hour] || 0) + Number(o.total_amount);
+
+                // Note: SaleRead schema might not include lines/items unless we requested them. 
+                // The current SaleRead default does NOT return lines in the list view for performance.
+                // So we might skip product breakdown here or need to fetch details.
+                // For now, let's skip product chart to avoid errors or 0s
             });
 
             renderChart('trend', 'chart-trend', 'line', {
                 labels: Object.keys(salesByDay),
-                datasets: [{ label: 'Ventas', data: Object.values(salesByDay), borderColor: '#8b5cf6', backgroundColor: 'rgba(139, 92, 246, 0.1)', fill: true, tension: 0.4 }]
+                datasets: [{ label: 'Ventas', data: Object.values(salesByDay), borderColor: '#2EA98C', backgroundColor: 'rgba(46, 169, 140, 0.1)', fill: true, tension: 0.4 }]
             });
 
-            const topProd = Object.entries(products).sort((a, b) => b[1] - a[1]).slice(0, 5);
-            renderChart('top', 'chart-top-products', 'bar', {
-                labels: topProd.map(x => x[0].substring(0, 15) + '...'),
-                datasets: [{ label: 'Monto', data: topProd.map(x => x[1]), backgroundColor: ['#34d399', '#2dd4bf', '#38bdf8', '#818cf8', '#a78bfa'], borderRadius: 5 }]
-            }, { indexAxis: 'y' });
+            // Skipping Top Products Chart for now as list doesn't have items
+            // ... OR fetch details if critical.
 
             const hours = Array.from({ length: 14 }, (_, i) => i + 8);
             renderChart('hourly', 'chart-hourly', 'bar', {

@@ -31,12 +31,12 @@
                     </svg>
                 </span>
                 <input id="search-input" type="text" placeholder="Buscar por nombre, SKU o código..."
-                    class="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-900/50 border border-slate-700/50 text-white text-sm focus:ring-2 focus:ring-violet-500 outline-none transition placeholder-slate-500">
+                    class="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-900/50 border border-slate-700/50 text-white text-sm focus:ring-2 focus:ring-primary-500 outline-none transition placeholder-slate-500">
             </div>
 
             <div class="flex flex-wrap items-center gap-2">
                 <select id="department-filter"
-                    class="px-3 py-2.5 rounded-xl bg-slate-900/50 border border-slate-700/50 text-white text-sm focus:ring-2 focus:ring-violet-500 outline-none cursor-pointer hover:bg-slate-800 transition">
+                    class="px-3 py-2.5 rounded-xl bg-slate-900/50 border border-slate-700/50 text-white text-sm focus:ring-2 focus:ring-primary-500 outline-none cursor-pointer hover:bg-slate-800 transition">
                     <option value="ALL">Todos los Deptos</option>
                 </select>
 
@@ -67,7 +67,7 @@
                 </button>
 
                 <button id="new-product-button"
-                    class="flex items-center gap-2 bg-violet-600 hover:bg-violet-500 text-white px-5 py-2.5 rounded-xl text-xs font-bold shadow-lg shadow-violet-500/20 transition transform active:scale-95 ml-2">
+                    class="flex items-center gap-2 bg-primary-600 hover:bg-primary-500 text-white px-5 py-2.5 rounded-xl text-xs font-bold shadow-lg shadow-primary-500/20 transition transform active:scale-95 ml-2">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
                     </svg>
@@ -210,7 +210,7 @@
                     <label class="block text-xs font-bold text-slate-500 mb-1 uppercase">SKU*</label>
                     <div class="flex gap-2">
                         <input id="product-sku" type="text"
-                            class="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-lg text-white outline-none focus:ring-2 focus:ring-violet-500 transition"
+                            class="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-lg text-white outline-none focus:ring-2 focus:ring-primary-500 transition"
                             required>
                         <button type="button" id="generate-sku-button"
                             class="px-3 bg-slate-800 text-slate-300 rounded-lg text-xs font-bold hover:bg-slate-700 transition">Auto</button>
@@ -252,7 +252,7 @@
                 <div class="flex items-end gap-4 pb-2">
                     <label class="flex items-center gap-2 cursor-pointer">
                         <input type="checkbox" id="product-uses-inventory"
-                            class="w-4 h-4 rounded border-slate-700 bg-slate-800 text-violet-600 focus:ring-violet-500"
+                            class="w-4 h-4 rounded border-slate-700 bg-slate-800 text-primary-600 focus:ring-primary-500"
                             checked>
                         <span class="text-sm font-medium text-slate-300">Inventario</span>
                     </label>
@@ -265,28 +265,55 @@
                 </div>
             </div>
 
-            <div class="bg-slate-800/30 p-4 rounded-xl border border-slate-800">
+            <!-- TABS FOR VARIANTS / PRICES -->
+            <div class="border-b border-slate-700 mb-4 flex gap-4">
+                <button type="button"
+                    class="tab-btn px-3 py-2 text-sm font-bold text-white border-b-2 border-primary-500"
+                    data-tab="tab-prices">Precios Escalonados</button>
+                <button type="button"
+                    class="tab-btn px-3 py-2 text-sm font-bold text-slate-400 hover:text-white border-b-2 border-transparent"
+                    data-tab="tab-variants">Variantes</button>
+            </div>
+
+            <!-- TAB: PRICES -->
+            <div id="tab-prices" class="tab-content bg-slate-800/30 p-4 rounded-xl border border-slate-800 mb-4">
                 <div class="flex justify-between items-center mb-3">
-                    <label class="text-xs font-bold text-slate-500 uppercase">Lista de Precios</label>
+                    <label class="text-xs font-bold text-slate-500 uppercase">Lista de Precios (Variante
+                        Principal)</label>
                     <button type="button" id="add-price-tier-button"
-                        class="text-xs text-violet-400 font-bold hover:text-violet-300">+ Agregar Nivel</button>
+                        class="text-xs text-primary-400 font-bold hover:text-primary-300">+ Agregar Nivel</button>
                 </div>
                 <div id="price-tiers-container" class="space-y-2">
                     <!-- Rows JS -->
                 </div>
             </div>
 
+            <!-- TAB: VARIANTS -->
+            <div id="tab-variants"
+                class="tab-content hidden bg-slate-800/30 p-4 rounded-xl border border-slate-800 mb-4">
+                <div class="flex justify-between items-center mb-3">
+                    <label class="text-xs font-bold text-slate-500 uppercase">Variantes Adicionales</label>
+                    <button type="button" id="add-variant-button"
+                        class="text-xs text-emerald-400 font-bold hover:text-emerald-300">+ Nueva Variante</button>
+                </div>
+                <div id="variants-container" class="space-y-3">
+                    <!-- Variant Rows JS -->
+                </div>
+                <p class="text-[10px] text-slate-500 mt-2 italic">* La variante principal siempre es la "Estándar". Aquí
+                    agregas tallas, colores, etc. extra.</p>
+            </div>
+
             <div>
                 <label class="block text-xs font-bold text-slate-500 mb-1 uppercase">Descripción</label>
                 <textarea id="product-description" rows="2"
-                    class="w-full px-4 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white outline-none focus:ring-2 focus:ring-violet-500 transition resize-none"></textarea>
+                    class="w-full px-4 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white outline-none focus:ring-2 focus:ring-primary-500 transition resize-none"></textarea>
             </div>
 
             <div class="flex justify-end gap-3 pt-4 border-t border-slate-800">
                 <button type="button" id="cancel-product-modal"
                     class="px-4 py-2 text-slate-400 hover:bg-slate-800 rounded-lg font-bold transition">Cancelar</button>
                 <button type="submit" id="save-product-button"
-                    class="px-6 py-2 bg-violet-600 hover:bg-violet-500 text-white rounded-lg font-bold shadow-md transition">Guardar
+                    class="px-6 py-2 bg-primary-600 hover:bg-primary-500 text-white rounded-lg font-bold shadow-md transition">Guardar
                     Producto</button>
             </div>
         </form>
@@ -301,7 +328,7 @@
         <form id="upload-form">
             <div id="upload-step-1">
                 <label
-                    class="block w-full p-8 border-2 border-dashed border-slate-700 rounded-xl text-center cursor-pointer hover:border-violet-500 hover:bg-slate-800/50 transition mb-4">
+                    class="block w-full p-8 border-2 border-dashed border-slate-700 rounded-xl text-center cursor-pointer hover:border-primary-500 hover:bg-slate-800/50 transition mb-4">
                     <svg class="w-10 h-10 mx-auto text-slate-500 mb-2" fill="none" stroke="currentColor"
                         viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -320,7 +347,7 @@
             </div>
             <div id="upload-step-2" class="hidden text-center py-8">
                 <div
-                    class="spinner w-10 h-10 border-4 border-slate-700 border-t-violet-600 rounded-full mx-auto mb-4 animate-spin">
+                    class="spinner w-10 h-10 border-4 border-slate-700 border-t-primary-600 rounded-full mx-auto mb-4 animate-spin">
                 </div>
                 <p class="text-slate-300 font-bold">Importando productos...</p>
             </div>
@@ -460,7 +487,7 @@
                         <td class="px-6 py-4 font-bold text-white text-xs">${p.name}</td>
                         <td class="px-6 py-4 text-xs text-slate-500">${p.department ? p.department.name : '-'}</td>
                         <td class="px-6 py-4 text-xs">
-                            ${p.prices?.map(pr => `<div class="flex justify-between w-24"><span class="text-slate-500">${pr.min_quantity}+</span> <span class="font-bold text-emerald-500">$${pr.unit_price.toFixed(2)}</span></div>`).join('') || ''}
+                            ${p.prices?.map(pr => `<div class="flex justify-between w-24"><span class="text-slate-500">${pr.min_quantity}+</span> <span class="font-bold text-emerald-500">$${Number(pr.unit_price).toFixed(2)}</span></div>`).join('') || ''}
                         </td>
                         <td class="px-6 py-4 text-center">
                             <span class="px-2 py-1 rounded text-[10px] font-bold ${p.stock_levels?.[0]?.qty_on_hand > 0 ? 'bg-emerald-900/30 text-emerald-400' : 'bg-red-900/30 text-red-400'}">
@@ -468,7 +495,7 @@
                             </span>
                         </td>
                         <td class="px-6 py-4 text-right space-x-2">
-                            <button class="text-violet-400 hover:text-violet-300 font-bold text-xs edit-btn" data-id="${p.id}">Editar</button>
+                            <button class="text-primary-400 hover:text-primary-300 font-bold text-xs edit-btn" data-id="${p.id}">Editar</button>
                             <button class="text-rose-400 hover:text-rose-300 font-bold text-xs delete-btn" data-id="${p.id}">✕</button>
                         </td>
                     </tr>
@@ -477,11 +504,11 @@
                 const grid = document.getElementById('products-cards-container');
                 if (grid) grid.innerHTML = pageData.map(p => `
                     <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-sm hover:shadow-md transition group relative overflow-hidden">
-                        <div class="absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-violet-500/10 to-fuchsia-500/10 rounded-bl-full -mr-4 -mt-4 transition group-hover:scale-110"></div>
+                        <div class="absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-primary-500/10 to-emerald-500/10 rounded-bl-full -mr-4 -mt-4 transition group-hover:scale-110"></div>
                         <div class="flex justify-between items-start mb-2">
                             <span class="text-[10px] font-mono bg-slate-800 text-slate-500 px-2 py-0.5 rounded">${p.sku}</span>
                             <div class="flex gap-1 relative z-10">
-                                <button class="p-1 text-slate-500 hover:text-violet-400 transition edit-btn" data-id="${p.id}">
+                                <button class="p-1 text-slate-500 hover:text-primary-400 transition edit-btn" data-id="${p.id}">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
                                 </button>
                                 <button class="p-1 text-slate-500 hover:text-rose-400 transition delete-btn" data-id="${p.id}">
@@ -495,7 +522,7 @@
                         <div class="flex items-end justify-between border-t border-dashed border-slate-800 pt-3">
                             <div>
                                 <span class="block text-[10px] text-slate-500 uppercase font-bold">Precio</span>
-                                <span class="text-lg font-black text-emerald-500">$${(p.prices?.[0]?.unit_price || 0).toFixed(2)}</span>
+                                <span class="text-lg font-black text-emerald-500">$${Number(p.prices?.[0]?.unit_price || 0).toFixed(2)}</span>
                             </div>
                             <div class="text-right">
                                 <span class="block text-[10px] text-slate-500 uppercase font-bold">Stock</span>
@@ -563,25 +590,73 @@
             priceContainer.appendChild(div);
         }
 
+        // --- TABS LOGIC ---
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.onclick = () => {
+                document.querySelectorAll('.tab-btn').forEach(b => {
+                    b.classList.remove('text-white', 'border-primary-500');
+                    b.classList.add('text-slate-400', 'border-transparent');
+                });
+                btn.classList.remove('text-slate-400', 'border-transparent');
+                btn.classList.add('text-white', 'border-primary-500');
+
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+                document.getElementById(btn.dataset.tab).classList.remove('hidden');
+            };
+        });
+
+        // --- VARIANTS LOGIC ---
+        const variantsContainer = document.getElementById('variants-container');
+        document.getElementById('add-variant-button').onclick = () => addVariantRow();
+
+        function addVariantRow(v = { name: '', sku: '', price: '' }) {
+            const div = document.createElement('div');
+            div.className = 'grid grid-cols-3 gap-2 variant-row p-2 bg-slate-950/50 rounded border border-slate-700';
+            div.innerHTML = `
+                <input type="text" value="${v.name}" class="v-name px-2 py-1 bg-slate-900 border border-slate-700 rounded text-xs text-white w-full" placeholder="Nombre (Ej. Rojo/L)">
+                <input type="text" value="${v.sku}" class="v-sku px-2 py-1 bg-slate-900 border border-slate-700 rounded text-xs text-white w-full" placeholder="SKU Único">
+                <div class="flex items-center gap-1">
+                    <input type="number" value="${v.price}" class="v-price px-2 py-1 bg-slate-900 border border-slate-700 rounded text-xs text-emerald-400 font-bold w-full" placeholder="Precio">
+                    <button type="button" class="text-rose-500 hover:text-rose-400 font-bold px-1" onclick="this.closest('.variant-row').remove()">✕</button>
+                </div>
+            `;
+            variantsContainer.appendChild(div);
+        }
+
         async function openEditModal(id) {
             const p = allProducts.find(x => x.id == id);
             if (!p) return;
             document.getElementById('product-id').value = p.id;
             document.getElementById('product-name').value = p.name;
-            document.getElementById('product-sku').value = p.sku;
+            document.getElementById('product-sku').value = p.sku; // Main SKU
             document.getElementById('product-barcode').value = p.barcode || '';
             document.getElementById('product-unit').value = p.unit;
-            document.getElementById('product-base-price').value = '';
-            document.getElementById('product-cost').value = p.cost;
+            document.getElementById('product-base-price').value = p.prices?.[0]?.unit_price || 0; // Approx
+            document.getElementById('product-cost').value = p.cost || 0;
             document.getElementById('product-department').value = p.department_id || '';
             document.getElementById('product-description').value = p.description || '';
             document.getElementById('product-uses-inventory').checked = p.uses_inventory;
 
+            // Tiered Prices (Main Variant)
             priceContainer.innerHTML = '';
             if (p.prices && p.prices.length) {
                 p.prices.forEach(pr => addPriceRow({ name: pr.price_name, qty: pr.min_quantity, val: pr.unit_price }));
             } else {
                 addPriceRow();
+            }
+
+            // Additional Variants (skip first/main one which usually matches product SKU)
+            variantsContainer.innerHTML = '';
+            // We need to fetch variants or assume they are in p.variants
+            // For now, let's look at p.variants if available. 
+            // NOTE: The current API might flatten variants. We need to check 'p.variants'.
+            if (p.variants && p.variants.length > 1) {
+                // Skip the "Estándar" or main skew 
+                p.variants.forEach(v => {
+                    if (v.sku !== p.sku) { // If it's not the main one
+                        addVariantRow({ name: v.variant_name, sku: v.sku, price: v.price });
+                    }
+                });
             }
 
             document.getElementById('product-modal-title').textContent = 'Editar Producto';
@@ -590,6 +665,7 @@
 
         document.getElementById('product-form').onsubmit = async (e) => {
             e.preventDefault();
+            // Pricing Tiers
             const rows = document.querySelectorAll('.price-row');
             const prices = Array.from(rows).map(r => ({
                 price_name: r.querySelector('.p-name').value,
@@ -597,18 +673,28 @@
                 unit_price: parseFloat(r.querySelector('.p-val').value)
             })).filter(x => x.unit_price > 0);
 
-            if (!prices.length) return alert('Agrega al menos un precio');
+            // Additional Variants
+            const vRows = document.querySelectorAll('.variant-row');
+            const variants = Array.from(vRows).map(r => ({
+                variant_name: r.querySelector('.v-name').value,
+                sku: r.querySelector('.v-sku').value,
+                price: parseFloat(r.querySelector('.v-price').value) || 0
+            })).filter(x => x.sku && x.variant_name);
+
+            if (!prices.length) return alert('Agrega al menos un precio base');
 
             const payload = {
                 name: document.getElementById('product-name').value,
                 sku: document.getElementById('product-sku').value,
                 barcode: document.getElementById('product-barcode').value,
                 unit: document.getElementById('product-unit').value,
+                price: prices[0].unit_price, // Base price from first tier
                 cost: parseFloat(document.getElementById('product-cost').value) || 0,
                 department_id: document.getElementById('product-department').value || null,
                 description: document.getElementById('product-description').value,
                 uses_inventory: document.getElementById('product-uses-inventory').checked,
-                prices: prices
+                prices: prices,
+                extra_variants: variants // New field for backend
             };
 
             const id = document.getElementById('product-id').value;
@@ -619,7 +705,172 @@
                 await apiFetch(url, { method, body: JSON.stringify(payload) });
                 hideModal(prodModal);
                 loadProducts();
+                alert('Guardado exitosamente');
             } catch (e) { alert(e.message); }
+        };
+
+        // --- DEPARTAMENTS MANAGEMENT ---
+        const departmentsModal = document.createElement('div');
+        departmentsModal.id = 'departments-modal';
+        departmentsModal.className = 'hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-[70] flex items-center justify-center p-4';
+        departmentsModal.innerHTML = `
+            <div class="bg-slate-900 rounded-2xl shadow-xl w-full max-w-md p-6 border border-slate-700">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-bold text-white">Gestionar Departamentos</h3>
+                    <button onclick="document.getElementById('departments-modal').classList.add('hidden')" class="text-slate-400 hover:text-white transition">✕</button>
+                </div>
+                <!-- Create/Edit Form -->
+                <form id="dept-form" class="mb-6 flex gap-2">
+                    <input type="hidden" id="dept-id">
+                    <input type="text" id="dept-name" placeholder="Nuevo Departamento" class="flex-1 px-4 py-2 bg-slate-950 border border-slate-700 rounded-lg text-white focus:ring-2 focus:ring-primary-500 outline-none" required>
+                    <button type="submit" class="bg-primary-600 hover:bg-primary-500 text-white px-4 py-2 rounded-lg font-bold shadow transition">Guardar</button>
+                </form>
+                <!-- List -->
+                <div class="max-h-60 overflow-y-auto custom-scrollbar border border-slate-800 rounded-xl bg-slate-950/50">
+                    <ul id="dept-list" class="divide-y divide-slate-800"></ul>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(departmentsModal);
+
+        // Open Dept Modal (We can add a button for this later if needed, or link it to the "+" in select?)
+        // Let's add a button in the main toolbar dynamically
+        const filtersDiv = document.querySelector('#department-filter').parentNode;
+        const manageDeptsBtn = document.createElement('button');
+        manageDeptsBtn.className = 'bg-slate-800 border border-slate-700 text-slate-300 px-3 py-2.5 rounded-xl text-xs font-bold hover:bg-slate-700 transition shadow-sm ml-2';
+        manageDeptsBtn.innerHTML = '⚙️ Deptos';
+        manageDeptsBtn.onclick = () => {
+            loadDeptsList();
+            showModal(departmentsModal);
+        };
+        filtersDiv.insertBefore(manageDeptsBtn, filtersDiv.firstChild); // Add at beginning
+
+        async function loadDeptsList() {
+            try {
+                const depts = await apiFetch('/api/departments/');
+                const ul = document.getElementById('dept-list');
+                ul.innerHTML = depts.map(d => `
+                    <li class="flex justify-between items-center p-3 hover:bg-slate-800/50 transition">
+                        <span class="text-sm text-slate-300 font-medium">${d.name}</span>
+                        <div class="flex gap-2">
+                            <button onclick="editDept(${d.id}, '${d.name}')" class="text-xs text-primary-400 hover:text-white font-bold">Editar</button>
+                            <button onclick="deleteDept(${d.id})" class="text-xs text-rose-400 hover:text-white font-bold">Eliminar</button>
+                        </div>
+                    </li>
+                `).join('');
+            } catch (e) { console.error(e); }
+        }
+
+        window.editDept = (id, name) => {
+            document.getElementById('dept-id').value = id;
+            document.getElementById('dept-name').value = name;
+            document.getElementById('dept-name').focus();
+        };
+
+        window.deleteDept = async (id) => {
+            if (!confirm('¿Eliminar departamento? Si tiene productos, estos podrían quedar sin categoría.')) return;
+            try {
+                await apiFetch(`/api/departments/${id}`, { method: 'DELETE' });
+                loadDeptsList();
+                loadDepartments(); // Reload main select
+            } catch (e) { alert(e.message); }
+        };
+
+        const deptForm = document.getElementById('dept-form');
+        deptForm.onsubmit = async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('dept-id').value;
+            const name = document.getElementById('dept-name').value;
+            const method = id ? 'PUT' : 'POST';
+            const url = id ? `/api/departments/${id}` : '/api/departments/';
+
+            try {
+                await apiFetch(url, { method, body: JSON.stringify({ name }) });
+                deptForm.reset();
+                document.getElementById('dept-id').value = '';
+                loadDeptsList();
+                loadDepartments();
+            } catch (e) { alert(e.message); }
+        };
+
+
+        // --- IMPORT / EXPORT LOGIC ---
+
+        // Export
+        const exportBtn = document.getElementById('export-button');
+        if (exportBtn) exportBtn.onclick = async () => {
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/products/export/excel`, {
+                    headers: { 'Authorization': `Bearer ${ACCESS_TOKEN}` }
+                });
+                if (!res.ok) throw new Error('Error descargando archivo');
+                const blob = await res.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `Productos_${new Date().toISOString().split('T')[0]}.xlsx`;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+            } catch (e) { alert(e.message); }
+        };
+
+        // Import
+        const importBtn = document.getElementById('import-excel-button');
+        const uploadModal = document.getElementById('upload-modal');
+        if (importBtn) importBtn.onclick = () => {
+            document.getElementById('upload-step-1').classList.remove('hidden');
+            document.getElementById('upload-step-2').classList.add('hidden');
+            document.getElementById('upload-step-3').classList.add('hidden');
+            document.getElementById('upload-form').reset();
+            showModal(uploadModal);
+        };
+
+        document.getElementById('cancel-upload-button').onclick = () => hideModal(uploadModal);
+        document.getElementById('close-results-button').onclick = () => {
+            hideModal(uploadModal);
+            loadProducts(); // Reload table
+        };
+
+        document.getElementById('upload-form').onsubmit = async (e) => {
+            e.preventDefault();
+            const fileInput = document.getElementById('excel-file-input');
+            if (!fileInput.files.length) return alert('Selecciona un archivo');
+
+            document.getElementById('upload-step-1').classList.add('hidden');
+            document.getElementById('upload-step-2').classList.remove('hidden');
+
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            try {
+                // Not using apiFetch because body is FormData
+                const res = await fetch(`${API_BASE_URL}/api/products/upload`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${ACCESS_TOKEN}` },
+                    body: formData
+                });
+
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.detail || 'Error en carga');
+                }
+
+                const stats = await res.json();
+                document.getElementById('upload-results-summary').innerHTML = `
+                    Creados: <strong class="text-emerald-400">${stats.created}</strong><br>
+                    Actualizados: <strong class="text-blue-400">${stats.updated}</strong><br>
+                    Fallidos: <strong class="text-rose-400">${stats.failed}</strong>
+                `;
+
+                document.getElementById('upload-step-2').classList.add('hidden');
+                document.getElementById('upload-step-3').classList.remove('hidden');
+
+            } catch (e) {
+                alert(e.message);
+                document.getElementById('upload-step-1').classList.remove('hidden');
+                document.getElementById('upload-step-2').classList.add('hidden');
+            }
         };
 
         // --- DELETE ---
