@@ -1,151 +1,152 @@
 from sqlalchemy.orm import Session
 from decimal import Decimal
-from app.database import SessionLocal, engine
-from app.models import Base
+import random
 
-# Importamos modelos y el Enum de Role
+from app.database import SessionLocal, engine, Base
 from app.models import (
-    User, Role,                  
-    Branch, Department,          
-    Customer,                    
-    Product, ProductVariant,     
-    Category, StockOnHand,       
-    ProductPrice                
+    User, Branch, Product, ProductVariant, StockOnHand, 
+    Category, ProductPrice, InventoryMovement, MovementType
 )
-from app.security import get_password_hash
+from app.auth import get_password_hash
 
 def init_db():
-    print("⚠️  ATENCIÓN: Se borrarán todos los datos actuales...")
-    
-    # 1. Reset Total
-    Base.metadata.drop_all(bind=engine) 
-    Base.metadata.create_all(bind=engine) 
-    
+    Base.metadata.create_all(bind=engine)
     db = SessionLocal()
-    
-    try:
-        print("🏢 1. Creando Estructura Organizacional...")
-        # --- SUCURSALES ---
-        matriz = Branch(name="Matriz Centro", address="Av. Reforma #123", phone="555-111-222")
-        norte = Branch(name="Sucursal Norte", address="Blvd. Norte #99", phone="555-333-444")
-        db.add_all([matriz, norte])
-        db.commit() 
 
-        # --- DEPARTAMENTOS ---
-        dept_ventas = Department(name="Ventas", description="Fuerza de ventas y caja")
-        dept_admin = Department(name="Administración", description="Gerencia y Contabilidad")
-        dept_almacen = Department(name="Almacén", description="Logística")
-        db.add_all([dept_ventas, dept_admin, dept_almacen])
+    print("--- INICIANDO SEED ---")
+
+    # 1. Crear Sucursal
+    branch = db.query(Branch).first()
+    if not branch:
+        branch = Branch(name="Matriz Principal", address="Calle Falsa 123", phone="555-5555")
+        db.add(branch)
         db.commit()
+        db.refresh(branch)
+        print("Sucursal creada.")
+    else:
+        print("Sucursal ya existe.")
 
-        print("👤 2. Creando Usuarios...")
-        # --- USUARIOS (Ajustado a tu Modelo) ---
-        # Nota: Usamos los ROLES exactos de tu Enum
-        users_data = [
-            ("admin", "admin123", Role.ADMINISTRADOR, "Administrador General", matriz),
-            ("gerente", "1234", Role.GERENTE, "Gerente de Tienda", matriz),
-            ("cajero", "0000", Role.CAJERO, "Cajero Matriz", matriz),
-            ("cajeronorte", "0000", Role.CAJERO, "Cajero Norte", norte),
-            ("dueno", "9999", Role.DUEÑO, "Dueño del Negocio", matriz),
-        ]
-
-        for username, password, role_enum, fullname, branch_obj in users_data:
-            user = User(
-                username=username,
-                # AQUI EL CAMBIO: Usamos 'password_hash' para coincidir con tu modelo
-                password_hash=get_password_hash(password), 
-                role=role_enum, # Pasamos el Enum correcto
-                full_name=fullname,
-                branch_id=branch_obj.id,
-                is_active=True
-            )
-            db.add(user)
-        db.commit()
-
-        print("👥 3. Creando Clientes (CRM)...")
-        # --- CLIENTES ---
-        publico_general = Customer(
-            name="Público General",
-            tax_id="XAXX010101000",
-            tax_system="616",
-            email="ventas@mostrador.com",
-            address="Mostrador",
-            zip_code="00000",
-            has_credit=False,
-            current_balance=0
+    # 2. Crear Usuario Admin
+    admin = db.query(User).filter(User.username == "admin").first()
+    if not admin:
+        admin = User(
+            username="admin",
+            email="admin@atlas.com",
+            hashed_password=get_password_hash("admin123"),
+            full_name="Administrador",
+            role="admin",
+            branch_id=branch.id
         )
-        db.add(publico_general)
-
-        cliente_vip = Customer(
-            name="Empresa Distribuidora S.A.",
-            tax_id="EDI190101ABC",
-            tax_system="601",
-            email="compras@distribuidora.com",
-            address="Parque Industrial #500",
-            zip_code="37000",
-            has_credit=True,
-            credit_limit=50000.00,
-            credit_days=30,
-            current_balance=0
-        )
-        db.add(cliente_vip)
+        db.add(admin)
         db.commit()
+        print("Usuario admin creado.")
+    else:
+        print("Usuario admin ya existe.")
 
-        print("📦 4. Creando Catálogo de Productos...")
-        # --- CATEGORÍAS ---
-        cats = ["Bebidas", "Botanas", "Limpieza", "Farmacia", "Electrónica"]
-        cat_objs = {}
-        for c_name in cats:
-            cat = Category(name=c_name)
+    # 3. Categorías / Departamentos
+    depts = ["Abarrotes", "Bebidas", "Farmacia", "Limpieza", "Carnicería", "Panadería", "Electrónica"]
+    dept_map = {}
+    for d_name in depts:
+        cat = db.query(Category).filter(Category.name == d_name).first()
+        if not cat:
+            cat = Category(name=d_name, description=f"Productos de {d_name}")
             db.add(cat)
             db.flush()
-            cat_objs[c_name] = cat.id
+        dept_map[d_name] = cat.id
+    db.commit()
+    print("Departamentos asegurados.")
+
+    # 4. Productos (20 items)
+    # Lista de ejemplos
+    products_data = [
+        ("Coca Cola 600ml", "Bebidas", 18.00, 15.00, "BOT001"),
+        ("Pepsi 600ml", "Bebidas", 17.50, 14.50, "BOT002"),
+        ("Agua Ciel 1L", "Bebidas", 12.00, 8.00, "BOT003"),
+        ("Sabritas Sal 45g", "Abarrotes", 16.00, 12.00, "SNH001"),
+        ("Doritos Nacho 58g", "Abarrotes", 17.00, 12.50, "SNH002"),
+        ("Leche Lala 1L", "Abarrotes", 28.00, 24.00, "LAC001"),
+        ("Huevo San Juan 12pz", "Abarrotes", 45.00, 38.00, "HUE001"),
+        ("Paracetamol 500mg", "Farmacia", 25.00, 10.00, "MED001"),
+        ("Aspirina 500mg", "Farmacia", 35.00, 20.00, "MED002"),
+        ("Alcohol Etílico 1L", "Farmacia", 85.00, 60.00, "MED003"),
+        ("Cloralex 1L", "Limpieza", 18.00, 14.00, "LIM001"),
+        ("Fabuloso Lavanda 1L", "Limpieza", 22.00, 16.00, "LIM002"),
+        ("Detergente Ace 1kg", "Limpieza", 35.00, 28.00, "LIM003"),
+        ("Bistec de Res kg", "Carnicería", 180.00, 140.00, "CAR001"),
+        ("Pollo Entero kg", "Carnicería", 85.00, 65.00, "CAR002"),
+        ("Bolillo", "Panadería", 3.50, 1.50, "PAN001"),
+        ("Concha Vainilla", "Panadería", 12.00, 6.00, "PAN002"),
+        ("Cable USB-C", "Electrónica", 150.00, 50.00, "TEC001"),
+        ("Cargador iPhone", "Electrónica", 350.00, 180.00, "TEC002"),
+        ("Audífonos Básicos", "Electrónica", 120.00, 60.00, "TEC003"),
+    ]
+
+    count_new = 0
+    for name, dept_name, price, cost, sku in products_data:
+        # Check if exists by SKU in variants
+        exists = db.query(ProductVariant).filter(ProductVariant.sku == sku).first()
+        if exists:
+            continue
+
+        # Crear
+        dept_id = dept_map.get(dept_name)
+        new_prod = Product(
+            name=name,
+            description=f"Descripción de {name}",
+            unit="pza" if "kg" not in name else "kg",
+            category_id=dept_id,
+            has_variants=True,
+            is_active=True
+        )
+        db.add(new_prod)
+        db.flush()
+
+        # Variant
+        variant = ProductVariant(
+            product_id=new_prod.id,
+            sku=sku,
+            barcode=sku, # Use SKU as barcode for simplicity
+            variant_name="Estándar",
+            price=Decimal(price),
+            cost=Decimal(cost)
+        )
+        db.add(variant)
+        db.flush()
+
+        # Tiered Prices (Example)
+        # Mayoreo > 3 pzas, Distribuidor > 10 pzas
+        p_mayoreo = round(price * 0.90, 2)
+        p_distrib = round(price * 0.80, 2)
+
+        db.add(ProductPrice(variant_id=variant.id, price_name="Mayoreo (3+)", min_quantity=3, unit_price=Decimal(p_mayoreo)))
+        db.add(ProductPrice(variant_id=variant.id, price_name="Distrib. (10+)", min_quantity=10, unit_price=Decimal(p_distrib)))
+
+        # Stock
+        initial_stock = Decimal(random.randint(10, 100))
+        db.add(StockOnHand(
+            branch_id=branch.id,
+            variant_id=variant.id,
+            qty_on_hand=initial_stock
+        ))
+
+        # Movement
+        db.add(InventoryMovement(
+            branch_id=branch.id,
+            variant_id=variant.id,
+            user_id=admin.id if admin else None,
+            movement_type=MovementType.ADJUSTMENT_IN,
+            qty_change=initial_stock,
+            qty_before=0,
+            qty_after=initial_stock,
+            reference="Seed Inicial",
+            notes="Auto-generated"
+        ))
         
-        # --- PRODUCTOS ---
-        products_data = [
-            ("Coca Cola 600ml", "Bebidas", "COCA600", 18.00, 12.50, 100, 50),
-            ("Sabritas Sal 45g", "Botanas", "SABRITAS", 19.00, 13.00, 80, 40),
-            ("Paracetamol 500mg", "Farmacia", "PARACET", 25.00, 8.00, 200, 100),
-        ]
+        count_new += 1
 
-        for name, cat_name, sku, price, cost, s_matriz, s_norte in products_data:
-            prod = Product(
-                name=name,
-                description=f"Descripción de {name}",
-                category_id=cat_objs.get(cat_name),
-                unit="pza",
-                is_active=True
-            )
-            db.add(prod)
-            db.flush()
-
-            variant = ProductVariant(
-                product_id=prod.id,
-                sku=sku,
-                variant_name="Estándar",
-                price=Decimal(str(price)),
-                cost=Decimal(str(cost)),
-                barcode=sku
-            )
-            db.add(variant)
-            db.flush()
-
-            # Stock
-            db.add(StockOnHand(branch_id=matriz.id, variant_id=variant.id, qty_on_hand=Decimal(s_matriz)))
-            db.add(StockOnHand(branch_id=norte.id, variant_id=variant.id, qty_on_hand=Decimal(s_norte)))
-
-        db.commit()
-        print("✅ ¡Base de datos poblada exitosamente!")
-        print(f"👉 Admin: admin / admin123")
-        print(f"👉 Cajero: cajero / 0000")
-
-    except Exception as e:
-        print(f"❌ Error al poblar la base de datos: {e}")
-        import traceback
-        traceback.print_exc()
-        db.rollback()
-    finally:
-        db.close()
+    db.commit()
+    print(f"--- SEED TERMINADO ---. Productos nuevos: {count_new}")
+    db.close()
 
 if __name__ == "__main__":
     init_db()

@@ -40,6 +40,10 @@ def _compute_product_read(
 
     if p.variants:
         v = p.variants[0]
+        p_read.sku = v.sku
+        p_read.barcode = v.barcode
+        p_read.price = v.price
+        p_read.cost = v.cost
 
         # Precios escalonados de la variante principal
         p_read.prices = list(v.prices or [])

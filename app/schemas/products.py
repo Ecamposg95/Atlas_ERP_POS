@@ -96,6 +96,11 @@ class ProductRead(BaseModel):
     variants: List[ProductVariantRead] = []
     
     # Campos computados para facilitar el frontend
+    sku: Optional[str] = ""
+    barcode: Optional[str] = ""
+    cost: Decimal = Decimal(0)
+    price: Decimal = Decimal(0) # Main variant price
+    
     stock_total: Decimal = Decimal(0)
     prices: List[ProductPriceRead] = [] # Precios de la variante principal
 
