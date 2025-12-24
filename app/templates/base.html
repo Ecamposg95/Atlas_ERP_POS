@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}DataX POS{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        slate: { 850: '#172033', 950: '#020617' },
+                        primary: { 500: '#8b5cf6', 600: '#7c3aed' }
+                    },
+                    fontFamily: { sans: ['Inter', 'sans-serif'] }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Estilos Base & Glassmorphism */
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        .dashboard-bg {
+            background: radial-gradient(circle at top left, #1e1b4b 0%, #020617 100%);
+            min-height: 100vh;
+        }
+
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(12px);
+            border-right: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .glass-card {
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+        }
+
+        .nav-item {
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .nav-item::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 3px;
+            background: #8b5cf6;
+            transform: scaleY(0);
+            transition: transform 0.3s;
+        }
+
+        .nav-item:hover::before,
+        .nav-item.active::before {
+            transform: scaleY(1);
+        }
+
+        .nav-item:hover,
+        .nav-item.active {
+            background: rgba(139, 92, 246, 0.1);
+            color: white;
+        }
+
+        /* Scrollbar Personalizado */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 3px;
+        }
+
+        /* Utilidades */
+        .hidden {
+            display: none;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+            {
+            % block extra_css %
+        }
+
+            {
+            % endblock %
+        }
+    </style>
+</head>
+
+<body class="bg-slate-950 text-slate-100 transition-colors duration-300 overflow-hidden">
+
+    <!-- Wrapper Principal -->
+    <div id="app-root" class="flex h-screen w-full dashboard-bg opacity-0 transition-opacity duration-500">
+
+        <!-- Sidebar -->
+        <aside class="w-20 lg:w-64 flex flex-col glass-panel z-20 transition-all duration-300">
+            <!-- Logo -->
+            <div class="h-16 flex items-center justify-center border-b border-white/5">
+                <div
+                    class="w-10 h-10 bg-gradient-to-br from-violet-600 to-indigo-600 rounded-xl flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-violet-900/20">
+                    DX
+                </div>
+                <span class="hidden lg:block ml-3 font-bold text-white tracking-tight">DataX POS</span>
+            </div>
+
+            <!-- Navegación -->
+            <nav class="flex-1 py-6 space-y-2 px-2 overflow-y-auto">
+                <a href="/"
+                    class="nav-item flex items-center px-4 py-3 text-slate-400 rounded-xl group {% if request.path == '/' %}active text-white{% endif %}">
+                    <svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z">
+                        </path>
+                    </svg>
+                    <span class="hidden lg:block ml-3 font-medium text-sm">Dashboard</span>
+                </a>
+
+                <a href="/pos"
+                    class="nav-item flex items-center px-4 py-3 text-slate-400 rounded-xl group {% if request.path == '/pos' %}active text-white{% endif %}">
+                    <svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z">
+                        </path>
+                    </svg>
+                    <span class="hidden lg:block ml-3 font-medium text-sm">Punto de Venta</span>
+                </a>
+
+                <a href="/products"
+                    class="nav-item flex items-center px-4 py-3 text-slate-400 rounded-xl group {% if request.path == '/products' %}active text-white{% endif %}">
+                    <svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                    </svg>
+                    <span class="hidden lg:block ml-3 font-medium text-sm">Productos</span>
+                </a>
+
+                <div class="my-4 border-t border-white/5 mx-4"></div>
+
+                <a href="#" id="logout-btn"
+                    class="nav-item flex items-center px-4 py-3 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-xl group transition-colors">
+                    <svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1">
+                        </path>
+                    </svg>
+                    <span class="hidden lg:block ml-3 font-medium text-sm">Cerrar Sesión</span>
+                </a>
+            </nav>
+
+            <!-- User Profile Short -->
+            <div class="p-4 border-t border-white/5">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-xs font-bold ring-2 ring-slate-800"
+                        id="user-avatar">
+                        U
+                    </div>
+                    <div class="hidden lg:block overflow-hidden">
+                        <p class="text-sm font-bold text-white truncate" id="user-name">Usuario</p>
+                        <p class="text-xs text-slate-500 truncate" id="user-role">Rol</p>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 flex flex-col min-w-0 relative h-full overflow-hidden">
+            <!-- Topbar mobile-only or Breadcrumbs could go here -->
+
+            <div class="flex-1 overflow-hidden relative">
+                {% block content %}{% endblock %}
+            </div>
+        </main>
+    </div>
+
+    <!-- Modals & Overlays -->
+    {% block modals %}{% endblock %}
+
+    <script>
+        // Global Logic
+        document.addEventListener('DOMContentLoaded', () => {
+            // 1. Check Auth
+            const token = sessionStorage.getItem('ACCESS_TOKEN');
+            const userStr = sessionStorage.getItem('CURRENT_USER');
+
+            if (!token && window.location.pathname !== '/auth') {
+                // Redirect to login if not authenticated
+                window.location.href = '/auth'; // Assuming we'll make this route
+                return;
+            }
+
+            // 2. Show UI
+            document.getElementById('app-root').classList.remove('opacity-0');
+
+            // 3. Populate User Info
+            if (userStr) {
+                try {
+                    const user = JSON.parse(userStr);
+                    document.getElementById('user-name').textContent = user.username || 'Usuario';
+                    document.getElementById('user-role').textContent = user.role || 'Rol';
+                    document.getElementById('user-avatar').textContent = (user.username || 'U').charAt(0).toUpperCase();
+                } catch (e) { console.error('Error parsing user data', e); }
+            }
+
+            // 4. Logout Handler
+            document.getElementById('logout-btn')?.addEventListener('click', (e) => {
+                e.preventDefault();
+                sessionStorage.clear();
+                window.location.href = '/auth';
+            });
+        });
+    </script>
+    {% block scripts %}{% endblock %}
+</body>
+
+</html>

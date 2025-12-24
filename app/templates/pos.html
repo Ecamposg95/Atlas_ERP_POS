@@ -1,265 +1,651 @@
-<!-- app/templates/pos.html -->
-<!doctype html>
-<html lang="es">
+{% extends "base.html" %}
 
-<head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Atlas POS</title>
+{% block title %}Punto de Venta - DataX POS{% endblock %}
 
-    <style>
-        body {
-            font-family: system-ui;
-            margin: 0;
-            background: #f6f7fb;
-        }
-
-        .topbar {
-            position: sticky;
-            top: 0;
-            z-index: 10;
-            background: #fff;
-            border-bottom: 1px solid #e5e7eb;
-            padding: 10px 12px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .brand {
-            font-weight: 900;
-        }
-
-        .muted {
-            opacity: .72;
-            font-size: 13px;
-        }
-
-        .pill {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            border: 1px solid #e5e7eb;
-            padding: 6px 10px;
-            border-radius: 999px;
-            font-size: 12px;
-            background: #fff;
-        }
-
-        .wrap {
-            display: grid;
-            grid-template-columns: 1fr 480px;
-            gap: 12px;
-            padding: 12px;
-        }
-
-        .card {
-            background: #fff;
-            border: 1px solid #e5e7eb;
-            border-radius: 16px;
-            padding: 12px;
-            box-shadow: 0 10px 35px rgba(0, 0, 0, .05);
-        }
-
-        .row {
-            display: flex;
-            gap: 8px;
-            align-items: center;
-        }
-
-        input,
-        button,
-        select {
-            padding: 12px;
-            border-radius: 12px;
-            border: 1px solid #e5e7eb;
-            font-size: 14px;
-        }
-
-        button {
-            cursor: pointer;
-            font-weight: 800;
-        }
-
-        .btn-primary {
-            background: #111;
-            color: #fff;
-            border-color: #111;
-        }
-
-        .btn-muted {
-            background: #fff;
-            color: #111;
-            border-color: #e5e7eb;
-        }
-
-        .big {
-            font-size: 18px;
-            font-weight: 900;
-        }
-
-        .suggest {
-            border: 1px solid #e5e7eb;
-            border-radius: 12px;
-            overflow: hidden;
-            margin-top: 8px;
-        }
-
-        .suggest button {
-            width: 100%;
-            border: 0;
-            border-bottom: 1px solid #f1f5f9;
-            text-align: left;
-            padding: 12px;
-            background: #fff;
-        }
-
-        .suggest button:last-child {
-            border-bottom: 0;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        th,
-        td {
-            padding: 10px 8px;
-            border-bottom: 1px solid #f1f5f9;
-            font-size: 14px;
-            vertical-align: top;
-        }
-
-        th {
-            text-align: left;
-            font-size: 12px;
-            opacity: .7;
-        }
-
-        .right {
-            text-align: right;
-        }
-
-        .danger {
-            color: #b91c1c;
-            font-weight: 800;
-        }
-
-        hr {
-            border: 0;
-            border-top: 1px solid #f1f5f9;
-        }
-    </style>
-</head>
-
-<body>
-    <div class="topbar">
+{% block content %}
+<!-- HEADER POS -->
+<header
+    class="h-16 border-b border-white/5 bg-slate-900/50 backdrop-blur-md flex justify-between items-center px-6 shrink-0 z-10 sticky top-0">
+    <div class="flex items-center gap-4">
         <div>
-            <div class="brand">Atlas ERP & POS</div>
-            <div id="cashStatus" class="muted">Validando caja...</div>
-        </div>
-        <div class="row">
-            <span class="pill" id="sessionPill">Sesión activa</span>
-            <button id="btnLogout" class="btn-muted">Salir</button>
+            <h1 class="text-lg font-bold text-white tracking-tight">Terminal Punto de Venta</h1>
+            <div id="session-status-badge"
+                class="hidden inline-flex items-center gap-2 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span id="session-status-text" class="text-[10px] uppercase font-bold text-emerald-400">Turno
+                    Activo</span>
+            </div>
         </div>
     </div>
 
-    <div class="wrap">
-        <!-- Izquierda -->
-        <div class="card">
-            <div class="row" style="justify-content:space-between;">
+    <div class="flex items-center gap-2">
+        <button id="open-session-btn"
+            class="hidden px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg shadow-sm transition">Abrir
+            Turno</button>
+        <button id="close-session-btn"
+            class="hidden px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold rounded-lg shadow-sm transition">Cerrar
+            Turno</button>
+    </div>
+</header>
+
+<!-- MAIN POS WRAPPER -->
+<div id="pos-content-wrapper" class="flex-1 flex gap-6 p-6 overflow-hidden h-full relative">
+
+    <!-- LEFT COLUMN: SEARCH & PRODUCTS -->
+    <div class="flex-1 flex flex-col gap-4 overflow-hidden min-w-[300px]">
+
+        <!-- Product Search -->
+        <div class="glass-card rounded-2xl flex-1 flex flex-col overflow-hidden min-h-[300px]">
+            <div class="px-4 py-3 border-b border-white/5 bg-slate-900/30 shrink-0">
+                <div class="relative">
+                    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                        </svg>
+                    </span>
+                    <input id="search-input" type="text"
+                        class="w-full bg-slate-950/50 border border-slate-700/50 rounded-xl pl-9 pr-3 py-2.5 text-sm md:text-base text-white focus:ring-2 focus:ring-violet-500 outline-none transition-all placeholder-slate-600"
+                        placeholder="Buscar producto (Escáner activo)..." autofocus>
+                </div>
+            </div>
+            <div id="search-results" class="flex-1 overflow-y-auto p-2 space-y-2 custom-scrollbar"></div>
+        </div>
+
+    </div>
+
+    <!-- RIGHT COLUMN: TICKET (CART) -->
+    <div
+        class="w-[350px] xl:w-[420px] glass-card rounded-2xl flex flex-col overflow-hidden shrink-0 shadow-2xl shadow-black/50">
+        <!-- Ticket Header -->
+        <div class="px-5 py-4 border-b border-white/5 bg-slate-900/50 flex justify-between items-center shrink-0">
+            <h2 class="font-bold text-sm text-slate-200">Ticket de Venta</h2>
+            <button id="clear-cart-btn"
+                class="text-[10px] text-rose-400 hover:text-rose-300 font-bold uppercase tracking-wider">Limpiar</button>
+        </div>
+
+        <!-- Items Area -->
+        <div class="flex-1 overflow-y-auto p-4 relative custom-scrollbar bg-slate-950/30">
+            <div id="ticket-items" class="space-y-3"></div>
+            <!-- Placeholder -->
+            <div id="ticket-placeholder"
+                class="absolute inset-0 flex flex-col items-center justify-center text-slate-600 space-y-4 pointer-events-none opacity-50">
+                <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                        d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z">
+                    </path>
+                </svg>
+                <p class="text-xs font-medium italic">Agrega productos para iniciar</p>
+            </div>
+        </div>
+
+        <!-- Summary -->
+        <div class="p-5 bg-slate-900/80 border-t border-white/5 space-y-2 shrink-0 z-10 backdrop-blur-md">
+            <div class="flex justify-between text-xs text-slate-400"><span>Subtotal</span><span id="ticket-subtotal"
+                    class="font-medium text-slate-200">$0.00</span></div>
+            <div class="flex justify-between text-xs text-slate-400"><span>Impuestos</span><span id="ticket-taxes"
+                    class="font-medium text-slate-200">$0.00</span></div>
+            <div class="flex justify-between text-xl font-black pt-2 border-t border-dashed border-white/10 items-end">
+                <span class="text-white text-base">Total</span>
+                <span id="ticket-total" class="text-emerald-400 leading-none">$0.00</span>
+            </div>
+        </div>
+
+        <!-- Pay Buttons -->
+        <div class="p-4 grid grid-cols-2 gap-3 bg-slate-950/50 border-t border-white/5 shrink-0">
+            <button id="pay-cash-button" disabled
+                class="bg-emerald-600 hover:bg-emerald-500 disabled:opacity-30 disabled:cursor-not-allowed text-white font-bold py-3 rounded-xl shadow-lg shadow-emerald-900/20 transition transform active:scale-95 flex flex-col items-center justify-center gap-0.5">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z">
+                    </path>
+                </svg>
+                <span class="text-xs">Efectivo</span>
+            </button>
+            <button id="pay-card-button" disabled
+                class="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-30 disabled:cursor-not-allowed text-white font-bold py-3 rounded-xl shadow-lg shadow-indigo-900/20 transition transform active:scale-95 flex flex-col items-center justify-center gap-0.5">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z">
+                    </path>
+                </svg>
+                <span class="text-xs">Tarjeta</span>
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block modals %}
+<!-- Modal Efectivo -->
+<div id="cash-modal"
+    class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-slate-900 rounded-3xl shadow-2xl max-w-sm w-full p-8 border border-white/10 relative">
+        <button id="cancel-cash-modal-x"
+            class="absolute top-4 right-4 text-slate-500 hover:text-white transition">✕</button>
+        <div class="text-center mb-8">
+            <div class="w-16 h-16 bg-emerald-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg class="w-8 h-8 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z">
+                    </path>
+                </svg>
+            </div>
+            <h3 class="text-xl font-bold mb-2 text-white">Cobrar en Efectivo</h3>
+            <p id="cash-modal-total" class="text-4xl font-black text-emerald-400">$0.00</p>
+        </div>
+        <form id="cash-form" class="space-y-6">
+            <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase mb-2 ml-1">Recibido</label>
+                <div class="relative">
+                    <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-2xl font-bold">$</span>
+                    <input id="amount-received" type="number" step="0.01"
+                        class="w-full pl-10 pr-4 py-3 bg-slate-950 border-2 border-slate-700 rounded-2xl text-2xl font-bold text-white focus:border-emerald-500 focus:ring-0 outline-none transition-all text-center"
+                        placeholder="0.00" required>
+                </div>
+            </div>
+            <div class="flex flex-wrap justify-center gap-2">
+                <button type="button"
+                    class="quick-cash px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl hover:bg-emerald-900/30 hover:border-emerald-500/50 text-xs font-bold transition flex-1 text-slate-300"
+                    data-val="exacto">Exacto</button>
+                <button type="button"
+                    class="quick-cash px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl hover:bg-slate-700 text-xs font-bold transition text-slate-300"
+                    data-val="50">$50</button>
+                <button type="button"
+                    class="quick-cash px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl hover:bg-slate-700 text-xs font-bold transition text-slate-300"
+                    data-val="100">$100</button>
+                <button type="button"
+                    class="quick-cash px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl hover:bg-slate-700 text-xs font-bold transition text-slate-300"
+                    data-val="200">$200</button>
+                <button type="button"
+                    class="quick-cash px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl hover:bg-slate-700 text-xs font-bold transition text-slate-300"
+                    data-val="500">$500</button>
+            </div>
+            <p id="cash-modal-error"
+                class="hidden text-rose-400 text-xs text-center font-bold bg-rose-900/20 py-2 rounded-lg"></p>
+            <button type="submit"
+                class="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-bold text-lg shadow-xl shadow-emerald-900/20 transition transform active:scale-95">Confirmar</button>
+        </form>
+    </div>
+</div>
+
+<!-- Modal Success -->
+<div id="success-modal"
+    class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+    <div
+        class="bg-slate-900 rounded-[2rem] shadow-2xl max-w-md w-full p-8 text-center border border-white/10 relative overflow-hidden">
+        <div
+            class="absolute inset-0 pointer-events-none opacity-5 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-emerald-500 to-transparent">
+        </div>
+
+        <div
+            class="w-20 h-20 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-6 relative z-10">
+            <svg class="w-10 h-10 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
+            </svg>
+        </div>
+        <h3 class="text-2xl font-black mb-2 text-white relative z-10">¡Venta Exitosa!</h3>
+        <p id="success-folio" class="text-sm text-slate-400 font-mono mb-4">Folio: -</p>
+
+        <div class="bg-slate-950/50 rounded-2xl p-6 mb-8 space-y-3 border border-slate-800 relative z-10 mt-6">
+            <div class="flex justify-between text-sm text-slate-400"><span>Pagado</span><span id="success-total-paid"
+                    class="font-bold text-white text-lg">$0.00</span></div>
+            <div
+                class="flex justify-between text-xl font-black text-emerald-400 border-t border-dashed border-slate-700 pt-3 mt-2">
+                <span>Cambio</span><span id="success-change">$0.00</span>
+            </div>
+        </div>
+
+        <div class="space-y-3 relative z-10">
+            <button id="print-ticket-button"
+                class="w-full py-3 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl flex items-center justify-center gap-3 transition border border-slate-700">
+                <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z">
+                    </path>
+                </svg>
+                <span>Imprimir Ticket</span>
+            </button>
+            <button id="next-sale-button"
+                class="w-full py-3 bg-violet-600 hover:bg-violet-500 text-white font-bold rounded-xl shadow-lg transition transform active:scale-95 flex items-center justify-center gap-2">
+                <span>Siguiente Venta</span>
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3">
+                    </path>
+                </svg>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Sesión -->
+<div id="cash-session-modal"
+    class="hidden fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-4">
+    <div class="bg-slate-900 rounded-3xl shadow-2xl max-w-md w-full p-8 border border-slate-700">
+        <!-- OPEN -->
+        <div id="open-session-view">
+            <div class="text-center mb-6">
+                <div
+                    class="w-12 h-12 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-3 text-emerald-400">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                    </svg>
+                </div>
+                <h3 class="text-xl font-bold text-white">Abrir Turno</h3>
+                <p class="text-xs text-slate-400">Ingresa fondo inicial</p>
+            </div>
+            <form id="open-session-form" class="space-y-6">
+                <div class="relative">
+                    <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 text-xl font-bold">$</span>
+                    <input id="opening-balance" type="number" step="0.01"
+                        class="w-full pl-10 pr-4 py-4 bg-slate-950 border-2 border-slate-700 rounded-xl text-2xl font-bold text-white focus:border-emerald-500 outline-none transition-all text-center"
+                        placeholder="0.00" required>
+                </div>
+                <div class="flex justify-end gap-3">
+                    <button type="submit"
+                        class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold shadow-lg transition">Abrir
+                        Caja</button>
+                </div>
+            </form>
+        </div>
+        <!-- CLOSE -->
+        <div id="close-session-view" class="hidden">
+            <div class="text-center mb-6">
+                <div
+                    class="w-12 h-12 bg-amber-500/20 rounded-full flex items-center justify-center mx-auto mb-3 text-amber-400">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                </div>
+                <h3 class="text-xl font-bold text-white">Cerrar Turno</h3>
+            </div>
+            <form id="close-session-form" class="space-y-6">
+                <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 text-center">
+                    <p class="text-[10px] text-slate-400 uppercase font-bold mb-1">Esperado</p>
+                    <p class="text-2xl font-black text-violet-400" id="close-expected-display">$0.00</p>
+                </div>
                 <div>
-                    <div class="big">Ventas POS</div>
-                    <div class="muted">Buscar y agregar productos al carrito.</div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-2 ml-1">Real en Caja</label>
+                    <div class="relative">
+                        <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 text-xl font-bold">$</span>
+                        <input id="closing-balance" type="number" step="0.01"
+                            class="w-full pl-10 pr-4 py-4 bg-slate-950 border-2 border-slate-700 rounded-xl text-2xl font-bold text-white focus:border-amber-500 outline-none transition-all text-center"
+                            placeholder="0.00" required>
+                    </div>
                 </div>
-                <div class="row">
-                    <button id="btnOpenCash" class="btn-muted">Abrir caja</button>
-                    <button id="btnCloseCash" class="btn-muted">Cerrar caja</button>
+                <div>
+                    <textarea id="close-notes" rows="2"
+                        class="w-full px-4 py-3 bg-slate-950 border-2 border-slate-700 rounded-xl text-sm text-white focus:border-amber-500 outline-none transition-all resize-none"
+                        placeholder="Notas..."></textarea>
                 </div>
-            </div>
-
-            <div style="height:12px;"></div>
-
-            <div class="row">
-                <input id="searchInput" placeholder="Buscar por nombre, SKU o código..." style="flex:1;"
-                    autocomplete="off" />
-                <button id="btnClearSearch" class="btn-muted">Limpiar</button>
-            </div>
-
-            <div id="suggestions" class="suggest" style="display:none;"></div>
-
-            <div style="height:12px;"></div>
-            <div class="muted">Operación rápida: escribe 2+ caracteres y toca una sugerencia para agregar.</div>
-
-            <div style="height:10px;"></div>
-            <div id="posMsg" class="muted"></div>
-        </div>
-
-        <!-- Derecha -->
-        <div class="card">
-            <div class="row" style="justify-content:space-between;">
-                <div class="big">Carrito</div>
-                <div id="cartMeta" class="muted">0 ítems</div>
-            </div>
-
-            <div style="margin-top:10px; max-height: 44vh; overflow:auto;">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Producto</th>
-                            <th class="right" style="width:90px;">Cant.</th>
-                            <th class="right" style="width:110px;">Precio</th>
-                            <th class="right" style="width:40px;"></th>
-                        </tr>
-                    </thead>
-                    <tbody id="cartTbody"></tbody>
-                </table>
-            </div>
-
-            <div style="margin-top:12px;">
-                <div class="row" style="justify-content:space-between;">
-                    <span>Subtotal</span><span id="subtotal">$0.00</span>
+                <div class="flex justify-end gap-3">
+                    <button type="button" id="cancel-close-session"
+                        class="px-4 py-3 text-slate-400 hover:bg-slate-800 rounded-xl font-bold transition">Cancelar</button>
+                    <button type="submit"
+                        class="flex-1 py-3 bg-amber-600 hover:bg-amber-500 text-white rounded-xl font-bold shadow-lg transition">Cerrar</button>
                 </div>
-                <div class="row" style="justify-content:space-between;">
-                    <span>Total</span><span id="total" class="big">$0.00</span>
-                </div>
-            </div>
-
-            <div style="height:12px;"></div>
-            <hr />
-            <div style="height:12px;"></div>
-
-            <div class="row">
-                <select id="paymentMethod" style="flex:1;">
-                    <option value="CASH">Efectivo</option>
-                    <option value="CARD">Tarjeta</option>
-                    <option value="TRANSFER">Transferencia</option>
-                </select>
-                <input id="cashReceived" placeholder="Recibido" inputmode="decimal" style="width:160px;" />
-            </div>
-
-            <div class="row" style="justify-content:space-between; margin-top:10px;">
-                <span class="muted">Cambio</span>
-                <span id="changeDue" class="big">$0.00</span>
-            </div>
-
-            <div id="cashWarn" class="muted" style="margin-top:6px;"></div>
-
-            <div class="row" style="margin-top:12px;">
-                <button id="btnPay" class="btn-primary" style="flex:1;">Cobrar</button>
-                <button id="btnVoid" class="btn-muted">Vaciar</button>
-            </div>
+            </form>
         </div>
     </div>
+</div>
+{% endblock %}
 
-    <script>
-        // Guard: si no hay token, mandar a login
-        if (!localStorage.getItem("access_token")) window.location.href = "/login";
-    </script>
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- CONFIG ---
+        const API_BASE_URL = 'http://127.0.0.1:8000';
+        const ACCESS_TOKEN = sessionStorage.getItem('ACCESS_TOKEN');
+        const CURRENT_USER = JSON.parse(sessionStorage.getItem('CURRENT_USER'));
 
-    <!-- IMPORTANTE: módulo ES -->
-    <script type="module" src="/static/js/pos.js"></script>
-</body>
+        // --- STATE ---
+        let CURRENT_CASH_SESSION_ID = null;
+        let CURRENT_SESSION_EXPECTED = 0;
+        let cart = []; // Client-side cart
+        let LAST_SUCCESSFUL_SALE = null; // Store result from API
 
-</html>
+        // --- AUTH CHECK ---
+        if (!ACCESS_TOKEN) window.location.href = '/auth';
+
+        // --- API ---
+        async function apiFetch(endpoint, options = {}) {
+            const headers = { 'Authorization': `Bearer ${ACCESS_TOKEN}`, ...options.headers };
+            if (options.body) headers['Content-Type'] = 'application/json';
+            const res = await fetch(`${API_BASE_URL}${endpoint}`, { ...options, headers });
+            if (res.status === 401) { sessionStorage.clear(); window.location.href = '/auth'; }
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({ detail: res.statusText }));
+                throw new Error(err.detail);
+            }
+            return res.status === 204 ? null : res.json();
+        }
+
+        // --- SESSION LOGIC ---
+        async function checkSession() {
+            try {
+                // Correct Endpoint: /api/cash/status
+                const session = await apiFetch('/api/cash/status');
+                const badge = document.getElementById('session-status-badge');
+                const badgeText = document.getElementById('session-status-text');
+                const openBtn = document.getElementById('open-session-btn');
+                const closeBtn = document.getElementById('close-session-btn');
+                const wrapper = document.getElementById('pos-content-wrapper');
+                const modal = document.getElementById('cash-session-modal');
+
+                if (session && session.status === 'OPEN') {
+                    CURRENT_CASH_SESSION_ID = session.id;
+                    CURRENT_SESSION_EXPECTED = session.expected_balance;
+
+                    badge.classList.remove('hidden');
+                    badgeText.textContent = `Turno #${session.id}`;
+                    openBtn.classList.add('hidden');
+                    closeBtn.classList.remove('hidden');
+
+                    wrapper.classList.remove('blur-sm', 'pointer-events-none');
+                    hideModal(modal);
+                } else {
+                    CURRENT_CASH_SESSION_ID = null;
+                    badge.classList.add('hidden');
+                    openBtn.classList.remove('hidden');
+                    closeBtn.classList.add('hidden');
+
+                    wrapper.classList.add('blur-sm', 'pointer-events-none');
+                    showModal(modal);
+                    document.getElementById('open-session-view').classList.remove('hidden');
+                    document.getElementById('close-session-view').classList.add('hidden');
+                    setTimeout(() => document.getElementById('opening-balance').focus(), 100);
+                }
+            } catch (e) { console.error('Session Check Failed', e); }
+        }
+        checkSession();
+
+        document.getElementById('open-session-form').onsubmit = async (e) => {
+            e.preventDefault();
+            try {
+                // Correct Endpoint: /api/cash/open
+                await apiFetch('/api/cash/open', {
+                    method: 'POST',
+                    body: JSON.stringify({ opening_balance: parseFloat(document.getElementById('opening-balance').value) })
+                });
+                checkSession();
+            } catch (e) { alert(e.message); }
+        };
+
+        document.getElementById('open-session-btn').onclick = () => checkSession();
+
+        document.getElementById('close-session-btn').onclick = () => {
+            const modal = document.getElementById('cash-session-modal');
+            document.getElementById('open-session-view').classList.add('hidden');
+            document.getElementById('close-session-view').classList.remove('hidden');
+            document.getElementById('close-expected-display').textContent = fmtMoney(CURRENT_SESSION_EXPECTED);
+            showModal(modal);
+            setTimeout(() => document.getElementById('closing-balance').focus(), 100);
+        };
+        document.getElementById('cancel-close-session').onclick = () => hideModal(document.getElementById('cash-session-modal'));
+
+        document.getElementById('close-session-form').onsubmit = async (e) => {
+            e.preventDefault();
+            try {
+                // Correct Endpoint: /api/cash/close
+                const res = await apiFetch(`/api/cash/close`, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        closing_balance: parseFloat(document.getElementById('closing-balance').value),
+                        notes: document.getElementById('close-notes').value
+                    })
+                });
+                alert(`Turno cerrado.\nDiferencia: ${fmtMoney(res.difference)}`);
+                checkSession();
+            } catch (e) { alert(e.message); }
+        };
+
+        // --- CLIENT-SIDE CART LOGIC ---
+        window.addToCart = function (product, qty = 1) {
+            const existing = cart.find(i => i.id === product.id);
+            if (existing) {
+                existing.qty += qty;
+            } else {
+                // Logic to extract price: Tiered Price > Base Variant Price > 0
+                let price = 0;
+                if (product.prices && product.prices.length > 0) {
+                    price = product.prices[0].unit_price;
+                } else if (product.variants && product.variants.length > 0) {
+                    price = product.variants[0].price;
+                }
+
+                cart.push({
+                    id: product.id,
+                    name: product.name,
+                    sku: product.sku || product.variants?.[0]?.sku || '-',
+                    unit_price: Number(price),
+                    qty: qty
+                });
+            }
+            renderCart();
+            // Limpiar buscador
+            document.getElementById('search-input').value = '';
+            document.getElementById('search-results').innerHTML = '';
+            document.getElementById('search-input').focus();
+        };
+
+        window.updateItem = function (id, delta) {
+            const item = cart.find(i => i.id === id);
+            if (!item) return;
+            item.qty += delta;
+            if (item.qty <= 0) {
+                cart = cart.filter(i => i.id !== id);
+            }
+            renderCart();
+        };
+
+        document.getElementById('clear-cart-btn').onclick = () => {
+            if (confirm('¿Limpiar carrito?')) {
+                cart = [];
+                renderCart();
+            }
+        };
+
+        function renderCart() {
+            const ph = document.getElementById('ticket-placeholder');
+            const items = document.getElementById('ticket-items');
+            const btns = [document.getElementById('pay-cash-button'), document.getElementById('pay-card-button')];
+
+            if (cart.length === 0) {
+                ph.classList.remove('opacity-0', 'pointer-events-none');
+                items.innerHTML = '';
+                btns.forEach(b => b.disabled = true);
+                ['subtotal', 'taxes', 'total'].forEach(id => document.getElementById(`ticket-${id}`).textContent = '$0.00');
+                return;
+            }
+
+            ph.classList.add('opacity-0', 'pointer-events-none');
+            items.innerHTML = '';
+
+            let total = 0;
+
+            cart.forEach(i => {
+                const lineTotal = i.unit_price * i.qty;
+                total += lineTotal;
+
+                const row = document.createElement('div');
+                row.className = 'flex justify-between items-center py-2 border-b border-dashed border-white/5 last:border-0';
+                row.innerHTML = `
+                    <div class="flex-1 min-w-0 pr-2">
+                        <div class="font-medium text-slate-200 truncate text-xs mb-0.5">${i.name}</div>
+                        <div class="text-[10px] text-slate-500">$${i.unit_price.toFixed(2)}</div>
+                    </div>
+                    <div class="flex items-center bg-slate-800 rounded-lg p-0.5 gap-1 mx-2">
+                        <button class="w-6 h-6 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 rounded transition font-bold text-xs" onclick="updateItem(${i.id}, -1)">-</button>
+                        <span class="w-6 text-center font-bold text-xs text-white">${i.qty}</span>
+                        <button class="w-6 h-6 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 rounded transition font-bold text-xs" onclick="updateItem(${i.id}, 1)">+</button>
+                    </div>
+                    <div class="w-16 text-right font-bold text-slate-200 text-sm">$${lineTotal.toFixed(2)}</div>
+                `;
+                items.appendChild(row);
+            });
+
+            document.getElementById('ticket-subtotal').textContent = fmtMoney(total);
+            document.getElementById('ticket-taxes').textContent = fmtMoney(0);
+            document.getElementById('ticket-total').textContent = fmtMoney(total);
+            btns.forEach(b => b.disabled = false);
+        }
+
+        // --- SEARCH ---
+        const searchInput = document.getElementById('search-input');
+        // Usamos keyup en lugar de input para evitar doble disparo en algunos scanners, + debounce
+        searchInput.addEventListener('input', debounce(async (e) => {
+            const q = e.target.value.trim();
+            const results = document.getElementById('search-results');
+            if (q.length < 2) { results.innerHTML = ''; return; }
+
+            // Correct Endpoint: /api/products/search
+            const prods = await apiFetch(`/api/products/search?q=${encodeURIComponent(q)}`);
+            results.innerHTML = prods.map(p => {
+                // Determine price to display
+                let displayPrice = 0;
+                if (p.prices && p.prices.length > 0) {
+                    displayPrice = p.prices[0].unit_price;
+                } else if (p.variants && p.variants.length > 0) {
+                    displayPrice = p.variants[0].price;
+                }
+
+                // Serializar producto en el atributo data-prod para pasarlo a addToCart
+                const prodStr = encodeURIComponent(JSON.stringify(p));
+                return `
+                <div class="p-2 hover:bg-slate-800 rounded-xl cursor-pointer flex justify-between items-center group transition border border-transparent hover:border-slate-700" onclick="handleSearchClick('${prodStr}')">
+                    <div class="min-w-0">
+                        <div class="text-xs font-bold text-slate-300 group-hover:text-white truncate">${p.name}</div>
+                        <div class="text-[10px] text-slate-500">${p.variants?.[0]?.sku || '-'}</div>
+                    </div>
+                    <div class="font-bold text-xs text-emerald-400 bg-emerald-900/20 px-2 py-0.5 rounded ml-2">
+                        $${Number(displayPrice).toFixed(2)}
+                    </div>
+                </div>
+            `}).join('');
+        }, 300));
+
+        window.handleSearchClick = function (prodEncoded) {
+            const prod = JSON.parse(decodeURIComponent(prodEncoded));
+            addToCart(prod, 1);
+        };
+
+        // --- PAYMENTS & CHECKOUT ---
+        const cashModal = document.getElementById('cash-modal');
+
+        // Show Cash Modal
+        document.getElementById('pay-cash-button').onclick = () => {
+            const total = getCartTotal();
+            document.getElementById('cash-modal-total').textContent = fmtMoney(total);
+            document.getElementById('amount-received').value = '';
+            document.getElementById('cash-modal-error').classList.add('hidden');
+            showModal(cashModal);
+            setTimeout(() => document.getElementById('amount-received').focus(), 50);
+        };
+        document.getElementById('cancel-cash-modal-x').onclick = () => hideModal(cashModal);
+
+        // Quick Cash Buttons
+        document.querySelectorAll('.quick-cash').forEach(b => {
+            b.onclick = () => {
+                const total = getCartTotal();
+                const val = b.dataset.val === 'exacto' ? total : parseFloat(b.dataset.val);
+                document.getElementById('amount-received').value = val.toFixed(2);
+                document.getElementById('amount-received').focus();
+            };
+        });
+
+        // Submit Cash Payment
+        document.getElementById('cash-form').onsubmit = async (e) => {
+            e.preventDefault();
+            const total = getCartTotal();
+            const val = parseFloat(document.getElementById('amount-received').value);
+
+            if (isNaN(val) || val < total) {
+                const err = document.getElementById('cash-modal-error');
+                err.textContent = 'Monto insuficiente';
+                err.classList.remove('hidden');
+                return;
+            }
+            await finalizeSale('CASH', val);
+        };
+
+        // Submit Card Payment
+        document.getElementById('pay-card-button').onclick = async () => {
+            const total = getCartTotal();
+            if (confirm(`¿Confirmar cobro de ${fmtMoney(total)} con Tarjeta?`)) {
+                await finalizeSale('CARD', total);
+            }
+        };
+
+        async function finalizeSale(method, amount) {
+            hideModal(cashModal);
+
+            const payload = {
+                customer_id: null, // Public in general
+                items: cart.map(i => ({ sku: i.sku, quantity: i.qty })),
+                payments: [
+                    { method: method, amount: amount }
+                ]
+            };
+
+            try {
+                // Correct Endpoint: POST /api/sales/
+                const res = await apiFetch('/api/sales/', {
+                    method: 'POST',
+                    body: JSON.stringify(payload)
+                });
+
+                // Success!
+                LAST_SUCCESSFUL_SALE = res; // { status, message, sale_id, folio, total, paid, change }
+
+                document.getElementById('success-folio').textContent = `Folio: ${res.folio}`;
+                document.getElementById('success-total-paid').textContent = fmtMoney(res.paid);
+                document.getElementById('success-change').textContent = fmtMoney(res.change);
+
+                showModal(document.getElementById('success-modal'));
+
+                // Clear cart locally
+                cart = [];
+                renderCart();
+            } catch (e) {
+                alert(`Error al procesar venta: ${e.message}`);
+            }
+        }
+
+        // --- PRINTING ---
+        document.getElementById('print-ticket-button').onclick = async function () {
+            const btn = this;
+            if (btn.disabled || !LAST_SUCCESSFUL_SALE) return;
+            btn.disabled = true;
+            const prev = btn.innerHTML;
+            btn.innerHTML = 'Enviando...';
+
+            try {
+                // Endpoint logic from previous conversations implies /api/printer/print-ticket
+                // But let's check if it exists in main.py. Yes: prefix="/api/printer"
+                await apiFetch('/api/printer/print-ticket', {
+                    method: 'POST', body: JSON.stringify({ order_id: LAST_SUCCESSFUL_SALE.sale_id })
+                });
+                btn.innerHTML = '¡Enviado!';
+            } catch (e) { alert(`Error: ${e.message}`); }
+            setTimeout(() => { btn.innerHTML = prev; btn.disabled = false; }, 2000);
+        };
+
+        document.getElementById('next-sale-button').onclick = () => {
+            hideModal(document.getElementById('success-modal'));
+            LAST_SUCCESSFUL_SALE = null;
+            document.getElementById('search-input').focus();
+        };
+
+        // --- UTILS ---
+        function getCartTotal() {
+            return cart.reduce((acc, i) => acc + (i.unit_price * i.qty), 0);
+        }
+        function showModal(el) { el.classList.remove('hidden'); setTimeout(() => el.classList.add('flex'), 0); }
+        function hideModal(el) { el.classList.remove('flex'); setTimeout(() => el.classList.add('hidden'), 0); }
+        function fmtMoney(val) { return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(val); }
+        function debounce(fn, ms) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
+    });
+</script>
+{% endblock %}

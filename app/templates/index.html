@@ -1,17 +1,352 @@
-<!DOCTYPE html>
-<html lang="es">
+{% extends "base.html" %}
 
-<head>
-    <meta charset="UTF-8">
-    <title>Atlas ERP - Dashboard</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="/static/js/navbar.js"></script>
-</head>
+{% block title %}Dashboard - DataX POS{% endblock %}
 
-<body class="bg-slate-50">
-    <div class="p-8">
-        <h1 class="text-3xl font-bold text-slate-800">Bienvenido al Sistema</h1>
+{% block content %}
+<!-- HEADER PROPIO DEL DASHBOARD -->
+<header
+    class="h-16 border-b border-white/5 bg-slate-900/50 backdrop-blur-md flex justify-between items-center px-6 shrink-0 z-10 sticky top-0">
+    <div>
+        <h1 class="text-lg font-bold text-white tracking-tight">Dashboard General</h1>
+        <p class="text-[10px] text-slate-400 uppercase tracking-widest font-semibold flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            En vivo
+        </p>
     </div>
-</body>
+    <div class="flex items-center gap-4">
+        <div class="text-right hidden sm:block">
+            <p class="text-[10px] text-slate-400 uppercase font-bold" id="last-update-label">Actualizando...</p>
+        </div>
+    </div>
+</header>
 
-</html>
+<!-- CONTENT SCROLLABLE -->
+<div class="flex-1 overflow-y-auto p-6 custom-scrollbar">
+    <div class="max-w-7xl mx-auto space-y-6">
+
+        <!-- KPIs PRINCIPALES -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <!-- Ventas Totales -->
+            <div
+                class="glass-card rounded-2xl p-5 relative overflow-hidden group hover:bg-slate-800/50 transition duration-300">
+                <div class="absolute right-0 top-0 p-4 opacity-10 group-hover:opacity-20 transition">
+                    <svg class="w-12 h-12 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z">
+                        </path>
+                    </svg>
+                </div>
+                <p class="text-[10px] uppercase tracking-widest text-slate-400 font-bold mb-1">Ventas Hoy</p>
+                <p class="text-3xl font-bold text-white tracking-tight" id="kpi-sales">$0.00</p>
+                <div class="mt-2 flex items-center gap-1 text-xs text-emerald-400">
+                    <span class="bg-emerald-500/20 px-1.5 py-0.5 rounded">MXN</span>
+                </div>
+            </div>
+
+            <!-- Tickets Pagados -->
+            <div
+                class="glass-card rounded-2xl p-5 relative overflow-hidden group hover:bg-slate-800/50 transition duration-300">
+                <div class="absolute right-0 top-0 p-4 opacity-10 group-hover:opacity-20 transition">
+                    <svg class="w-12 h-12 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01">
+                        </path>
+                    </svg>
+                </div>
+                <p class="text-[10px] uppercase tracking-widest text-slate-400 font-bold mb-1">Tickets</p>
+                <p class="text-3xl font-bold text-white tracking-tight" id="kpi-orders">0</p>
+                <div class="mt-2 flex items-center gap-1 text-xs text-violet-400">
+                    <span class="bg-violet-500/20 px-1.5 py-0.5 rounded">Pagados</span>
+                </div>
+            </div>
+
+            <!-- Ticket Promedio -->
+            <div
+                class="glass-card rounded-2xl p-5 relative overflow-hidden group hover:bg-slate-800/50 transition duration-300">
+                <div class="absolute right-0 top-0 p-4 opacity-10 group-hover:opacity-20 transition">
+                    <svg class="w-12 h-12 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                    </svg>
+                </div>
+                <p class="text-[10px] uppercase tracking-widest text-slate-400 font-bold mb-1">Ticket Promedio</p>
+                <p class="text-3xl font-bold text-white tracking-tight" id="kpi-avg">$0.00</p>
+                <div class="mt-2 flex items-center gap-1 text-xs text-sky-400">
+                    <span class="bg-sky-500/20 px-1.5 py-0.5 rounded">Por venta</span>
+                </div>
+            </div>
+
+            <!-- Estado Piso -->
+            <div
+                class="glass-card rounded-2xl p-5 relative overflow-hidden group hover:bg-slate-800/50 transition duration-300">
+                <div class="absolute right-0 top-0 p-4 opacity-10 group-hover:opacity-20 transition">
+                    <svg class="w-12 h-12 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                </div>
+                <p class="text-[10px] uppercase tracking-widest text-slate-400 font-bold mb-1">Flujo en Piso</p>
+                <div class="flex items-center gap-4 mt-1">
+                    <div>
+                        <span class="text-2xl font-bold text-white" id="kpi-ready">0</span>
+                        <span class="text-[10px] text-slate-400 block uppercase">Por Cobrar</span>
+                    </div>
+                    <div class="h-8 w-px bg-white/10"></div>
+                    <div>
+                        <span class="text-xl font-bold text-slate-300" id="kpi-preparing">0</span>
+                        <span class="text-[10px] text-slate-500 block uppercase">En Prep.</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- GRÁFICOS PRINCIPALES -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Tendencia -->
+            <div class="lg:col-span-2 glass-card rounded-2xl p-6">
+                <h3 class="text-sm font-bold text-slate-200 mb-4">Tendencia de Ventas (7 Días)</h3>
+                <div class="h-64">
+                    <canvas id="chart-trend"></canvas>
+                </div>
+            </div>
+            <!-- Mix Pagos -->
+            <div class="glass-card rounded-2xl p-6 flex flex-col">
+                <h3 class="text-sm font-bold text-slate-200 mb-2">Métodos de Pago</h3>
+                <div class="flex-1 flex items-center justify-center min-h-[200px]">
+                    <canvas id="chart-payments"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- TABLAS DETALLADAS -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+            <!-- Órdenes Recientes -->
+            <div class="glass-card rounded-2xl overflow-hidden flex flex-col h-96">
+                <div class="p-4 border-b border-white/5 flex justify-between items-center bg-slate-900/30">
+                    <h3 class="text-sm font-bold text-slate-200">Ventas Recientes</h3>
+                    <span class="text-[10px] text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded">En tiempo real</span>
+                </div>
+                <div class="flex-1 overflow-y-auto custom-scrollbar p-2">
+                    <table class="w-full text-left border-collapse">
+                        <thead
+                            class="text-[10px] uppercase text-slate-500 font-bold sticky top-0 bg-slate-900/90 backdrop-blur-sm z-10">
+                            <tr>
+                                <th class="px-3 py-2">#Orden</th>
+                                <th class="px-3 py-2">Cliente</th>
+                                <th class="px-3 py-2 text-right">Total</th>
+                                <th class="px-3 py-2 text-right">Hora</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-recent-orders" class="text-xs text-slate-300">
+                            <tr>
+                                <td colspan="4" class="p-4 text-center italic text-slate-500">Cargando...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Inventario Crítico -->
+            <div class="glass-card rounded-2xl overflow-hidden flex flex-col h-96">
+                <div class="p-4 border-b border-white/5 flex justify-between items-center bg-slate-900/30">
+                    <h3 class="text-sm font-bold text-slate-200">Inventario Bajo</h3>
+                    <span class="text-[10px] text-rose-400 bg-rose-500/10 px-2 py-1 rounded">Atención Requerida</span>
+                </div>
+                <div class="flex-1 overflow-y-auto custom-scrollbar p-2">
+                    <table class="w-full text-left border-collapse">
+                        <thead
+                            class="text-[10px] uppercase text-slate-500 font-bold sticky top-0 bg-slate-900/90 backdrop-blur-sm z-10">
+                            <tr>
+                                <th class="px-3 py-2">Producto</th>
+                                <th class="px-3 py-2 text-center">Stock</th>
+                                <th class="px-3 py-2 text-right">Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-low-stock" class="text-xs text-slate-300">
+                            <tr>
+                                <td colspan="3" class="p-4 text-center italic text-slate-500">Analizando stock...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- GRÁFICOS SECUNDARIOS -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="glass-card rounded-2xl p-6">
+                <h3 class="text-sm font-bold text-slate-200 mb-4">Top 5 Productos</h3>
+                <div class="h-48">
+                    <canvas id="chart-top-products"></canvas>
+                </div>
+            </div>
+            <div class="glass-card rounded-2xl p-6">
+                <h3 class="text-sm font-bold text-slate-200 mb-4">Ventas por Hora</h3>
+                <div class="h-48">
+                    <canvas id="chart-hourly"></canvas>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const API_BASE_URL = 'http://127.0.0.1:8000';
+        let ACCESS_TOKEN = sessionStorage.getItem('ACCESS_TOKEN');
+        let REFRESH_TIMER = null;
+
+        let charts = { trend: null, payments: null, top: null, hourly: null };
+
+        // --- API ---
+        async function apiFetch(endpoint) {
+            if (!ACCESS_TOKEN) return [];
+            const res = await fetch(`${API_BASE_URL}${endpoint}`, {
+                headers: { 'Authorization': `Bearer ${ACCESS_TOKEN}` }
+            });
+            if (res.status === 401) {
+                sessionStorage.clear();
+                window.location.href = '/auth';
+            }
+            return res.ok ? res.json() : [];
+        }
+
+        async function loadDashboard() {
+            const label = document.getElementById('last-update-label');
+            if (label) label.textContent = 'Actualizando...';
+
+            try {
+                // Fetch Paralelo
+                const [ordersPaid, ordersReady, ordersPrep, inventory] = await Promise.all([
+                    apiFetch('/api/orders/?status=PAID&limit=500'),
+                    apiFetch('/api/orders/?status=READY_TO_PAY&limit=100'),
+                    apiFetch('/api/orders/?status=PREPARING&limit=100'),
+                    apiFetch('/api/inventory/?limit=500')
+                ]);
+
+                // Update UI
+                updateKPIs(ordersPaid, ordersReady.length, ordersPrep.length);
+                updateTables(ordersPaid, inventory);
+                updateCharts(ordersPaid);
+
+                const now = new Date();
+                if (label) label.textContent = 'Actualizado: ' + now.toLocaleTimeString();
+            } catch (e) { console.error('Dashboard Error:', e); }
+        }
+
+        // Logic Helpers (Copied from legacy and adapted)
+        function updateKPIs(orders, ready, prep) {
+            const total = orders.reduce((acc, o) => acc + o.total, 0);
+            const count = orders.length;
+            const avg = count ? total / count : 0;
+
+            setText('kpi-sales', fmtMoney(total));
+            setText('kpi-orders', count);
+            setText('kpi-avg', fmtMoney(avg));
+            setText('kpi-ready', ready);
+            setText('kpi-preparing', prep);
+        }
+
+        function updateTables(orders, inventory) {
+            const recent = orders.slice(0, 20);
+            const tableOrders = document.getElementById('table-recent-orders');
+            if (tableOrders) {
+                tableOrders.innerHTML = recent.length ? recent.map(o => `
+                    <tr class="border-b border-white/5 hover:bg-white/5 transition-colors">
+                        <td class="px-3 py-2 font-mono text-violet-300">#${o.id}</td>
+                        <td class="px-3 py-2 truncate max-w-[120px] text-slate-300">${o.customer_name}</td>
+                        <td class="px-3 py-2 text-right font-bold text-emerald-400">${fmtMoney(o.total)}</td>
+                        <td class="px-3 py-2 text-right text-slate-500">${new Date(o.opened_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
+                    </tr>
+                `).join('') : '<tr><td colspan="4" class="p-4 text-center italic text-slate-500">Sin ventas recientes</td></tr>';
+            }
+
+            const lowStock = inventory.filter(i => i.qty_on_hand <= 5).sort((a, b) => a.qty_on_hand - b.qty_on_hand).slice(0, 20);
+            const tableStock = document.getElementById('table-low-stock');
+            if (tableStock) {
+                tableStock.innerHTML = lowStock.length ? lowStock.map(i => {
+                    const p = i.product || {};
+                    const isZero = i.qty_on_hand <= 0;
+                    const color = isZero ? 'text-rose-500 font-bold' : 'text-amber-400';
+                    return `
+                        <tr class="border-b border-white/5 hover:bg-white/5 transition-colors">
+                            <td class="px-3 py-2">
+                                <div class="font-medium text-slate-200 truncate max-w-[150px]">${p.name || 'Item'}</div>
+                                <div class="text-[10px] text-slate-500 font-mono">${p.sku || '-'}</div>
+                            </td>
+                            <td class="px-3 py-2 text-center ${color}">${i.qty_on_hand}</td>
+                            <td class="px-3 py-2 text-right"><span class="text-[10px] bg-slate-800 px-2 py-1 rounded border border-slate-700 ${isZero ? 'text-rose-400 border-rose-900/30' : 'text-amber-400 border-amber-900/30'}">${isZero ? 'AGOTADO' : 'BAJO'}</span></td>
+                        </tr>
+                    `;
+                }).join('') : '<tr><td colspan="3" class="p-4 text-center text-emerald-400">Stock saludable</td></tr>';
+            }
+        }
+
+        function updateCharts(orders) {
+            const salesByDay = {}, salesByHour = {}, products = {};
+            orders.forEach(o => {
+                const day = new Date(o.opened_at).toLocaleDateString('es-MX', { weekday: 'short' });
+                salesByDay[day] = (salesByDay[day] || 0) + o.total;
+                const hour = new Date(o.opened_at).getHours();
+                salesByHour[hour] = (salesByHour[hour] || 0) + o.total;
+                o.items.forEach(i => {
+                    if (i.product) products[i.product.name] = (products[i.product.name] || 0) + i.line_total;
+                });
+            });
+
+            renderChart('trend', 'chart-trend', 'line', {
+                labels: Object.keys(salesByDay),
+                datasets: [{ label: 'Ventas', data: Object.values(salesByDay), borderColor: '#8b5cf6', backgroundColor: 'rgba(139, 92, 246, 0.1)', fill: true, tension: 0.4 }]
+            });
+
+            const topProd = Object.entries(products).sort((a, b) => b[1] - a[1]).slice(0, 5);
+            renderChart('top', 'chart-top-products', 'bar', {
+                labels: topProd.map(x => x[0].substring(0, 15) + '...'),
+                datasets: [{ label: 'Monto', data: topProd.map(x => x[1]), backgroundColor: ['#34d399', '#2dd4bf', '#38bdf8', '#818cf8', '#a78bfa'], borderRadius: 5 }]
+            }, { indexAxis: 'y' });
+
+            const hours = Array.from({ length: 14 }, (_, i) => i + 8);
+            renderChart('hourly', 'chart-hourly', 'bar', {
+                labels: hours.map(h => `${h}:00`),
+                datasets: [{ label: 'Venta Hora', data: hours.map(h => salesByHour[h] || 0), backgroundColor: '#f59e0b', borderRadius: 4 }]
+            });
+
+            renderChart('payments', 'chart-payments', 'doughnut', {
+                labels: ['Efectivo', 'Tarjeta', 'Otros'],
+                datasets: [{ data: [70, 25, 5], backgroundColor: ['#10b981', '#3b82f6', '#f43f5e'], borderWidth: 0 }]
+            });
+        }
+
+        function renderChart(key, id, type, data, extraOpts = {}) {
+            const ctx = document.getElementById(id);
+            if (!ctx) return;
+            if (charts[key]) charts[key].destroy();
+            charts[key] = new Chart(ctx, {
+                type: type,
+                data: data,
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: type === 'doughnut', position: 'right', labels: { color: '#94a3b8', font: { size: 10 } } } },
+                    scales: type === 'doughnut' ? {} : {
+                        x: { grid: { display: false }, ticks: { color: '#64748b', font: { size: 10 } } },
+                        y: { grid: { color: '#334155' }, ticks: { color: '#64748b', font: { size: 10 }, callback: v => '$' + v } }
+                    },
+                    ...extraOpts
+                }
+            });
+        }
+
+        // Utils
+        const setText = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+        const fmtMoney = (val) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(val);
+
+        // Init
+        loadDashboard();
+        REFRESH_TIMER = setInterval(loadDashboard, 30000);
+    });
+</script>
+{% endblock %}

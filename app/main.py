@@ -1,8 +1,10 @@
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from datetime import datetime, timezone
+
 
 from app.database import engine
 from app.models import Base 
@@ -33,6 +35,10 @@ app.add_middleware(
 # 3. ARCHIVOS ESTÁTICOS Y TEMPLATES
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 templates = Jinja2Templates(directory="app/templates")
+def jinja_now_utc(fmt: str = "%A, %d %B %Y") -> str:
+    return datetime.now(timezone.utc).strftime(fmt)
+
+templates.env.globals["now_utc"] = jinja_now_utc
 
 # 4. REGISTRO DE ROUTERS (BACKEND API)
 app.include_router(auth.router, prefix="/api/auth", tags=["🔑 Autenticación"])
@@ -66,6 +72,24 @@ async def login_page(request: Request):
 @app.get("/pos", response_class=HTMLResponse)
 async def pos_page(request: Request):
     return templates.TemplateResponse("pos.html", {"request": request})
+
+@app.get("/products", response_class=HTMLResponse)
+async def products_page(request: Request):
+    """Gestión de productos"""
+    return templates.TemplateResponse("products.html", {"request": request})
+
+@app.get("/sales", response_class=HTMLResponse)
+async def sales_page(request: Request):
+    return templates.TemplateResponse("wip.html", {"request": request, "title": "Ventas"})
+
+@app.get("/customers", response_class=HTMLResponse)
+async def customers_page(request: Request):
+    return templates.TemplateResponse("wip.html", {"request": request, "title": "Clientes"})
+
+@app.get("/reports", response_class=HTMLResponse)
+async def reports_page(request: Request):
+    return templates.TemplateResponse("wip.html", {"request": request, "title": "Reportes"})
+
 
 # Ruta para el módulo de cotizaciones independiente
 @app.get("/quotes", response_class=HTMLResponse)

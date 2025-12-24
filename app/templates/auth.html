@@ -1,102 +1,153 @@
-<!-- app/templates/auth.html -->
-<!doctype html>
-<html lang="es">
+<!DOCTYPE html>
+<html lang="es" class="dark">
 
 <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Atlas ERP & POS — Login</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - DataX POS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        slate: { 850: '#172033', 950: '#020617' },
+                        primary: { 500: '#8b5cf6', 600: '#7c3aed' }
+                    },
+                    fontFamily: { sans: ['Inter', 'sans-serif'] }
+                }
+            }
+        }
+    </script>
     <style>
         body {
-            font-family: system-ui;
-            margin: 0;
-            background: #f6f7fb;
+            font-family: 'Inter', sans-serif;
         }
 
-        .wrap {
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 24px;
-        }
-
-        .card {
-            width: 100%;
-            max-width: 420px;
-            background: #fff;
-            border: 1px solid #e5e7eb;
-            border-radius: 16px;
-            padding: 18px;
-            box-shadow: 0 10px 35px rgba(0, 0, 0, .06);
-        }
-
-        .h {
-            font-size: 20px;
-            font-weight: 900;
-            margin: 0 0 6px;
-        }
-
-        .p {
-            margin: 0 0 14px;
-            opacity: .7;
-            font-size: 13px;
-        }
-
-        label {
-            display: block;
-            font-size: 13px;
-            margin: 10px 0 6px;
-            opacity: .8;
-        }
-
-        input,
-        button {
-            width: 100%;
-            padding: 12px;
-            border-radius: 12px;
-            border: 1px solid #e5e7eb;
-            font-size: 14px;
-        }
-
-        button {
-            cursor: pointer;
-            font-weight: 900;
-            background: #111;
-            color: #fff;
-            border-color: #111;
-        }
-
-        .msg {
-            margin-top: 10px;
-            font-size: 13px;
-            opacity: .85;
-            min-height: 18px;
+        .login-bg {
+            background: radial-gradient(circle at top left, #1e1b4b 0%, #020617 100%);
         }
     </style>
 </head>
 
-<body>
-    <div class="wrap">
-        <div class="card">
-            <h1 class="h">Acceso</h1>
-            <p class="p">Inicia sesión para entrar al POS.</p>
+<body class="bg-slate-950 text-slate-100 h-screen flex items-center justify-center login-bg overflow-hidden relative">
 
-            <form id="loginForm">
-                <label>Usuario</label>
-                <input name="username" autocomplete="username" required />
+    <!-- Background Decoration -->
+    <div class="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-violet-600/20 rounded-full blur-3xl"></div>
+    <div class="absolute bottom-[-10%] right-[-10%] w-[30%] h-[30%] bg-indigo-600/10 rounded-full blur-3xl"></div>
 
-                <label>Contraseña</label>
-                <input name="password" type="password" autocomplete="current-password" required />
+    <!-- Login Card -->
+    <div
+        class="w-full max-w-sm bg-slate-900/50 backdrop-blur-xl border border-white/5 rounded-3xl p-8 shadow-2xl relative overflow-hidden z-10 transition-all duration-500 transform hover:scale-[1.01]">
 
-                <div style="height:12px;"></div>
-                <button type="submit">Entrar</button>
-                <div id="loginMsg" class="msg"></div>
-            </form>
+        <!-- Glow Effect -->
+        <div class="absolute top-0 right-0 w-32 h-32 bg-violet-600/20 rounded-full blur-3xl -mr-16 -mt-16"></div>
+
+        <div class="flex justify-center mb-6 relative z-10">
+            <div
+                class="w-14 h-14 bg-gradient-to-br from-violet-600 to-indigo-600 rounded-xl flex items-center justify-center text-white font-bold text-2xl shadow-lg shadow-violet-900/30">
+                DX
+            </div>
+        </div>
+
+        <h2 class="text-2xl font-bold text-center text-white mb-1 relative z-10">Bienvenido</h2>
+        <p class="text-sm text-center text-slate-400 mb-8 relative z-10">Sistema Integral ERP & POS</p>
+
+        <form id="login-form" class="space-y-5 relative z-10">
+            <div>
+                <label class="block text-xs uppercase tracking-wider text-slate-500 font-bold mb-2 ml-1">Usuario</label>
+                <input id="username" type="text"
+                    class="w-full px-4 py-3 bg-slate-950/50 border border-slate-700/50 rounded-xl text-white focus:ring-2 focus:ring-violet-500 focus:border-transparent outline-none transition-all placeholder-slate-600"
+                    placeholder="ej. admin" required autofocus>
+            </div>
+
+            <div>
+                <label class="block text-xs uppercase tracking-wider text-slate-500 font-bold mb-2 ml-1">PIN /
+                    Contraseña</label>
+                <input id="pin" type="password" inputmode="numeric"
+                    class="w-full px-4 py-3 bg-slate-950/50 border border-slate-700/50 rounded-xl text-white focus:ring-2 focus:ring-violet-500 focus:border-transparent outline-none transition-all placeholder-slate-600"
+                    placeholder="••••" required>
+            </div>
+
+            <div id="login-error"
+                class="hidden p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs text-center font-medium">
+            </div>
+
+            <button type="submit"
+                class="w-full py-3.5 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-bold rounded-xl transition-all shadow-lg shadow-violet-900/20 hover:shadow-violet-900/40 active:scale-[0.98]">
+                Ingresar al Sistema
+            </button>
+        </form>
+
+        <div class="mt-6 text-center">
+            <p class="text-[10px] text-slate-500">
+                &copy; 2024 DataX Systems. V 2.0
+            </p>
         </div>
     </div>
 
-    <script type="module" src="/static/js/auth.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const API_BASE_URL = 'http://127.0.0.1:8000';
+            const form = document.getElementById('login-form');
+            const errorDiv = document.getElementById('login-error');
+
+            // Limpiar sesión previa al entrar al login
+            sessionStorage.clear();
+
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const user = document.getElementById('username').value;
+                const pin = document.getElementById('pin').value;
+
+                // UI Loading state
+                const btn = form.querySelector('button');
+                const originalBtnText = btn.innerHTML;
+                btn.disabled = true;
+                btn.innerHTML = `<svg class="animate-spin h-5 w-5 mx-auto text-white" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>`;
+                errorDiv.classList.add('hidden');
+
+                try {
+                    const res = await fetch(`${API_BASE_URL}/api/auth/login`, {
+                        method: 'POST',
+                        body: new URLSearchParams({ username: user, password: pin }),
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+                    });
+
+                    if (!res.ok) {
+                        const errData = await res.json().catch(() => ({}));
+                        throw new Error(errData.detail || 'Credenciales inválidas');
+                    }
+
+                    const data = await res.json();
+
+                    // Decode JWT
+                    const payload = JSON.parse(atob(data.access_token.split('.')[1]));
+
+                    sessionStorage.setItem('ACCESS_TOKEN', data.access_token);
+                    sessionStorage.setItem('CURRENT_USER', JSON.stringify({
+                        username: payload.sub,
+                        role: payload.role || 'Usuario' // Adjust based on your actual JWT payload
+                    }));
+
+                    // Redirect
+                    window.location.href = '/';
+
+                } catch (e) {
+                    errorDiv.textContent = e.message;
+                    errorDiv.classList.remove('hidden');
+                    btn.disabled = false;
+                    btn.innerHTML = originalBtnText;
+
+                    // Shake anim
+                    const card = document.querySelector('.max-w-sm');
+                    card.classList.add('animate-[shake_0.5s_ease-in-out]');
+                    setTimeout(() => card.classList.remove('animate-[shake_0.5s_ease-in-out]'), 500);
+                }
+            });
+        });
+    </script>
 </body>
 
 </html>

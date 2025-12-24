@@ -205,12 +205,24 @@ async function searchProducts(q) {
             const name = p?.name || "(Sin nombre)";
 
             const btn = document.createElement("button");
-            btn.type = "button";
-            btn.innerHTML = `<strong>${name}</strong> · ${money(price)} <span class="muted">(${sku})</span>`;
+            btn.className = "btn btn-secondary"; // New class
+            btn.style.width = "100%";
+            btn.style.justifyContent = "space-between"; // Flex layout
+            btn.style.textAlign = "left";
+            btn.style.marginBottom = "4px";
+
+            btn.innerHTML = `
+                <div style="display:flex; flex-direction:column; align-items:flex-start;">
+                    <span style="font-weight:600;">${name}</span>
+                    <span class="text-sm text-muted">${sku}</span>
+                </div>
+                <div class="font-bold text-primary-600">${money(price)}</div>
+            `;
             btn.addEventListener("click", () => {
                 addToCartFromApiProduct(p);
                 els.searchInput.value = "";
                 showSuggestions(false);
+                els.searchInput.focus(); // Keep focus
             });
             els.suggestions.appendChild(btn);
         });
@@ -282,7 +294,9 @@ function renderCart() {
         qtyInput.min = "1";
         qtyInput.step = "1";
         qtyInput.value = String(it.quantity);
-        qtyInput.style.width = "80px";
+        qtyInput.className = "form-input"; // New class
+        qtyInput.style.width = "60px";
+        qtyInput.style.padding = "4px 8px"; // Compact
         qtyInput.addEventListener("change", () => {
             const q = Math.max(1, Math.floor(num(qtyInput.value)));
             it.quantity = q;
@@ -299,9 +313,11 @@ function renderCart() {
         tdX.className = "right";
 
         const btnX = document.createElement("button");
-        btnX.className = "btn-muted";
-        btnX.textContent = "X";
-        btnX.style.padding = "8px 10px";
+        btnX.className = "btn btn-danger"; // New class
+        btnX.textContent = "×";
+        btnX.style.padding = "4px 8px";
+        btnX.style.minWidth = "24px";
+        btnX.style.height = "28px";
         btnX.addEventListener("click", () => {
             cart = cart.filter((x) => x.variant_id !== it.variant_id);
             renderCart();

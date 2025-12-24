@@ -1,0 +1,653 @@
+{% extends "base.html" %}
+
+{% block title %}Productos - DataX POS{% endblock %}
+
+{% block content %}
+<!-- HEADER -->
+<header
+    class="h-16 border-b border-white/5 bg-slate-900/50 backdrop-blur-md flex justify-between items-center px-6 shrink-0 z-10 sticky top-0">
+    <div>
+        <h1 class="text-lg font-bold text-white tracking-tight">Catálogo de Productos</h1>
+        <p class="text-[10px] text-slate-400 uppercase tracking-widest font-semibold flex items-center gap-2">
+            Administración
+        </p>
+    </div>
+    <div class="flex items-center gap-4">
+        <!-- Actions could go here -->
+    </div>
+</header>
+
+<!-- MAIN SCROLLABLE AREA -->
+<div class="flex-1 overflow-y-auto p-6 custom-scrollbar">
+    <div class="max-w-7xl mx-auto space-y-6">
+
+        <!-- ACCIONES Y FILTROS -->
+        <div class="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
+            <div class="relative flex-1 max-w-xl">
+                <span class="absolute inset-y-0 left-3 flex items-center text-slate-400">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                </span>
+                <input id="search-input" type="text" placeholder="Buscar por nombre, SKU o código..."
+                    class="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-900/50 border border-slate-700/50 text-white text-sm focus:ring-2 focus:ring-violet-500 outline-none transition placeholder-slate-500">
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2">
+                <select id="department-filter"
+                    class="px-3 py-2.5 rounded-xl bg-slate-900/50 border border-slate-700/50 text-white text-sm focus:ring-2 focus:ring-violet-500 outline-none cursor-pointer hover:bg-slate-800 transition">
+                    <option value="ALL">Todos los Deptos</option>
+                </select>
+
+                <div class="h-8 w-px bg-slate-700 mx-2 hidden md:block"></div>
+
+                <button id="export-button"
+                    class="flex items-center gap-2 bg-slate-800 border border-slate-700 text-slate-200 px-4 py-2.5 rounded-xl text-xs font-bold hover:bg-slate-700 transition shadow-sm">
+                    <svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                    </svg>
+                    Exportar
+                </button>
+
+                <button id="import-excel-button"
+                    class="flex items-center gap-2 bg-slate-800 border border-slate-700 text-slate-200 px-4 py-2.5 rounded-xl text-xs font-bold hover:bg-slate-700 transition shadow-sm">
+                    <svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12">
+                        </path>
+                    </svg>
+                    Importar
+                </button>
+
+                <button id="toggle-view-button"
+                    class="flex items-center gap-2 bg-slate-800 border border-slate-700 text-slate-200 px-4 py-2.5 rounded-xl text-xs font-bold hover:bg-slate-700 transition shadow-sm">
+                    <span id="view-icon">📋</span> <span id="view-label">Tabla</span>
+                </button>
+
+                <button id="new-product-button"
+                    class="flex items-center gap-2 bg-violet-600 hover:bg-violet-500 text-white px-5 py-2.5 rounded-xl text-xs font-bold shadow-lg shadow-violet-500/20 transition transform active:scale-95 ml-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                    </svg>
+                    Nuevo
+                </button>
+            </div>
+        </div>
+
+        <!-- KPIs -->
+        <section class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="glass-card rounded-2xl p-4 flex flex-col justify-between h-24">
+                <p class="text-[10px] uppercase tracking-widest text-slate-400 font-bold">Total Productos</p>
+                <div class="flex items-end justify-between">
+                    <p id="stat-total-products" class="text-3xl font-black text-white">0</p>
+                    <span class="text-xs text-slate-400 bg-slate-800 px-2 py-1 rounded">Activos</span>
+                </div>
+            </div>
+            <div class="glass-card rounded-2xl p-4 flex flex-col justify-between h-24">
+                <p class="text-[10px] uppercase tracking-widest text-slate-400 font-bold">Sin Precio</p>
+                <div class="flex items-end justify-between">
+                    <p id="stat-no-price" class="text-3xl font-black text-amber-500">0</p>
+                    <span class="text-xs text-amber-500 bg-amber-500/10 px-2 py-1 rounded">Revisar</span>
+                </div>
+            </div>
+            <div class="glass-card rounded-2xl p-4 flex flex-col justify-between h-24">
+                <p class="text-[10px] uppercase tracking-widest text-slate-400 font-bold">Sin Depto</p>
+                <div class="flex items-end justify-between">
+                    <p id="stat-no-dept" class="text-3xl font-black text-rose-500">0</p>
+                    <span class="text-xs text-rose-500 bg-rose-500/10 px-2 py-1 rounded">Asignar</span>
+                </div>
+            </div>
+            <div class="glass-card rounded-2xl p-4 flex flex-col justify-between h-24">
+                <p class="text-[10px] uppercase tracking-widest text-slate-400 font-bold">Nuevos (7d)</p>
+                <div class="flex items-end justify-between">
+                    <p id="stat-new-products" class="text-3xl font-black text-emerald-500">0</p>
+                    <span class="text-xs text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded">Recientes</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- VISTA TABLA -->
+        <section id="table-view" class="glass-card rounded-2xl overflow-hidden glass-panel">
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-slate-800">
+                    <thead class="bg-slate-900/50">
+                        <tr>
+                            <th
+                                class="px-6 py-4 text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                                SKU / Barras</th>
+                            <th
+                                class="px-6 py-4 text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                                Producto</th>
+                            <th
+                                class="px-6 py-4 text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                                Depto</th>
+                            <th
+                                class="px-6 py-4 text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                                Precios</th>
+                            <th
+                                class="px-6 py-4 text-center text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                                Stock</th>
+                            <th
+                                class="px-6 py-4 text-right text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                                Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="products-table-body"
+                        class="bg-transparent divide-y divide-slate-800 text-sm text-slate-300">
+                        <!-- Filas JS -->
+                    </tbody>
+                </table>
+            </div>
+            <!-- Paginación -->
+            <div class="flex items-center justify-between px-6 py-4 border-t border-slate-800 bg-slate-900/30">
+                <div id="pagination-info" class="text-xs text-slate-500">Mostrando 0 productos</div>
+                <div class="flex gap-2">
+                    <button id="prev-page-btn"
+                        class="p-1.5 rounded hover:bg-slate-800 text-slate-400 disabled:opacity-50">◀</button>
+                    <span id="current-page-label" class="text-xs font-bold text-slate-300 py-1.5">1 / 1</span>
+                    <button id="next-page-btn"
+                        class="p-1.5 rounded hover:bg-slate-800 text-slate-400 disabled:opacity-50">▶</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- VISTA CARDS -->
+        <section id="cards-view" class="hidden">
+            <div id="products-cards-container"
+                class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                <!-- Cards JS -->
+            </div>
+            <!-- Paginación Cards -->
+            <div class="flex items-center justify-between mt-4">
+                <div id="pagination-info-cards" class="text-xs text-slate-500">Mostrando 0 productos</div>
+                <div class="flex gap-2">
+                    <button id="prev-page-btn-cards"
+                        class="p-2 rounded bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-400 disabled:opacity-50">◀</button>
+                    <span id="current-page-label-cards" class="text-xs font-bold text-slate-300 py-2">1 / 1</span>
+                    <button id="next-page-btn-cards"
+                        class="p-2 rounded bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-400 disabled:opacity-50">▶</button>
+                </div>
+            </div>
+        </section>
+
+    </div>
+</div>
+{% endblock %}
+
+{% block modals %}
+<!-- Modal Crear/Editar -->
+<div id="product-modal"
+    class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 transition-opacity duration-300">
+    <div
+        class="bg-slate-900 rounded-2xl shadow-2xl max-w-3xl w-full p-6 border border-slate-700 max-h-[90vh] overflow-y-auto custom-scrollbar transform transition-all scale-100">
+        <div class="flex justify-between items-center mb-6">
+            <h3 id="product-modal-title" class="text-xl font-bold text-white">Nuevo Producto</h3>
+            <button id="close-product-modal" class="text-slate-400 hover:text-white transition">✕</button>
+        </div>
+
+        <form id="product-form" class="space-y-6">
+            <input type="hidden" id="product-id">
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="md:col-span-2">
+                    <label class="block text-xs font-bold text-slate-500 mb-1 uppercase">Nombre*</label>
+                    <input id="product-name" type="text"
+                        class="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-lg text-white outline-none focus:ring-2 focus:ring-violet-500 transition"
+                        placeholder="Nombre comercial" required>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1 uppercase">Unidad</label>
+                    <input id="product-unit" type="text"
+                        class="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-lg text-white outline-none focus:ring-2 focus:ring-violet-500 transition"
+                        placeholder="pza, kg, lt">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1 uppercase">SKU*</label>
+                    <div class="flex gap-2">
+                        <input id="product-sku" type="text"
+                            class="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-lg text-white outline-none focus:ring-2 focus:ring-violet-500 transition"
+                            required>
+                        <button type="button" id="generate-sku-button"
+                            class="px-3 bg-slate-800 text-slate-300 rounded-lg text-xs font-bold hover:bg-slate-700 transition">Auto</button>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1 uppercase">Código Barras</label>
+                    <input id="product-barcode" type="text"
+                        class="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-lg text-white outline-none focus:ring-2 focus:ring-violet-500 transition">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1 uppercase">Departamento</label>
+                    <select id="product-department"
+                        class="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-lg text-white outline-none focus:ring-2 focus:ring-violet-500 transition">
+                        <option value="">(Ninguno)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1 uppercase">Precio Base</label>
+                    <div class="relative">
+                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">$</span>
+                        <input id="product-base-price" type="number" step="0.01"
+                            class="w-full pl-7 pr-4 py-2.5 bg-slate-950 border border-slate-800 rounded-lg text-white outline-none focus:ring-2 focus:ring-emerald-500 transition"
+                            placeholder="0.00" required>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1 uppercase">Costo</label>
+                    <div class="relative">
+                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">$</span>
+                        <input id="product-cost" type="number" step="0.01"
+                            class="w-full pl-7 pr-4 py-2.5 bg-slate-950 border border-slate-800 rounded-lg text-white outline-none focus:ring-2 focus:ring-amber-500 transition"
+                            placeholder="0.00">
+                    </div>
+                </div>
+                <div class="flex items-end gap-4 pb-2">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" id="product-uses-inventory"
+                            class="w-4 h-4 rounded border-slate-700 bg-slate-800 text-violet-600 focus:ring-violet-500"
+                            checked>
+                        <span class="text-sm font-medium text-slate-300">Inventario</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" id="product-active"
+                            class="w-4 h-4 rounded border-slate-700 bg-slate-800 text-emerald-600 focus:ring-emerald-500"
+                            checked>
+                        <span class="text-sm font-medium text-slate-300">Activo</span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="bg-slate-800/30 p-4 rounded-xl border border-slate-800">
+                <div class="flex justify-between items-center mb-3">
+                    <label class="text-xs font-bold text-slate-500 uppercase">Lista de Precios</label>
+                    <button type="button" id="add-price-tier-button"
+                        class="text-xs text-violet-400 font-bold hover:text-violet-300">+ Agregar Nivel</button>
+                </div>
+                <div id="price-tiers-container" class="space-y-2">
+                    <!-- Rows JS -->
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-500 mb-1 uppercase">Descripción</label>
+                <textarea id="product-description" rows="2"
+                    class="w-full px-4 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white outline-none focus:ring-2 focus:ring-violet-500 transition resize-none"></textarea>
+            </div>
+
+            <div class="flex justify-end gap-3 pt-4 border-t border-slate-800">
+                <button type="button" id="cancel-product-modal"
+                    class="px-4 py-2 text-slate-400 hover:bg-slate-800 rounded-lg font-bold transition">Cancelar</button>
+                <button type="submit" id="save-product-button"
+                    class="px-6 py-2 bg-violet-600 hover:bg-violet-500 text-white rounded-lg font-bold shadow-md transition">Guardar
+                    Producto</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal Importar Excel -->
+<div id="upload-modal"
+    class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-slate-900 rounded-2xl shadow-2xl max-w-md w-full p-6 border border-slate-700">
+        <h3 class="text-xl font-bold mb-4 text-white">Importar Excel</h3>
+        <form id="upload-form">
+            <div id="upload-step-1">
+                <label
+                    class="block w-full p-8 border-2 border-dashed border-slate-700 rounded-xl text-center cursor-pointer hover:border-violet-500 hover:bg-slate-800/50 transition mb-4">
+                    <svg class="w-10 h-10 mx-auto text-slate-500 mb-2" fill="none" stroke="currentColor"
+                        viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12">
+                        </path>
+                    </svg>
+                    <span class="text-sm font-medium text-slate-400">Clic para subir archivo .xlsx</span>
+                    <input type="file" id="excel-file-input" class="hidden" accept=".xlsx" required>
+                </label>
+                <div class="flex justify-end gap-3">
+                    <button type="button" id="cancel-upload-button"
+                        class="px-4 py-2 text-slate-500 font-bold hover:bg-slate-800 rounded-lg">Cancelar</button>
+                    <button type="submit"
+                        class="px-6 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg shadow">Procesar</button>
+                </div>
+            </div>
+            <div id="upload-step-2" class="hidden text-center py-8">
+                <div
+                    class="spinner w-10 h-10 border-4 border-slate-700 border-t-violet-600 rounded-full mx-auto mb-4 animate-spin">
+                </div>
+                <p class="text-slate-300 font-bold">Importando productos...</p>
+            </div>
+            <div id="upload-step-3" class="hidden">
+                <h4 class="font-bold text-lg mb-2 text-emerald-500">¡Importación Finalizada!</h4>
+                <p id="upload-results-summary"
+                    class="text-sm text-center text-slate-400 mb-4 bg-slate-800 p-3 rounded-lg"></p>
+                <button type="button" id="close-results-button"
+                    class="w-full py-2 bg-slate-700 hover:bg-slate-600 text-white font-bold rounded-lg transition">Cerrar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal Eliminar -->
+<div id="delete-modal"
+    class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+    <div class="bg-slate-900 rounded-2xl shadow-xl w-full max-w-sm p-6 border border-slate-700">
+        <h3 class="text-lg font-bold text-white mb-2">Eliminar Producto</h3>
+        <p class="text-sm text-slate-400 mb-4">¿Estás seguro? Esta acción es irreversible.</p>
+        <p id="delete-product-name" class="font-mono text-sm bg-slate-800 p-2 rounded mb-6 text-center text-slate-200">
+        </p>
+        <div class="flex justify-end gap-3">
+            <button type="button" id="cancel-delete-button"
+                class="px-4 py-2 text-slate-400 hover:bg-slate-800 rounded-lg font-bold">Cancelar</button>
+            <button type="button" id="confirm-delete-button"
+                class="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-lg font-bold shadow">Sí,
+                Eliminar</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const API_BASE_URL = 'http://127.0.0.1:8000';
+        let ACCESS_TOKEN = sessionStorage.getItem('ACCESS_TOKEN');
+        let allProducts = [];
+        let filteredProducts = [];
+        let currentView = 'cards';
+        let currentPage = 1;
+        const pageSize = 24;
+        let deletingProductId = null;
+
+        // --- API ---
+        async function apiFetch(endpoint, options = {}) {
+            const headers = { 'Authorization': `Bearer ${ACCESS_TOKEN}`, ...options.headers };
+            if (options.body && !(options.body instanceof FormData)) headers['Content-Type'] = 'application/json';
+
+            const res = await fetch(`${API_BASE_URL}${endpoint}`, { ...options, headers });
+            if (res.status === 401) { sessionStorage.clear(); window.location.href = '/auth'; }
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({ detail: res.statusText }));
+                throw new Error(err.detail);
+            }
+            return res.status === 204 ? null : res.json();
+        }
+
+        async function loadAllData() {
+            await loadProducts();
+            await loadDepartments();
+        }
+
+        async function loadProducts() {
+            try {
+                const prods = await apiFetch('/api/products/?limit=1000');
+                allProducts = prods;
+                applyFilters();
+                updateStats();
+            } catch (e) { console.error(e); }
+        }
+
+        async function loadDepartments() {
+            try {
+                const depts = await apiFetch('/api/departments/');
+                const sel = document.getElementById('product-department');
+                const filter = document.getElementById('department-filter');
+                if (sel) sel.innerHTML = '<option value="">(Ninguno)</option>';
+                if (filter) filter.innerHTML = '<option value="ALL">Todos los Deptos</option>';
+
+                depts.forEach(d => {
+                    if (sel) sel.insertAdjacentHTML('beforeend', `<option value="${d.id}">${d.name}</option>`);
+                    if (filter) filter.insertAdjacentHTML('beforeend', `<option value="${d.name}">${d.name}</option>`);
+                });
+            } catch (e) { console.error(e); }
+        }
+
+        function updateStats() {
+            setText('stat-total-products', allProducts.length);
+            setText('stat-no-price', allProducts.filter(p => !p.prices?.length).length);
+            setText('stat-no-dept', allProducts.filter(p => !p.department_id).length);
+            setText('stat-new-products', allProducts.filter(p => {
+                const d = new Date(p.created_at || Date.now());
+                return (Date.now() - d) < (7 * 24 * 60 * 60 * 1000);
+            }).length);
+        }
+
+        // --- FILTERS ---
+        const searchInput = document.getElementById('search-input');
+        const deptFilter = document.getElementById('department-filter');
+
+        if (searchInput) searchInput.addEventListener('input', debounce(applyFilters, 300));
+        if (deptFilter) deptFilter.addEventListener('change', applyFilters);
+
+        function applyFilters() {
+            const q = searchInput ? searchInput.value.toLowerCase() : '';
+            const dept = deptFilter ? deptFilter.value : 'ALL';
+
+            filteredProducts = allProducts.filter(p => {
+                const matchText = p.name?.toLowerCase().includes(q) || p.sku?.toLowerCase().includes(q) || (p.barcode && p.barcode.includes(q));
+                const matchDept = dept === 'ALL' || (p.department?.name === dept);
+                return matchText && matchDept;
+            });
+            currentPage = 1;
+            renderView();
+        }
+
+        function renderView() {
+            const start = (currentPage - 1) * pageSize;
+            const pageData = filteredProducts.slice(start, start + pageSize);
+            const totalPages = Math.ceil(filteredProducts.length / pageSize) || 1;
+
+            setText('pagination-info', `Mostrando ${Math.min(start + 1, filteredProducts.length)}-${Math.min(start + pageSize, filteredProducts.length)} de ${filteredProducts.length}`);
+            setText('pagination-info-cards', document.getElementById('pagination-info').textContent);
+            setText('current-page-label', `${currentPage} / ${totalPages}`);
+            setText('current-page-label-cards', `${currentPage} / ${totalPages}`);
+
+            if (currentView === 'table') {
+                const tbody = document.getElementById('products-table-body');
+                if (tbody) tbody.innerHTML = pageData.map(p => `
+                    <tr class="hover:bg-slate-800/50 transition border-b border-slate-800">
+                        <td class="px-6 py-4">
+                            <div class="font-mono text-xs font-bold text-slate-400">${p.sku}</div>
+                            <div class="text-[10px] text-slate-500">${p.barcode || '-'}</div>
+                        </td>
+                        <td class="px-6 py-4 font-bold text-white text-xs">${p.name}</td>
+                        <td class="px-6 py-4 text-xs text-slate-500">${p.department ? p.department.name : '-'}</td>
+                        <td class="px-6 py-4 text-xs">
+                            ${p.prices?.map(pr => `<div class="flex justify-between w-24"><span class="text-slate-500">${pr.min_quantity}+</span> <span class="font-bold text-emerald-500">$${pr.unit_price.toFixed(2)}</span></div>`).join('') || ''}
+                        </td>
+                        <td class="px-6 py-4 text-center">
+                            <span class="px-2 py-1 rounded text-[10px] font-bold ${p.stock_levels?.[0]?.qty_on_hand > 0 ? 'bg-emerald-900/30 text-emerald-400' : 'bg-red-900/30 text-red-400'}">
+                                ${p.stock_levels?.[0]?.qty_on_hand || 0}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 text-right space-x-2">
+                            <button class="text-violet-400 hover:text-violet-300 font-bold text-xs edit-btn" data-id="${p.id}">Editar</button>
+                            <button class="text-rose-400 hover:text-rose-300 font-bold text-xs delete-btn" data-id="${p.id}">✕</button>
+                        </td>
+                    </tr>
+                `).join('');
+            } else {
+                const grid = document.getElementById('products-cards-container');
+                if (grid) grid.innerHTML = pageData.map(p => `
+                    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-sm hover:shadow-md transition group relative overflow-hidden">
+                        <div class="absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-violet-500/10 to-fuchsia-500/10 rounded-bl-full -mr-4 -mt-4 transition group-hover:scale-110"></div>
+                        <div class="flex justify-between items-start mb-2">
+                            <span class="text-[10px] font-mono bg-slate-800 text-slate-500 px-2 py-0.5 rounded">${p.sku}</span>
+                            <div class="flex gap-1 relative z-10">
+                                <button class="p-1 text-slate-500 hover:text-violet-400 transition edit-btn" data-id="${p.id}">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                                </button>
+                                <button class="p-1 text-slate-500 hover:text-rose-400 transition delete-btn" data-id="${p.id}">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                </button>
+                            </div>
+                        </div>
+                        <h3 class="font-bold text-white text-sm mb-1 line-clamp-2 h-10">${p.name}</h3>
+                        <p class="text-xs text-slate-500 mb-3">${p.department ? p.department.name : 'Sin Depto'}</p>
+                        
+                        <div class="flex items-end justify-between border-t border-dashed border-slate-800 pt-3">
+                            <div>
+                                <span class="block text-[10px] text-slate-500 uppercase font-bold">Precio</span>
+                                <span class="text-lg font-black text-emerald-500">$${(p.prices?.[0]?.unit_price || 0).toFixed(2)}</span>
+                            </div>
+                            <div class="text-right">
+                                <span class="block text-[10px] text-slate-500 uppercase font-bold">Stock</span>
+                                <span class="text-sm font-bold text-slate-300">${p.stock_levels?.[0]?.qty_on_hand || 0}</span>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+            bindDynamicEvents();
+        }
+
+        function bindDynamicEvents() {
+            document.querySelectorAll('.edit-btn').forEach(b => b.onclick = () => openEditModal(b.dataset.id));
+            document.querySelectorAll('.delete-btn').forEach(b => b.onclick = () => confirmDelete(b.dataset.id, allProducts.find(p => p.id == b.dataset.id)?.name));
+        }
+
+        // --- VIEW TOGGLE ---
+        document.getElementById('toggle-view-button').onclick = () => {
+            currentView = currentView === 'table' ? 'cards' : 'table';
+            const icon = document.getElementById('view-icon');
+            const label = document.getElementById('view-label');
+
+            if (currentView === 'cards') {
+                icon.textContent = '📋'; label.textContent = 'Tabla';
+                document.getElementById('table-view').classList.add('hidden');
+                document.getElementById('cards-view').classList.remove('hidden');
+            } else {
+                icon.textContent = '🗂️'; label.textContent = 'Cards';
+                document.getElementById('cards-view').classList.add('hidden');
+                document.getElementById('table-view').classList.remove('hidden');
+            }
+            renderView();
+        };
+
+        // --- MODAL HELPERS ---
+        function showModal(el) { el.classList.remove('hidden'); setTimeout(() => el.classList.remove('opacity-0'), 10); }
+        function hideModal(el) { el.classList.add('opacity-0'); setTimeout(() => el.classList.add('hidden'), 300); }
+
+        // --- CRUD LOGIC ---
+        const prodModal = document.getElementById('product-modal');
+        const priceContainer = document.getElementById('price-tiers-container');
+
+        document.getElementById('new-product-button').onclick = () => {
+            document.getElementById('product-form').reset();
+            document.getElementById('product-id').value = '';
+            document.getElementById('product-modal-title').textContent = 'Nuevo Producto';
+            priceContainer.innerHTML = '';
+            addPriceRow();
+            showModal(prodModal);
+        };
+
+        document.getElementById('close-product-modal').onclick = () => hideModal(prodModal);
+        document.getElementById('cancel-product-modal').onclick = () => hideModal(prodModal);
+        document.getElementById('add-price-tier-button').onclick = () => addPriceRow();
+
+        function addPriceRow(price = { name: 'Menudeo', qty: 1, val: '' }) {
+            const div = document.createElement('div');
+            div.className = 'grid grid-cols-3 gap-2 price-row';
+            div.innerHTML = `
+                <input type="text" value="${price.name}" class="p-name px-2 py-1 bg-slate-950 border border-slate-700 rounded text-xs text-white" placeholder="Nombre">
+                <input type="number" value="${price.qty}" class="p-qty px-2 py-1 bg-slate-950 border border-slate-700 rounded text-xs text-white" placeholder="Min Cant">
+                <input type="number" value="${price.val}" class="p-val px-2 py-1 bg-slate-950 border border-slate-700 rounded text-xs font-bold text-emerald-500" placeholder="Precio">
+            `;
+            priceContainer.appendChild(div);
+        }
+
+        async function openEditModal(id) {
+            const p = allProducts.find(x => x.id == id);
+            if (!p) return;
+            document.getElementById('product-id').value = p.id;
+            document.getElementById('product-name').value = p.name;
+            document.getElementById('product-sku').value = p.sku;
+            document.getElementById('product-barcode').value = p.barcode || '';
+            document.getElementById('product-unit').value = p.unit;
+            document.getElementById('product-base-price').value = '';
+            document.getElementById('product-cost').value = p.cost;
+            document.getElementById('product-department').value = p.department_id || '';
+            document.getElementById('product-description').value = p.description || '';
+            document.getElementById('product-uses-inventory').checked = p.uses_inventory;
+
+            priceContainer.innerHTML = '';
+            if (p.prices && p.prices.length) {
+                p.prices.forEach(pr => addPriceRow({ name: pr.price_name, qty: pr.min_quantity, val: pr.unit_price }));
+            } else {
+                addPriceRow();
+            }
+
+            document.getElementById('product-modal-title').textContent = 'Editar Producto';
+            showModal(prodModal);
+        }
+
+        document.getElementById('product-form').onsubmit = async (e) => {
+            e.preventDefault();
+            const rows = document.querySelectorAll('.price-row');
+            const prices = Array.from(rows).map(r => ({
+                price_name: r.querySelector('.p-name').value,
+                min_quantity: parseFloat(r.querySelector('.p-qty').value),
+                unit_price: parseFloat(r.querySelector('.p-val').value)
+            })).filter(x => x.unit_price > 0);
+
+            if (!prices.length) return alert('Agrega al menos un precio');
+
+            const payload = {
+                name: document.getElementById('product-name').value,
+                sku: document.getElementById('product-sku').value,
+                barcode: document.getElementById('product-barcode').value,
+                unit: document.getElementById('product-unit').value,
+                cost: parseFloat(document.getElementById('product-cost').value) || 0,
+                department_id: document.getElementById('product-department').value || null,
+                description: document.getElementById('product-description').value,
+                uses_inventory: document.getElementById('product-uses-inventory').checked,
+                prices: prices
+            };
+
+            const id = document.getElementById('product-id').value;
+            const method = id ? 'PUT' : 'POST';
+            const url = id ? `/api/products/${id}` : '/api/products/';
+
+            try {
+                await apiFetch(url, { method, body: JSON.stringify(payload) });
+                hideModal(prodModal);
+                loadProducts();
+            } catch (e) { alert(e.message); }
+        };
+
+        // --- DELETE ---
+        const delModal = document.getElementById('delete-modal');
+        function confirmDelete(id, name) {
+            deletingProductId = id;
+            document.getElementById('delete-product-name').textContent = name;
+            showModal(delModal);
+        }
+        document.getElementById('cancel-delete-button').onclick = () => hideModal(delModal);
+        document.getElementById('confirm-delete-button').onclick = async () => {
+            try {
+                await apiFetch(`/api/products/${deletingProductId}`, { method: 'DELETE' });
+                hideModal(delModal);
+                loadProducts();
+            } catch (e) { alert(e.message); }
+        };
+
+        // --- EXTRAS ---
+        document.getElementById('generate-sku-button').onclick = () => {
+            document.getElementById('product-sku').value = 'GEN-' + Math.floor(Math.random() * 100000);
+        };
+
+        function debounce(fn, ms) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
+        function setText(id, val) { const el = document.getElementById(id); if (el) el.textContent = val; }
+
+        // --- INIT ---
+        loadAllData();
+    });
+</script>
+{% endblock %}
