@@ -132,7 +132,7 @@ def generate_quote_pdf(quote):
         "4. Tiempos de entrega sujetos a disponibilidad de stock."
     )
 
-    return pdf.output()
+    return pdf.output(dest='S').encode('latin-1')
 
 def generate_cash_cut_pdf(session, user_name, branch_name, sales_cash, inflows, outflows):
     """
@@ -244,7 +244,7 @@ def generate_cash_cut_pdf(session, user_name, branch_name, sales_cash, inflows, 
     pdf.line(70, pdf.get_y(), 140, pdf.get_y())
     pdf.cell(0, 5, "Firma del Cajero / Supervisor", 0, 1, 'C')
 
-    return pdf.output()
+    return pdf.output(dest='S').encode('latin-1')
 
 def generate_account_statement_pdf(customer, entries):
     pdf = PDFQuote()

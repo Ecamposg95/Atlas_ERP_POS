@@ -2,7 +2,11 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.models import SalesDocument, User
+from app.models import SalesDocument, User, Payment, SalesLineItem
+from app.models.cash import CashSession, CashMovement, CashSessionStatus
+from app.models.sales import DocumentStatus, PaymentMethod
+from sqlalchemy import func
+from decimal import Decimal
 from app.security import get_current_user
 from app.pos_printer import PosPrinter
 
@@ -65,7 +69,60 @@ def reprint_ticket_endpoint(
         raise HTTPException(status_code=500, detail=f"Error de reimpresión: {str(e)}")
 
     return {
-        "status": "reprinted", 
         "folio": f"{sale.series}-{sale.folio}",
         "reprint_count": getattr(sale, 'reprint_count', 'N/A')
     }
+
+class PrintCashCutRequest(BaseModel):
+    session_id: int
+
+@router.post("/print-cash-cut")
+def print_cash_cut_endpoint(
+    req: PrintCashCutRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    session = db.query(CashSession).filter(CashSession.id == req.session_id).first()
+    if not session:
+        raise HTTPException(404, "Sesión no encontrada")
+
+    # Recalcular totales para impresión
+    sales_cash = db.query(func.sum(Payment.amount)).join(SalesDocument).filter(
+        Payment.method == PaymentMethod.CASH,
+        SalesDocument.seller_id == session.user_id, 
+        Payment.created_at >= session.opened_at,
+        Payment.created_at <= (session.closed_at or datetime.now()),
+        SalesDocument.status == DocumentStatus.PAID
+    ).scalar() or Decimal(0)
+
+    inflows = db.query(func.sum(CashMovement.amount)).filter(
+        CashMovement.session_id == session.id,
+        CashMovement.type == 'IN'
+    ).scalar() or Decimal(0)
+
+    outflows = db.query(func.sum(CashMovement.amount)).filter(
+        CashMovement.session_id == session.id,
+        CashMovement.type == 'OUT'
+    ).scalar() or Decimal(0)
+
+    # Identificar nombre de usuario y sucursal
+    cashier_name = session.user.username if session.user else "Desconocido"
+    branch_name = "Sucursal Principal" # Placeholder o tomar de session.user.branch
+
+    printer = PosPrinter(printer_name="POS-80", paper_width_mm=80)
+    
+    try:
+        success = printer.print_cash_cut(
+            session=session,
+            cashier_name=cashier_name,
+            branch_name=branch_name,
+            sales_cash=sales_cash,
+            inflows=inflows,
+            outflows=outflows
+        )
+        if not success:
+            raise HTTPException(500, "Error de hardware al imprimir corte")
+    except Exception as e:
+        raise HTTPException(500, f"Error impresión: {str(e)}")
+
+    return {"status": "printed", "session_id": session.id}

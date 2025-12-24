@@ -145,6 +145,78 @@ class PosPrinter:
         
         return raw
 
+    def print_cash_cut(self, session, cashier_name: str, branch_name: str, sales_cash: Decimal, inflows: Decimal, outflows: Decimal) -> bool:
+        """
+        Imprime el corte de caja.
+        """
+        raw = self._build_cash_cut_raw(session, cashier_name, branch_name, sales_cash, inflows, outflows)
+
+        if IS_WINDOWS:
+            if not win32print: return False
+            return self._print_windows_raw(raw, job_name=f"Corte #{session.id}")
+        else:
+            if not Usb: return False
+            return self._print_linux_usb(raw)
+
+    def _build_cash_cut_raw(self, session, cashier: str, branch: str, sales: Decimal, inflows: Decimal, outflows: Decimal) -> bytes:
+        sep = ("-" * self.cols + "\n").encode("latin-1", "replace")
+        raw = b""
+        
+        # 1. Header
+        raw += self.CMD["INIT"] + self.CMD["SIZE_NORMAL"] + self.CMD["CENTER"]
+        raw += self.CMD["BOLD_ON"] + b"CORTE DE CAJA\n" + self.CMD["BOLD_OFF"]
+        raw += f"{branch}\n".encode("latin-1", "replace")
+        
+        fecha = session.closed_at.strftime("%d/%m/%Y %H:%M") if session.closed_at else datetime.now().strftime("%d/%m/%Y %H:%M")
+        raw += f"{fecha}\n".encode("latin-1", "replace") + self.CMD["LF"]
+
+        raw += self.CMD["LEFT"]
+        raw += f"Cajero: {cashier}\n".encode("latin-1", "replace")
+        raw += f"Corte #: {session.id}\n".encode("latin-1", "replace")
+        raw += sep
+
+        # 2. Resumen
+        expected = session.opening_balance + sales + inflows - outflows
+        reported = session.closing_balance or Decimal(0)
+        diff = reported - expected
+
+        raw += self.CMD["BOLD_ON"] + b"BALANCE GENERAL\n" + self.CMD["BOLD_OFF"]
+        raw += self._rline("Fondo Inicial", float(session.opening_balance))
+        raw += self._rline("(+) Ventas Efec", float(sales))
+        raw += self._rline("(+) Entradas", float(inflows))
+        raw += self._rline("(-) Salidas", float(outflows))
+        raw += sep
+        
+        raw += self.CMD["BOLD_ON"]
+        raw += self._rline("(=) Esperado", float(expected))
+        raw += self._rline("Reportado", float(reported))
+        
+        start_diff = b""
+        if diff < 0: start_diff = b"FALTANTE"
+        elif diff > 0: start_diff = b"SOBRANTE"
+        else: start_diff = b"DIFERENCIA"
+        
+        curr_diff_label = start_diff.decode('latin-1') 
+        raw += self._rline(curr_diff_label, float(diff))
+        raw += self.CMD["BOLD_OFF"]
+        raw += sep
+
+        # 3. Observaciones
+        if session.notes:
+            raw += b"OBSERVACIONES:\n"
+            raw += self._wrap_line(session.notes, 0)
+            raw += self.CMD["LF"]
+
+        # 4. Firma
+        raw += self.CMD["LF"] * 3
+        raw += self.CMD["CENTER"] + ("_" * 20).encode("latin-1") + b"\n"
+        raw += b"Firma Cajero/Supervisor\n"
+        
+        raw += self.CMD["LF"] * 4
+        raw += self.CMD["CUT"]
+        
+        return raw
+
     # --- Helpers de formato ---
     def _rline(self, label: str, value: float) -> bytes:
         txt = f"{label}: ${value:.2f}"
