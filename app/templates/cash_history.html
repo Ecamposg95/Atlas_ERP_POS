@@ -393,14 +393,41 @@
     }
 
     // --- ACTIONS ---
-    window.downloadPDF = (id) => {
-        window.open(`${API_BASE}/api/cash/${id}/pdf`, '_blank');
+    window.downloadPDF = async (id) => {
+        try {
+            const res = await fetch(`${API_BASE}/api/cash/${id}/pdf`, {
+                headers: { 'Authorization': `Bearer ${ACCESS_TOKEN}` }
+            });
+            if (!res.ok) throw new Error("Error descargando PDF");
+
+            const blob = await res.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Corte_${id}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        } catch (e) {
+            alert("No se pudo descargar el reporte: " + e.message);
+        }
     };
 
     window.printTicket = async (id) => {
-        // Here you would send the JSON from /ticket endpoint to your local printer service
-        // For now, we just open the raw json or debug
-        window.open(`${API_BASE}/api/cash/${id}/ticket`, '_blank');
+        try {
+            const res = await fetch(`${API_BASE}/api/cash/${id}/ticket`, {
+                headers: { 'Authorization': `Bearer ${ACCESS_TOKEN}` }
+            });
+            if (!res.ok) throw new Error("Error obteniendo ticket");
+
+            const json = await res.json();
+            console.log("Ticket Data:", json);
+            alert("Datos de ticket obtenidos (Ver consola). Integración con impresora pendiente.");
+            // Aquí iría la lógica para enviar a la impresora (QZ Tray, WebUSB, etc)
+        } catch (e) {
+            alert("Error: " + e.message);
+        }
     };
 
     // --- MODALS ---
