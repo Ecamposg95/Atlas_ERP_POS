@@ -102,9 +102,6 @@ async def inventory_page(request: Request):
     """Gestión de Inventario"""
     return templates.TemplateResponse("inventory.html", {"request": request})
 
-@app.get("/customers", response_class=HTMLResponse)
-async def customers_page(request: Request):
-    return templates.TemplateResponse("wip.html", {"request": request, "title": "Clientes"})
 
 @app.get("/reports", response_class=HTMLResponse)
 async def reports_page(request: Request):

@@ -130,7 +130,7 @@
         // LOAD CUSTOMERS
         (async () => {
             try {
-                const customers = await apiFetch('/api/crm/');
+                const customers = await apiFetch('/api/customers/');
                 const sel = document.getElementById('customer-select');
                 customers.forEach(c => {
                     const opt = document.createElement('option');
@@ -230,7 +230,7 @@
             if (q.length < 2) { results.innerHTML = ''; return; }
 
             try {
-                const prods = await apiFetch(`/api/products/search?q=${encodeURIComponent(q)}`);
+                const prods = await apiFetch(`/api/products/?search=${encodeURIComponent(q)}&limit=20`);
                 results.innerHTML = prods.map(p => {
                     let displayPrice = 0;
                     if (p.prices && p.prices.length > 0) displayPrice = p.prices[0].unit_price;
