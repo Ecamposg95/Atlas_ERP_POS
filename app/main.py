@@ -97,6 +97,11 @@ async def sales_page(request: Request):
     """Historial de Ventas"""
     return templates.TemplateResponse("sales.html", {"request": request})
 
+@app.get("/inventory", response_class=HTMLResponse)
+async def inventory_page(request: Request):
+    """Gestión de Inventario"""
+    return templates.TemplateResponse("inventory.html", {"request": request})
+
 @app.get("/customers", response_class=HTMLResponse)
 async def customers_page(request: Request):
     return templates.TemplateResponse("wip.html", {"request": request, "title": "Clientes"})
@@ -110,6 +115,10 @@ async def reports_page(request: Request):
 @app.get("/quotes", response_class=HTMLResponse)
 async def quotes_page(request: Request):
     return templates.TemplateResponse("quotes.html", {"request": request})
+
+@app.get("/departments", response_class=HTMLResponse)
+async def departments_page(request: Request):
+    return templates.TemplateResponse("departments.html", {"request": request})
 
 @app.get("/quotes/new", response_class=HTMLResponse)
 async def quotes_new_page(request: Request):

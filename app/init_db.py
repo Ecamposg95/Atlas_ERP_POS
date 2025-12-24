@@ -1,158 +1,181 @@
 import sys
 import os
+import random
+from datetime import datetime, timedelta
 
-# Agregamos el directorio raíz al path para poder importar 'app'
+# Agregar el directorio raíz al path para poder importar app
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from sqlalchemy.orm import Session
-from decimal import Decimal
-import random
-
 from app.database import SessionLocal, engine, Base
-from app.models import (
-    User, Branch, Product, ProductVariant, StockOnHand, 
-    Category, ProductPrice, InventoryMovement, MovementType
-)
 from app.security import get_password_hash
+from app.models.users import User, Role
+from app.models.organization import Branch, Department
+from app.models.products import Product, ProductVariant, ProductPrice, Category
+from app.models.inventory import InventoryMovement, StockOnHand, MovementType
 
 def init_db():
+    db_file = "sql_app.db"
+    if os.path.exists(db_file):
+        print(f"Deleting existing database: {db_file}")
+        os.remove(db_file)
+    
+    print("Creating tables...")
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
 
-    print("--- INICIANDO SEED ---")
+    try:
+        # 1. Crear Sucursal Principal
+        branch = db.query(Branch).first()
+        if not branch:
+            print("Creating default branch...")
+            branch = Branch(name="Sucursal Principal", address="Calle Principal #123", phone="555-1234")
+            db.add(branch)
+            db.commit()
+            db.refresh(branch)
 
-    # 1. Crear Sucursal
-    branch = db.query(Branch).first()
-    if not branch:
-        branch = Branch(name="Matriz Principal", address="Calle Falsa 123", phone="555-5555")
-        db.add(branch)
+        # 2. Crear Usuarios (Admin, Cajero, Inventario -> Gerente)
+        users_data = [
+            {"username": "admin", "role": Role.ADMINISTRADOR, "password": "admin123"},
+            {"username": "cajero", "role": Role.CAJERO, "password": "cajero123"},
+            {"username": "almacen", "role": Role.GERENTE, "password": "almacen123"}
+        ]        
+        for u_data in users_data:
+            user = db.query(User).filter_by(username=u_data["username"]).first()
+            if not user:
+                print(f"Creating user {u_data['username']}...")
+                user = User(
+                    username=u_data["username"], 
+                    password_hash=get_password_hash(u_data["password"]), # FIX: Field name correct
+                    role=u_data["role"],
+                    branch_id=branch.id,
+                    is_active=True
+                )
+                db.add(user)
         db.commit()
-        db.refresh(branch)
-        print("Sucursal creada.")
-    else:
-        print("Sucursal ya existe.")
 
-    # 2. Crear Usuario Admin
-    admin = db.query(User).filter(User.username == "admin").first()
-    if not admin:
-        admin = User(
-            username="admin",
-            # email="admin@atlas.com",  <-- Removed as per model
-            password_hash=get_password_hash("admin123"), # Matches User.password_hash
-            full_name="Administrador",
-            role="ADMINISTRADOR", # Matches Role enum string
-            branch_id=branch.id
-        )
-        db.add(admin)
-        db.commit()
-        print("Usuario admin creado.")
-    else:
-        print("Usuario admin ya existe.")
+        # 3. Crear Categorías (Departamentos)
+        categories = ["Abarrotes", "Bebidas", "Lácteos", "Carnes", "Frutas y Verduras", "Limpieza", "Farmacia", "Electrónica"]
+        cat_objs = []
+        for cat_name in categories:
+            cat = db.query(Category).filter_by(name=cat_name).first()
+            if not cat:
+                cat = Category(name=cat_name)
+                db.add(cat)
+                db.commit()
+                db.refresh(cat)
+            cat_objs.append(cat)
 
-    # 3. Categorías / Departamentos
-    depts = ["Abarrotes", "Bebidas", "Farmacia", "Limpieza", "Carnicería", "Panadería", "Electrónica"]
-    dept_map = {}
-    for d_name in depts:
-        cat = db.query(Category).filter(Category.name == d_name).first()
-        if not cat:
-            cat = Category(name=d_name, description=f"Productos de {d_name}")
-            db.add(cat)
-            db.flush()
-        dept_map[d_name] = cat.id
-    db.commit()
-    print("Departamentos asegurados.")
+        # 4. Crear Productos (25 ejemplos variados)
+        products_seed = [
+            ("Coca Cola 600ml", "Bebidas", 18.00, 12.50, "Pza"),
+            ("Pepsi 600ml", "Bebidas", 17.00, 11.50, "Pza"),
+            ("Leche Lala Entera 1L", "Lácteos", 28.00, 24.00, "Lt"),
+            ("Leche Alpura Entera 1L", "Lácteos", 27.50, 23.50, "Lt"),
+            ("Pan Bimbo Blanco Grande", "Abarrotes", 45.00, 38.00, "Pza"),
+            ("Arroz Verde Valle 1kg", "Abarrotes", 32.00, 25.00, "Kg"),
+            ("Frijol Negro 1kg", "Abarrotes", 35.00, 28.00, "Kg"),
+            ("Aceite 1-2-3 1L", "Abarrotes", 42.00, 34.00, "Lt"),
+            ("Atún Dolores Agua", "Abarrotes", 22.00, 16.00, "Lata"),
+            ("Mayonesa McCormick 390g", "Abarrotes", 38.00, 31.00, "Frasco"),
+            ("Sabritas Sal 45g", "Abarrotes", 18.00, 13.00, "Bolsa"),
+            ("Doritos Nacho 58g", "Abarrotes", 19.00, 14.00, "Bolsa"),
+            ("Jabón Zote Rosa", "Limpieza", 15.00, 10.00, "Barra"),
+            ("Cloralex 1L", "Limpieza", 18.00, 12.00, "Lt"),
+            ("Detergente Ace 1kg", "Limpieza", 35.00, 26.00, "Kg"),
+            ("Papel Higiénico Regio 4uds", "Limpieza", 30.00, 22.00, "Paq"),
+            ("Paracetamol 500mg", "Farmacia", 25.00, 5.00, "Caja"),
+            ("Aspirina 500mg", "Farmacia", 30.00, 15.00, "Caja"),
+            ("Manzana Red Delicious", "Frutas y Verduras", 45.00, 30.00, "Kg"),
+            ("Plátano Chiapas", "Frutas y Verduras", 22.00, 12.00, "Kg"),
+            ("Jitomate Saladet", "Frutas y Verduras", 28.00, 15.00, "Kg"),
+            ("Carne Molida Res", "Carnes", 120.00, 95.00, "Kg"),
+            ("Pechuga de Pollo", "Carnes", 110.00, 85.00, "Kg"),
+            ("Cargador USB-C", "Electrónica", 150.00, 50.00, "Pza"),
+            ("Audífonos Básicos", "Electrónica", 80.00, 25.00, "Pza"),
+        ]
 
-    # 4. Productos (20 items)
-    # Lista de ejemplos
-    products_data = [
-        ("Coca Cola 600ml", "Bebidas", 18.00, 15.00, "BOT001"),
-        ("Pepsi 600ml", "Bebidas", 17.50, 14.50, "BOT002"),
-        ("Agua Ciel 1L", "Bebidas", 12.00, 8.00, "BOT003"),
-        ("Sabritas Sal 45g", "Abarrotes", 16.00, 12.00, "SNH001"),
-        ("Doritos Nacho 58g", "Abarrotes", 17.00, 12.50, "SNH002"),
-        ("Leche Lala 1L", "Abarrotes", 28.00, 24.00, "LAC001"),
-        ("Huevo San Juan 12pz", "Abarrotes", 45.00, 38.00, "HUE001"),
-        ("Paracetamol 500mg", "Farmacia", 25.00, 10.00, "MED001"),
-        ("Aspirina 500mg", "Farmacia", 35.00, 20.00, "MED002"),
-        ("Alcohol Etílico 1L", "Farmacia", 85.00, 60.00, "MED003"),
-        ("Cloralex 1L", "Limpieza", 18.00, 14.00, "LIM001"),
-        ("Fabuloso Lavanda 1L", "Limpieza", 22.00, 16.00, "LIM002"),
-        ("Detergente Ace 1kg", "Limpieza", 35.00, 28.00, "LIM003"),
-        ("Bistec de Res kg", "Carnicería", 180.00, 140.00, "CAR001"),
-        ("Pollo Entero kg", "Carnicería", 85.00, 65.00, "CAR002"),
-        ("Bolillo", "Panadería", 3.50, 1.50, "PAN001"),
-        ("Concha Vainilla", "Panadería", 12.00, 6.00, "PAN002"),
-        ("Cable USB-C", "Electrónica", 150.00, 50.00, "TEC001"),
-        ("Cargador iPhone", "Electrónica", 350.00, 180.00, "TEC002"),
-        ("Audífonos Básicos", "Electrónica", 120.00, 60.00, "TEC003"),
-    ]
+        admin_user = db.query(User).filter_by(username="admin").first()
 
-    count_new = 0
-    for name, dept_name, price, cost, sku in products_data:
-        # Check if exists by SKU in variants
-        exists = db.query(ProductVariant).filter(ProductVariant.sku == sku).first()
-        if exists:
-            continue
+        print(f"Adding {len(products_seed)} products...")
+        count = 0
+        for name, cat_name, price, cost, unit in products_seed:
+            clean_name = name.replace(" ", "").upper()[:3]
+            sku = f"SKU-{clean_name}-{random.randint(100, 999)}"
+            
+            # Check if exists by name to avoid duplicates if run multiple times (though we wipe db)
+            existing = db.query(Product).filter_by(name=name).first()
+            
+            if not existing:
+                cat = next((c for c in cat_objs if c.name == cat_name), None)
+                cat_id = cat.id if cat else None
+                
+                barcode_val = f"750{random.randint(100000000, 999999999)}"
 
-        # Crear
-        dept_id = dept_map.get(dept_name)
-        new_prod = Product(
-            name=name,
-            description=f"Descripción de {name}",
-            unit="pza" if "kg" not in name else "kg",
-            category_id=dept_id,
-            has_variants=True,
-            is_active=True
-        )
-        db.add(new_prod)
-        db.flush()
+                product = Product(
+                    name=name,
+                    description=f"Descripción de {name}",
+                    unit=unit,
+                    category_id=cat_id,
+                    has_variants=True,
+                    is_active=True
+                )
+                db.add(product)
+                db.flush()
 
-        # Variant
-        variant = ProductVariant(
-            product_id=new_prod.id,
-            sku=sku,
-            barcode=sku, # Use SKU as barcode for simplicity
-            variant_name="Estándar",
-            price=Decimal(price),
-            cost=Decimal(cost)
-        )
-        db.add(variant)
-        db.flush()
+                # Crear Variante Principal
+                variant = ProductVariant(
+                    product_id=product.id,
+                    sku=sku,
+                    barcode=barcode_val,
+                    variant_name="Estándar",
+                    price=price,
+                    cost=cost  # Add cost here too
+                )
+                db.add(variant)
+                db.flush()
 
-        # Tiered Prices (Example)
-        # Mayoreo > 3 pzas, Distribuidor > 10 pzas
-        p_mayoreo = round(price * 0.90, 2)
-        p_distrib = round(price * 0.80, 2)
+                # Precios Escalonados
+                prices = [
+                    ProductPrice(variant_id=variant.id, price_name="Menudeo", min_quantity=1, unit_price=price),
+                    ProductPrice(variant_id=variant.id, price_name="Mayoreo (>10)", min_quantity=10, unit_price=price * 0.90),
+                    ProductPrice(variant_id=variant.id, price_name="Distribuidor (>50)", min_quantity=50, unit_price=price * 0.85),
+                ]
+                db.add_all(prices)
 
-        db.add(ProductPrice(variant_id=variant.id, price_name="Mayoreo (3+)", min_quantity=3, unit_price=Decimal(p_mayoreo)))
-        db.add(ProductPrice(variant_id=variant.id, price_name="Distrib. (10+)", min_quantity=10, unit_price=Decimal(p_distrib)))
+                # Stock Inicial
+                initial_stock = random.randint(10, 100)
+                stock = StockOnHand(
+                    branch_id=branch.id,
+                    variant_id=variant.id,
+                    qty_on_hand=initial_stock,
+                    last_updated=datetime.now()
+                )
+                db.add(stock)
 
-        # Stock
-        initial_stock = Decimal(random.randint(10, 100))
-        db.add(StockOnHand(
-            branch_id=branch.id,
-            variant_id=variant.id,
-            qty_on_hand=initial_stock
-        ))
+                # Movimiento Inicial (Kardex)
+                movement = InventoryMovement(
+                    branch_id=branch.id,
+                    variant_id=variant.id,
+                    user_id=admin_user.id,
+                    movement_type=MovementType.ADJUSTMENT_IN,
+                    qty_change=initial_stock,
+                    qty_before=0,
+                    qty_after=initial_stock,
+                    reference="INV-INI",
+                    notes="Carga Inicial"
+                )
+                db.add(movement)
+                db.commit()
+                count += 1
 
-        # Movement
-        db.add(InventoryMovement(
-            branch_id=branch.id,
-            variant_id=variant.id,
-            user_id=admin.id if admin else None,
-            movement_type=MovementType.ADJUSTMENT_IN,
-            qty_change=initial_stock,
-            qty_before=0,
-            qty_after=initial_stock,
-            reference="Seed Inicial",
-            notes="Auto-generated"
-        ))
-        
-        count_new += 1
+        print(f"Database initialized successfully! Added {count} products.")
 
-    db.commit()
-    print(f"--- SEED TERMINADO ---. Productos nuevos: {count_new}")
-    db.close()
+    except Exception as e:
+        print(f"Error initializing DB: {e}")
+        db.rollback()
+    finally:
+        db.close()
 
 if __name__ == "__main__":
     init_db()

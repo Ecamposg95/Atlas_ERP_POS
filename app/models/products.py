@@ -82,12 +82,3 @@ class ProductPrice(Base):
     variant = relationship("ProductVariant", back_populates="prices")
 
 # --- STOCK ---
-class StockOnHand(Base):
-    __tablename__ = "stock_on_hand"
-    __table_args__ = {'extend_existing': True}
-
-    id = Column(Integer, primary_key=True, index=True)
-    branch_id = Column(Integer, ForeignKey("branches.id"), nullable=False)
-    variant_id = Column(Integer, ForeignKey("product_variants.id"), nullable=False)
-    
-    qty_on_hand = Column(Numeric(10, 2), default=0.00)

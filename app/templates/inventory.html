@@ -1,299 +1,256 @@
 {% extends "base.html" %}
 
-{% block title %}Inventario & Kardex - Atlas ERP{% endblock %}
+{% block title %}Inventario - Atlas ERP{% endblock %}
 
 {% block content %}
-<div class="space-y-6 animate-fade-in">
-    <!-- Header -->
-    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-            <h1 class="text-3xl font-bold text-white tracking-tight">Inventario</h1>
-            <p class="text-slate-400 mt-1">Ajustes, Mermas y Kardex</p>
-        </div>
+<header
+    class="h-16 border-b border-white/5 bg-slate-900/50 backdrop-blur-md flex justify-between items-center px-6 shrink-0 z-10 sticky top-0">
+    <div>
+        <h1 class="text-lg font-bold text-white tracking-tight">Inventario y Kardex</h1>
+        <p class="text-[10px] text-slate-400 uppercase tracking-widest font-semibold">Movimientos de Stock</p>
     </div>
+</header>
 
-    <!-- Product Search for Actions -->
-    <div class="glass-card p-6 rounded-2xl border border-white/5">
-        <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Seleccionar Producto</label>
-        <div class="relative max-w-2xl">
-            <span class="absolute left-3 top-3 text-slate-500">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                </svg>
-            </span>
-            <input id="product-search" type="text" placeholder="Escribe para buscar un producto..."
-                class="w-full pl-10 pr-4 py-3 bg-slate-950 border border-slate-700/50 rounded-xl text-white focus:ring-2 focus:ring-primary-500 outline-none transition">
+<div class="flex-1 overflow-y-auto p-6 custom-scrollbar">
+    <div class="max-w-6xl mx-auto space-y-6">
 
-            <!-- Search Results Dropdown -->
-            <div id="search-results"
-                class="hidden absolute top-full left-0 right-0 mt-2 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl z-50 max-h-60 overflow-y-auto custom-scrollbar">
+        <!-- Controls -->
+        <div class="glass-card p-4 rounded-xl flex gap-4 items-center">
+            <div class="relative flex-1">
+                <span class="absolute inset-y-0 left-3 flex items-center text-slate-400">🔍</span>
+                <input id="search-input" type="text" placeholder="Buscar producto (SKU, Nombre)..."
+                    class="w-full pl-10 pr-4 py-2 rounded-lg bg-slate-950 border border-slate-800 text-white outline-none focus:ring-2 focus:ring-primary-500 transition">
             </div>
         </div>
+
+        <!-- Table -->
+        <div class="glass-card rounded-2xl overflow-hidden glass-panel">
+            <table class="min-w-full divide-y divide-slate-800">
+                <thead class="bg-slate-900/50">
+                    <tr>
+                        <th class="px-6 py-4 text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                            SKU</th>
+                        <th class="px-6 py-4 text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                            Producto</th>
+                        <th class="px-6 py-4 text-center text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                            Stock Actual</th>
+                        <th class="px-6 py-4 text-right text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                            Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="inventory-table-body" class="divide-y divide-slate-800 text-sm text-slate-300">
+                    <!-- JS Rows -->
+                </tbody>
+            </table>
+        </div>
+
     </div>
+</div>
+{% endblock %}
 
-    <!-- Product Details Area (Hidden until selected) -->
-    <div id="product-detail-area" class="hidden space-y-6">
+{% block modals %}
+<!-- Adjust Modal -->
+<div id="adjust-modal"
+    class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-slate-900 rounded-xl shadow-2xl w-full max-w-sm p-6 border border-slate-700">
+        <h3 class="text-lg font-bold text-white mb-1">Ajuste de Inventario</h3>
+        <p id="adjust-product-name" class="text-xs text-slate-400 mb-4 font-mono"></p>
 
-        <!-- Info Card -->
-        <div class="glass-card p-6 rounded-2xl border border-white/5 flex justify-between items-center bg-slate-800/20">
+        <form id="adjust-form" class="space-y-4">
+            <input type="hidden" id="adjust-variant-id">
+
             <div>
-                <p class="text-xs text-slate-500 font-bold uppercase mb-1">Producto Seleccionado</p>
-                <h2 class="text-2xl font-bold text-white" id="selected-product-name">Nombe del Producto</h2>
-                <p class="text-sm text-slate-400 font-mono mt-1" id="selected-product-sku">SKU12345</p>
+                <label class="block text-xs font-bold text-slate-500 mb-1 uppercase">Cantidad (+/-)</label>
+                <input type="number" id="adjust-qty" step="any" required
+                    class="w-full px-4 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white font-bold text-lg outline-none focus:ring-2 focus:ring-emerald-500">
+                <p class="text-[10px] text-slate-500 mt-1">Usa positivo para entradas, negativo para salidas.</p>
             </div>
-            <div class="text-right">
-                <p class="text-xs text-slate-500 font-bold uppercase mb-1">Stock Actual</p>
-                <div class="text-4xl font-bold text-primary-400" id="selected-product-stock">0</div>
-                <button onclick="openAdjustmentModal()"
-                    class="mt-2 text-xs bg-slate-800 hover:bg-slate-700 text-white px-3 py-1.5 rounded-lg border border-slate-700 transition">
-                    Realizar Ajuste
-                </button>
-            </div>
-        </div>
 
-        <!-- Kardex Table -->
-        <div class="glass-card rounded-2xl overflow-hidden border border-white/5">
-            <div class="p-4 border-b border-white/5 bg-slate-900/50">
-                <h3 class="font-bold text-white">Historial de Movimientos (Kardex)</h3>
+            <div>
+                <label class="block text-xs font-bold text-slate-500 mb-1 uppercase">Motivo</label>
+                <select id="adjust-reason"
+                    class="w-full px-4 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white outline-none">
+                    <option value="Compra">Compra / Resurtido</option>
+                    <option value="Ajuste Inicial">Ajuste Inicial</option>
+                    <option value="Merma">Merma / Dañado</option>
+                    <option value="Uso Interno">Uso Interno</option>
+                    <option value="Corrección">Corrección de Inventario</option>
+                </select>
             </div>
-            <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse">
-                    <thead>
-                        <tr
-                            class="bg-slate-900/50 text-slate-400 text-xs uppercase tracking-wider border-b border-white/5">
-                            <th class="p-4">Fecha</th>
-                            <th class="p-4">Tipo Movimiento</th>
-                            <th class="p-4 text-center">Cambio</th>
-                            <th class="p-4 text-center">Stock Final</th>
-                            <th class="p-4">Usuario</th>
-                            <th class="p-4">Notas/Referencia</th>
-                        </tr>
-                    </thead>
-                    <tbody id="kardex-body" class="text-sm divide-y divide-white/5">
-                        <!-- JS content -->
-                    </tbody>
-                </table>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-500 mb-1 uppercase">Notas</label>
+                <textarea id="adjust-notes" rows="2"
+                    class="w-full px-4 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white outline-none text-xs"></textarea>
             </div>
-        </div>
+
+            <div class="flex justify-end gap-2 pt-2">
+                <button type="button" onclick="document.getElementById('adjust-modal').classList.add('hidden')"
+                    class="px-4 py-2 text-slate-400 hover:text-white transition">Cancelar</button>
+                <button type="submit"
+                    class="bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-2 rounded-lg font-bold transition shadow-lg">Aplicar
+                    Ajuste</button>
+            </div>
+        </form>
     </div>
 </div>
 
-<!-- Modal Adjustment -->
-<div id="adjustment-modal" class="fixed inset-0 z-50 hidden">
-    <div class="absolute inset-0 bg-slate-950/80 backdrop-blur-sm" onclick="closeModal('adjustment-modal')"></div>
-    <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-md">
-        <div class="glass-card rounded-2xl shadow-2xl overflow-hidden animate-fade-in border border-white/10">
-            <div class="p-6 border-b border-white/10 flex justify-between items-center bg-slate-900/50">
-                <h3 class="text-lg font-bold text-white">Ajuste de Stock</h3>
-                <button onclick="closeModal('adjustment-modal')"
-                    class="text-slate-400 hover:text-white transition">✕</button>
+<!-- Kardex Modal -->
+<div id="kardex-modal"
+    class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-slate-900 rounded-xl shadow-2xl w-full max-w-2xl p-6 border border-slate-700 h-[80vh] flex flex-col">
+        <div class="flex justify-between items-center mb-4 shrink-0">
+            <div>
+                <h3 class="text-lg font-bold text-white">Kardex (Historial)</h3>
+                <p id="kardex-product-name" class="text-xs text-emerald-400 font-mono"></p>
             </div>
+            <button onclick="document.getElementById('kardex-modal').classList.add('hidden')"
+                class="text-slate-400 hover:text-white">✕</button>
+        </div>
 
-            <form id="adjustment-form" class="p-6 space-y-4">
-                <input type="hidden" id="adj-variant-id">
-
-                <div>
-                    <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Tipo de Movimiento</label>
-                    <div class="grid grid-cols-2 gap-2">
-                        <label class="cursor-pointer">
-                            <input type="radio" name="adj_type" value="IN" checked class="peer sr-only">
-                            <div
-                                class="p-3 rounded-xl border border-slate-700 bg-slate-900 peer-checked:bg-emerald-500/10 peer-checked:border-emerald-500 peer-checked:text-emerald-400 text-center transition">
-                                <span class="font-bold">Entrada (+)</span>
-                            </div>
-                        </label>
-                        <label class="cursor-pointer">
-                            <input type="radio" name="adj_type" value="OUT" class="peer sr-only">
-                            <div
-                                class="p-3 rounded-xl border border-slate-700 bg-slate-900 peer-checked:bg-rose-500/10 peer-checked:border-rose-500 peer-checked:text-rose-400 text-center transition">
-                                <span class="font-bold">Salida / Merma (-)</span>
-                            </div>
-                        </label>
-                    </div>
-                </div>
-
-                <div>
-                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Cantidad</label>
-                    <input name="quantity" type="number" step="0.01" min="0.01" required
-                        class="w-full px-4 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-white focus:ring-2 focus:ring-primary-500 outline-none transition">
-                </div>
-
-                <div>
-                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Razón</label>
-                    <select name="reason"
-                        class="w-full px-4 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-white focus:ring-2 focus:ring-primary-500 outline-none transition">
-                        <option value="Manual Adjustment">Ajuste Manual</option>
-                        <option value="Damaged">Dañado / Merma</option>
-                        <option value="Purchase">Compra / Reposición</option>
-                        <option value="Return">Devolución</option>
-                        <option value="Other">Otro</option>
-                    </select>
-                </div>
-
-                <div>
-                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Notas</label>
-                    <textarea name="notes" rows="2"
-                        class="w-full px-4 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-white focus:ring-2 focus:ring-primary-500 outline-none transition resize-none"></textarea>
-                </div>
-
-                <div class="pt-2">
-                    <button type="submit"
-                        class="w-full py-3 bg-primary-600 hover:bg-primary-500 text-white rounded-xl font-bold shadow-lg transition">Guardar
-                        Ajuste</button>
-                </div>
-            </form>
+        <div class="flex-1 overflow-y-auto custom-scrollbar bg-slate-950/50 rounded-lg border border-slate-800">
+            <table class="min-w-full divide-y divide-slate-800">
+                <thead class="bg-slate-900 sticky top-0">
+                    <tr>
+                        <th class="px-4 py-3 text-left text-[10px] text-slate-400 uppercase">Fecha</th>
+                        <th class="px-4 py-3 text-left text-[10px] text-slate-400 uppercase">Tipo</th>
+                        <th class="px-4 py-3 text-center text-[10px] text-slate-400 uppercase">Cant</th>
+                        <th class="px-4 py-3 text-center text-[10px] text-slate-400 uppercase">Saldo</th>
+                        <th class="px-4 py-3 text-left text-[10px] text-slate-400 uppercase">Ref / Usuario</th>
+                    </tr>
+                </thead>
+                <tbody id="kardex-table-body" class="divide-y divide-slate-800 text-xs text-slate-300"></tbody>
+            </table>
         </div>
     </div>
 </div>
-
 {% endblock %}
 
 {% block scripts %}
 <script>
-    const API_BASE = 'http://127.0.0.1:8000';
-    const ACCESS_TOKEN = sessionStorage.getItem('ACCESS_TOKEN'); // Assuming reuse from base
+    document.addEventListener('DOMContentLoaded', () => {
+        // Reusing API Fetch logic from base or Products
+        // Assuming base.html doesn't export it globally, I'll copy a minimal version.
+        // Ideally should be in a shared utils.js
+        const API_BASE_URL = 'http://127.0.0.1:8000';
+        let ACCESS_TOKEN = sessionStorage.getItem('ACCESS_TOKEN');
 
-    let currentVariant = null;
-
-    // Search
-    const searchInput = document.getElementById('product-search');
-    const resultsContainer = document.getElementById('search-results');
-
-    searchInput.addEventListener('input', debounce(async (e) => {
-        const query = e.target.value.trim();
-        if (query.length < 2) {
-            resultsContainer.classList.add('hidden');
-            return;
+        async function apiFetch(endpoint, options = {}) {
+            const headers = { 'Authorization': `Bearer ${ACCESS_TOKEN}`, ...options.headers };
+            if (options.body && !(options.body instanceof FormData)) headers['Content-Type'] = 'application/json';
+            const res = await fetch(`${API_BASE_URL}${endpoint}`, { ...options, headers });
+            if (res.status === 401) { window.location.href = '/auth'; }
+            if (!res.ok) throw new Error((await res.json()).detail || res.statusText);
+            return res.json();
         }
 
-        try {
-            const res = await fetch(`${API_BASE}/api/products/search/?q=${query}`, {
-                headers: { 'Authorization': `Bearer ${ACCESS_TOKEN}` }
-            });
-            const products = await res.json();
+        let allProducts = [];
 
-            resultsContainer.innerHTML = products.map(p => `
-                <div class="p-3 hover:bg-slate-800 cursor-pointer border-b border-slate-800 last:border-0" onclick="selectProduct(${p.id}, '${p.name}', '${p.variants[0]?.sku}', ${p.stock_total}, ${p.variants[0]?.id})">
-                    <div class="text-sm font-bold text-white">${p.name}</div>
-                    <div class="text-xs text-slate-500 font-mono">SKU: ${p.variants[0]?.sku || 'N/A'} | Stock: ${p.stock_total}</div>
-                </div>
-            `).join('');
-            resultsContainer.classList.remove('hidden');
+        loadData();
 
-        } catch (e) { console.error(e); }
-    }, 300));
+        async function loadData() {
+            try {
+                // Reusing products endpoint for list, it contains stock info
+                const prods = await apiFetch('/api/products/?limit=1000');
+                allProducts = prods;
+                renderTable(prods);
+            } catch (e) { console.error(e); }
+        }
 
-    // Select Product
-    async function selectProduct(id, name, sku, stock, variantId) {
-        currentVariant = { id, name, sku, stock, variantId };
+        const searchInput = document.getElementById('search-input');
+        searchInput.addEventListener('input', (e) => {
+            const q = e.target.value.toLowerCase();
+            const filtered = allProducts.filter(p => p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q));
+            renderTable(filtered);
+        });
 
-        // Hide Search
-        resultsContainer.classList.add('hidden');
-        searchInput.value = '';
+        function renderTable(products) {
+            const tbody = document.getElementById('inventory-table-body');
+            tbody.innerHTML = products.map(p => {
+                const stock = p.stock_levels?.[0]?.qty_on_hand || 0;
+                const style = stock > 0 ? 'text-emerald-400' : 'text-rose-400';
+                // Use main variant ID for adjustments
+                const variantId = p.variants?.[0]?.id;
 
-        // Show Details
-        document.getElementById('product-detail-area').classList.remove('hidden');
-        document.getElementById('selected-product-name').textContent = name;
-        document.getElementById('selected-product-sku').textContent = `SKU: ${sku}`;
-        document.getElementById('selected-product-stock').textContent = stock;
-
-        // Load Kardex
-        loadKardex(variantId);
-    }
-
-    async function loadKardex(variantId) {
-        const tbody = document.getElementById('kardex-body');
-        tbody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-slate-500">Cargando historial...</td></tr>';
-
-        try {
-            const res = await fetch(`${API_BASE}/api/inventory/kardex/${variantId}`, {
-                headers: { 'Authorization': `Bearer ${ACCESS_TOKEN}` }
-            });
-            if (!res.ok) throw new Error('Error kardex');
-            const data = await res.json();
-
-            if (!data.length) {
-                tbody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-slate-500">Sin movimientos registrados</td></tr>';
-                return;
-            }
-
-            tbody.innerHTML = data.map(m => {
-                let colorClass = m.qty_change > 0 ? 'text-emerald-400' : 'text-rose-400';
                 return `
-                <tr class="hover:bg-slate-800/50 transition">
-                    <td class="p-4 text-slate-400">${new Date(m.created_at).toLocaleString()}</td>
-                    <td class="p-4 text-white font-medium">${m.movement_type}</td>
-                    <td class="p-4 text-center font-bold ${colorClass}">${m.qty_change > 0 ? '+' : ''}${m.qty_change}</td>
-                    <td class="p-4 text-center text-slate-300 font-mono">${m.qty_after}</td>
-                    <td class="p-4 text-slate-400 text-xs">${m.user_name}</td>
-                    <td class="p-4 text-slate-500 text-xs italic">${m.reference || '-'} / ${m.notes || ''}</td>
-                </tr>
-                `;
+            <tr class="hover:bg-slate-800/50 transition border-b border-slate-800">
+                <td class="px-6 py-4 font-mono text-xs text-slate-400">${p.sku}</td>
+                <td class="px-6 py-4 font-bold text-white text-xs">${p.name}</td>
+                <td class="px-6 py-4 text-center text-sm font-bold ${style}">${stock}</td>
+                <td class="px-6 py-4 text-right space-x-2">
+                    <button onclick="openAdjust(${variantId}, '${p.sku} - ${p.name}')" 
+                        class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1 rounded text-xs font-bold border border-slate-700">Ajustar</button>
+                    <button onclick="openKardex(${variantId}, '${p.name}')"
+                        class="text-primary-400 hover:text-white text-xs font-bold underline">Kardex</button>
+                </td>
+            </tr>
+            `;
             }).join('');
-
-        } catch (e) {
-            tbody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-rose-500">Error cargando datos</td></tr>';
         }
-    }
 
-    // Modal
-    window.openAdjustmentModal = () => {
-        if (!currentVariant) return;
-        document.getElementById('adj-variant-id').value = currentVariant.variantId;
-        document.getElementById('adjustment-modal').classList.remove('hidden');
-    };
-    window.closeModal = (id) => document.getElementById(id).classList.add('hidden');
-
-    // Submit Adjustment
-    document.getElementById('adjustment-form').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const formData = new FormData(e.target);
-
-        let qty = Math.abs(Number(formData.get('quantity')));
-        const type = document.querySelector('input[name="adj_type"]:checked').value;
-        if (type === 'OUT') qty = -qty;
-
-        const payload = {
-            variant_id: parseInt(document.getElementById('adj-variant-id').value),
-            quantity: qty,
-            reason: formData.get('reason'),
-            notes: formData.get('notes')
+        // --- ADJUST LOGIC ---
+        window.openAdjust = (vid, name) => {
+            if (!vid) return alert('Este producto no tiene variante principal válida');
+            document.getElementById('adjust-variant-id').value = vid;
+            document.getElementById('adjust-product-name').textContent = name;
+            document.getElementById('adjust-qty').value = '';
+            document.getElementById('adjust-notes').value = '';
+            document.getElementById('adjust-modal').classList.remove('hidden');
         };
 
-        try {
-            const res = await fetch(`${API_BASE}/api/inventory/adjust`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${ACCESS_TOKEN}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(payload)
-            });
+        document.getElementById('adjust-form').onsubmit = async (e) => {
+            e.preventDefault();
+            const vid = document.getElementById('adjust-variant-id').value;
+            const qty = parseFloat(document.getElementById('adjust-qty').value);
+            const reason = document.getElementById('adjust-reason').value;
+            const notes = document.getElementById('adjust-notes').value;
 
-            if (!res.ok) {
-                const err = await res.json();
-                throw new Error(err.detail || 'Error en ajuste');
-            }
+            try {
+                await apiFetch('/api/inventory/adjust', {
+                    method: 'POST',
+                    body: JSON.stringify({ variant_id: vid, quantity: qty, reason, notes })
+                });
+                document.getElementById('adjust-modal').classList.add('hidden');
+                loadData(); // Refresh stock
+                alert('Ajuste aplicado correctamente');
+            } catch (err) { alert(err.message); }
+        };
 
-            // Success
-            closeModal('adjustment-modal');
-            e.target.reset();
-            // Refresh
-            selectProduct(currentVariant.id, currentVariant.name, currentVariant.sku, currentVariant.stock + qty, currentVariant.variantId);
+        // --- KARDEX LOGIC ---
+        window.openKardex = async (vid, name) => {
+            if (!vid) return;
+            document.getElementById('kardex-product-name').textContent = name;
+            document.getElementById('kardex-modal').classList.remove('hidden');
+            const tbody = document.getElementById('kardex-table-body');
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4">Cargando...</td></tr>';
 
-        } catch (err) {
-            alert(err.message);
+            try {
+                const moves = await apiFetch(`/api/inventory/kardex/${vid}`);
+                tbody.innerHTML = moves.map(m => `
+                <tr class="border-b border-slate-800 last:border-0 hover:bg-slate-800/30">
+                    <td class="px-4 py-2 text-slate-500">${new Date(m.created_at).toLocaleString()}</td>
+                    <td class="px-4 py-2 text-white font-bold">${formatType(m.movement_type)}</td>
+                    <td class="px-4 py-2 text-center font-mono ${m.qty_change > 0 ? 'text-emerald-400' : 'text-rose-400'}">
+                        ${m.qty_change > 0 ? '+' : ''}${m.qty_change}
+                    </td>
+                    <td class="px-4 py-2 text-center text-slate-300 font-bold">${m.qty_after}</td>
+                    <td class="px-4 py-2 text-slate-500 overflow-hidden text-ellipsis whitespace-nowrap max-w-[150px]">
+                        <span class="block text-white text-[10px]">${m.reference || ''}</span>
+                        <span class="block text-[9px]">${m.user_name}</span>
+                    </td>
+                </tr>
+            `).join('');
+            } catch (err) { tbody.innerHTML = `<tr><td colspan="5" class="text-center text-rose-500 py-4">${err.message}</td></tr>`; }
+        };
+
+        function formatType(t) {
+            if (t === 'ADJUSTMENT_IN') return 'Entrada';
+            if (t === 'ADJUSTMENT_OUT') return 'Salida';
+            if (t === 'SALE') return 'Venta';
+            if (t === 'PURCHASE') return 'Compra';
+            if (t === 'SALE_RETURN') return 'Devolución';
+            return t;
         }
     });
-
-    // Util
-    function debounce(func, wait) {
-        let timeout;
-        return function (...args) {
-            clearTimeout(timeout);
-            timeout = setTimeout(() => func.apply(this, args), wait);
-        };
-    }
 </script>
 {% endblock %}

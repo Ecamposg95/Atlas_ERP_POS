@@ -15,13 +15,12 @@ from .users import User, Role
 from .products import (
     Product, 
     ProductVariant, 
-    StockOnHand, 
     Brand, 
     Category, 
     UnitOfMeasure, 
     ProductPrice  # <--- Nuevo
 )
-from .inventory import InventoryMovement, MovementType
+from .inventory import InventoryMovement, MovementType, StockOnHand
 
 # 5. Ventas y Caja
 from .sales import (

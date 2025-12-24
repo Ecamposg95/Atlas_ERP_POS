@@ -388,7 +388,7 @@
         let ACCESS_TOKEN = sessionStorage.getItem('ACCESS_TOKEN');
         let allProducts = [];
         let filteredProducts = [];
-        let currentView = 'cards';
+        let currentView = 'table'; // FIX: Default matches HTML
         let currentPage = 1;
         const pageSize = 24;
         let deletingProductId = null;
@@ -709,89 +709,6 @@
             } catch (e) { alert(e.message); }
         };
 
-        // --- DEPARTAMENTS MANAGEMENT ---
-        const departmentsModal = document.createElement('div');
-        departmentsModal.id = 'departments-modal';
-        departmentsModal.className = 'hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-[70] flex items-center justify-center p-4';
-        departmentsModal.innerHTML = `
-            <div class="bg-slate-900 rounded-2xl shadow-xl w-full max-w-md p-6 border border-slate-700">
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-xl font-bold text-white">Gestionar Departamentos</h3>
-                    <button onclick="document.getElementById('departments-modal').classList.add('hidden')" class="text-slate-400 hover:text-white transition">✕</button>
-                </div>
-                <!-- Create/Edit Form -->
-                <form id="dept-form" class="mb-6 flex gap-2">
-                    <input type="hidden" id="dept-id">
-                    <input type="text" id="dept-name" placeholder="Nuevo Departamento" class="flex-1 px-4 py-2 bg-slate-950 border border-slate-700 rounded-lg text-white focus:ring-2 focus:ring-primary-500 outline-none" required>
-                    <button type="submit" class="bg-primary-600 hover:bg-primary-500 text-white px-4 py-2 rounded-lg font-bold shadow transition">Guardar</button>
-                </form>
-                <!-- List -->
-                <div class="max-h-60 overflow-y-auto custom-scrollbar border border-slate-800 rounded-xl bg-slate-950/50">
-                    <ul id="dept-list" class="divide-y divide-slate-800"></ul>
-                </div>
-            </div>
-        `;
-        document.body.appendChild(departmentsModal);
-
-        // Open Dept Modal (We can add a button for this later if needed, or link it to the "+" in select?)
-        // Let's add a button in the main toolbar dynamically
-        const filtersDiv = document.querySelector('#department-filter').parentNode;
-        const manageDeptsBtn = document.createElement('button');
-        manageDeptsBtn.className = 'bg-slate-800 border border-slate-700 text-slate-300 px-3 py-2.5 rounded-xl text-xs font-bold hover:bg-slate-700 transition shadow-sm ml-2';
-        manageDeptsBtn.innerHTML = '⚙️ Deptos';
-        manageDeptsBtn.onclick = () => {
-            loadDeptsList();
-            showModal(departmentsModal);
-        };
-        filtersDiv.insertBefore(manageDeptsBtn, filtersDiv.firstChild); // Add at beginning
-
-        async function loadDeptsList() {
-            try {
-                const depts = await apiFetch('/api/departments/');
-                const ul = document.getElementById('dept-list');
-                ul.innerHTML = depts.map(d => `
-                    <li class="flex justify-between items-center p-3 hover:bg-slate-800/50 transition">
-                        <span class="text-sm text-slate-300 font-medium">${d.name}</span>
-                        <div class="flex gap-2">
-                            <button onclick="editDept(${d.id}, '${d.name}')" class="text-xs text-primary-400 hover:text-white font-bold">Editar</button>
-                            <button onclick="deleteDept(${d.id})" class="text-xs text-rose-400 hover:text-white font-bold">Eliminar</button>
-                        </div>
-                    </li>
-                `).join('');
-            } catch (e) { console.error(e); }
-        }
-
-        window.editDept = (id, name) => {
-            document.getElementById('dept-id').value = id;
-            document.getElementById('dept-name').value = name;
-            document.getElementById('dept-name').focus();
-        };
-
-        window.deleteDept = async (id) => {
-            if (!confirm('¿Eliminar departamento? Si tiene productos, estos podrían quedar sin categoría.')) return;
-            try {
-                await apiFetch(`/api/departments/${id}`, { method: 'DELETE' });
-                loadDeptsList();
-                loadDepartments(); // Reload main select
-            } catch (e) { alert(e.message); }
-        };
-
-        const deptForm = document.getElementById('dept-form');
-        deptForm.onsubmit = async (e) => {
-            e.preventDefault();
-            const id = document.getElementById('dept-id').value;
-            const name = document.getElementById('dept-name').value;
-            const method = id ? 'PUT' : 'POST';
-            const url = id ? `/api/departments/${id}` : '/api/departments/';
-
-            try {
-                await apiFetch(url, { method, body: JSON.stringify({ name }) });
-                deptForm.reset();
-                document.getElementById('dept-id').value = '';
-                loadDeptsList();
-                loadDepartments();
-            } catch (e) { alert(e.message); }
-        };
 
 
         // --- IMPORT / EXPORT LOGIC ---

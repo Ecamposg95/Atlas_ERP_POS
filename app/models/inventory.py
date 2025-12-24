@@ -13,7 +13,6 @@ class MovementType(str, enum.Enum):
 
 class InventoryMovement(Base):
     __tablename__ = "inventory_movements"
-    __table_args__ = {'extend_existing': True}
 
     id = Column(Integer, primary_key=True, index=True)
     branch_id = Column(Integer, ForeignKey("branches.id"), nullable=False)
@@ -28,3 +27,22 @@ class InventoryMovement(Base):
     reference = Column(String, nullable=True) # ID Venta, ID Compra...
     notes = Column(String, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    from sqlalchemy.orm import relationship
+    user = relationship("User")
+    variant = relationship("ProductVariant")
+    branch = relationship("Branch")
+
+class StockOnHand(Base):
+    __tablename__ = "stock_on_hand"
+
+    id = Column(Integer, primary_key=True, index=True)
+    branch_id = Column(Integer, ForeignKey("branches.id"), nullable=False)
+    variant_id = Column(Integer, ForeignKey("product_variants.id"), nullable=False, unique=True)
+    
+    qty_on_hand = Column(Numeric(10, 2), default=0, nullable=False)
+    last_updated = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    from sqlalchemy.orm import relationship
+    branch = relationship("Branch")
+    variant = relationship("ProductVariant", backref="stock_levels")
