@@ -27,11 +27,15 @@ from .sales import (
     SalesDocument, 
     SalesLineItem, 
     Payment, 
-    CashSession, 
     DocumentStatus, 
     DocumentType, 
-    PaymentMethod, 
-    CashSessionStatus
+    PaymentMethod
+)
+
+from .cash import (
+    CashSession,
+    CashSessionStatus,
+    CashMovement
 )
 
 # 6. Clientes

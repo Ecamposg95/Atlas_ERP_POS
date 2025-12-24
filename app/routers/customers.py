@@ -192,3 +192,29 @@ def register_customer_payment(
     db.commit()
     db.refresh(new_entry)
     return new_entry
+
+from fastapi import Response
+from app.utils.pdf_generator import generate_account_statement_pdf
+
+@router.get("/{customer_id}/pdf-statement")
+def get_customer_statement_pdf(
+    customer_id: int, 
+    db: Session = Depends(get_db)
+):
+    customer = db.query(Customer).filter(Customer.id == customer_id).first()
+    if not customer:
+        raise HTTPException(404, "Cliente no encontrado")
+        
+    entries = db.query(CustomerLedgerEntry)\
+        .filter(CustomerLedgerEntry.customer_id == customer_id)\
+        .order_by(desc(CustomerLedgerEntry.created_at))\
+        .limit(100)\
+        .all()
+        
+    pdf_content = generate_account_statement_pdf(customer, entries)
+    
+    return Response(
+        content=pdf_content,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename=EdoCuenta_{customer.tax_id or 'Cliente'}.pdf"}
+    )

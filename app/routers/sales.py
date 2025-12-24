@@ -226,3 +226,135 @@ def create_sale(
         "change": float(change_amount),
         "credit_debt": float(remaining_debt) if remaining_debt > 0 else 0.0
     }
+
+# --------------------------------------------------------------------------
+# 6. OBTENER DETALLE DE VENTA
+# --------------------------------------------------------------------------
+@router.get("/{sale_id}", response_model=SaleRead)
+def get_sale_detail(
+    sale_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    sale = db.query(SalesDocument).filter(SalesDocument.id == sale_id).first()
+    if not sale:
+        raise HTTPException(status_code=404, detail="Venta no encontrada")
+    
+    # Verificar acceso a sucursal (opcional, dependiendo de reglas de negocio)
+    if sale.branch_id != current_user.branch_id:
+         # Permitir si es admin/gerente, restringir si es cajero de otra sucursal?
+         # Por ahora lo dejamos pasar o lanzamos 403.
+         pass
+         
+    return sale
+
+# --------------------------------------------------------------------------
+# 7. CANCELAR VENTA (ANULACIÓN)
+# --------------------------------------------------------------------------
+@router.delete("/{sale_id}")
+def cancel_sale(
+    sale_id: int,
+    reason: str = "Cancelación directa",
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Anula una venta completa. 
+    1. Marca estatus como CANCELLED.
+    2. Revertir Stock (Entrada por Cancelación).
+    3. Si hubo crédito, revertir deuda del cliente.
+    """
+    sale = db.query(SalesDocument).filter(SalesDocument.id == sale_id).first()
+    if not sale:
+        raise HTTPException(status_code=404, detail="Venta no encontrada")
+
+    if sale.status == DocumentStatus.CANCELLED:
+        raise HTTPException(status_code=400, detail="Esta venta ya está cancelada")
+
+    # 1. Revertir Stock
+    for line in sale.lines:
+        variant = db.query(ProductVariant).filter(ProductVariant.id == line.variant_id).first()
+        if variant:
+            stock_record = db.query(StockOnHand).filter(
+                StockOnHand.variant_id == variant.id, 
+                StockOnHand.branch_id == sale.branch_id
+            ).first()
+
+            if stock_record:
+                qty_to_restore = line.quantity # Asumiendo unidad base
+                qty_before = stock_record.qty_on_hand
+                
+                # Restaurar stock
+                stock_record.qty_on_hand += qty_to_restore
+                
+                # Registrar movimiento
+                move = InventoryMovement(
+                    branch_id=sale.branch_id,
+                    variant_id=variant.id,
+                    user_id=current_user.id,
+                    movement_type=MovementType.SALE_RETURN, # O un tipo específico CANCELLATION
+                    qty_change=qty_to_restore,
+                    qty_before=qty_before,
+                    qty_after=qty_before + qty_to_restore,
+                    reference=f"Cancelación Venta #{sale.folio}",
+                    notes=f"Motivo: {reason}"
+                )
+                db.add(move)
+
+    # 2. Revertir Deuda (Si aplicó)
+    # Si la venta estaba PENDING (crédito), reducimos la deuda del cliente
+    # Si estaba PAID, asumimos que se devolvió el dinero o se queda como saldo a favor (Nota de Crédito)
+    # Para simplificar este endpoint DELETE, asumiremos reversión total.
+    
+    if sale.customer_id:
+        customer = db.query(Customer).filter(Customer.id == sale.customer_id).first()
+        if customer:
+            # ¿Cuánto se cargó al cliente?
+            # Si status=PENDING, el cliente debe (total - pagado).
+            # Al cancelar, quitamos esa deuda.
+            
+            # Calculamos cuánto se debía originalmente
+            paid_amount = sum(p.amount for p in sale.payments)
+            debt_amount = sale.total_amount - paid_amount
+            
+            if debt_amount > 0 and sale.status == DocumentStatus.PENDING:
+                customer.current_balance -= debt_amount # Reducir deuda
+                
+                # Ledger entry
+                ledger = CustomerLedgerEntry(
+                    customer_id=customer.id,
+                    sales_document_id=sale.id,
+                    amount=-debt_amount,
+                    description=f"Cancelación Venta #{sale.folio}",
+                    entry_type="CANCELLATION"
+                )
+                db.add(ledger)
+
+    # 3. Marcar Cancelado
+    sale.status = DocumentStatus.CANCELLED
+    
+    db.commit()
+    return {"message": "Venta cancelada exitosamente", "sale_id": sale.id}
+
+# --------------------------------------------------------------------------
+# 8. REEMBOLSO / DEVOLUCIÓN (NUEVO)
+# --------------------------------------------------------------------------
+@router.post("/{sale_id}/refund")
+def refund_sale(
+    sale_id: int,
+    amount: Decimal = None, # Opcional: Monto parcial. Si es nulo, total.
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Genera una devolución monetaria o nota de crédito.
+    Por ahora, lo implementaremos como una 'Nota de Reembolso' simple.
+    """
+    sale = db.query(SalesDocument).filter(SalesDocument.id == sale_id).first()
+    if not sale:
+        raise HTTPException(status_code=404, detail="Venta no encontrada")
+    
+    # Lógica simplificada: Solo marcar reembolso si está pagada
+    # Implementación completa requiere modelo de "Devoluciones" (Returns) separado.
+    # Por ahora solo modificamos estado o notas.
+    return {"message": "Funcionalidad de reembolso parcial en construcción"}

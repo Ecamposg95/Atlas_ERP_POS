@@ -95,27 +95,3 @@ class Payment(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     sales_document = relationship("SalesDocument", back_populates="payments")
-
-# --- Modelo 4: Corte de Caja (Cash Sessions) ---
-class CashSession(Base):
-    __tablename__ = "cash_sessions"
-    __table_args__ = {'extend_existing': True}
-
-    id = Column(Integer, primary_key=True, index=True)
-    
-    branch_id = Column(Integer, ForeignKey("branches.id"), nullable=False)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    
-    status = Column(Enum(CashSessionStatus), default=CashSessionStatus.OPEN)
-    
-    opening_balance = Column(Numeric(10, 2), default=0.00)
-    closing_balance = Column(Numeric(10, 2), nullable=True)
-    
-    # Campos de auditoría al cierre
-    total_cash_sales = Column(Numeric(10, 2), default=0.00) # Cuánto vendió según sistema
-    difference = Column(Numeric(10, 2), default=0.00)       # Sobrante/Faltante
-    
-    opened_at = Column(DateTime(timezone=True), server_default=func.now())
-    closed_at = Column(DateTime(timezone=True), nullable=True)
-    
-    notes = Column(String, nullable=True)

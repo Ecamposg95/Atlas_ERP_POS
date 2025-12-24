@@ -1,48 +1,266 @@
 {% extends "base.html" %}
 
-{% block title %}Cortes de Caja - Atlas ERP{% endblock %}
+{% block title %}Control de Caja - Atlas ERP{% endblock %}
 
 {% block content %}
-<div class="space-y-6 animate-fade-in">
+<div class="space-y-6 animate-fade-in pb-20">
     <!-- Header -->
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-            <h1 class="text-3xl font-bold text-white tracking-tight">Historial de Caja</h1>
-            <p class="text-slate-400 mt-1">Auditoría de turnos y cierres</p>
+            <h1 class="text-3xl font-bold text-white tracking-tight">Control de Efectivo</h1>
+            <p class="text-slate-400 mt-1">Gestión de turnos, cortes de caja y auditoría</p>
         </div>
 
-        <button onclick="loadHistory()"
-            class="p-2.5 bg-slate-800 text-slate-300 rounded-xl hover:bg-slate-700 transition">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div id="session-status-badge" class="hidden">
+            <!-- JS Injected Status -->
+        </div>
+    </div>
+
+    <!-- ACTIVE SESSION DASHBOARD -->
+    <div id="active-session-panel" class="hidden grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Main Stats -->
+        <div class="lg:col-span-2 space-y-6">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <!-- Saldo Inicial -->
+                <div class="glass-card p-6 border-l-4 border-blue-500 bg-slate-900/40 relative overflow-hidden group">
+                    <div class="absolute right-0 top-0 p-4 opacity-5 group-hover:opacity-10 transition">
+                        <svg class="w-24 h-24" fill="currentColor" viewBox="0 0 24 24">
+                            <path
+                                d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1.41 16.09V20h-2.67v-1.93c-1.71-.36-3.15-1.46-3.27-3.4h1.96c.1 1.05 1.18 1.91 2.53 1.91 1.29 0 2.13-.77 2.13-2.11 0-2.85-6.53-2.55-6.53-8.84 0-2.52 1.86-4.16 4.61-4.74V7h2.67v1.93c1.38.35 2.58 1.19 2.73 2.77h-1.98c-.17-.96-1.04-1.63-2.14-1.63-1.23 0-1.93.7-1.93 1.98 0 2.77 6.54 2.3 6.54 8.71 0 2.47-1.78 4.2-4.64 4.77z" />
+                        </svg>
+                    </div>
+                    <p class="text-sm font-medium text-slate-400 uppercase tracking-widest">Fondo Inicial</p>
+                    <h3 class="text-3xl font-bold text-white mt-1" id="dash-opening">$0.00</h3>
+                    <p class="text-xs text-slate-500 mt-2">Monto de apertura de caja</p>
+                </div>
+
+                <!-- Ventas Efectivo -->
+                <div
+                    class="glass-card p-6 border-l-4 border-emerald-500 bg-slate-900/40 relative overflow-hidden group">
+                    <div class="absolute right-0 top-0 p-4 opacity-5 group-hover:opacity-10 transition">
+                        <svg class="w-24 h-24" fill="currentColor" viewBox="0 0 24 24">
+                            <path
+                                d="M11 9h2V6h3V4h-3V1h-2v3H8v2h3v3zm-4 9c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm10 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm-9.8-3.2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm6.2 3.6l-1-1.3L15 16h-4l-3-4-2.6 1.8L6.8 12 3 17.6l2 2.6L8.6 16l3 4 2.8-1.5 2-1.9 1-1.5z" />
+                        </svg>
+                    </div>
+                    <p class="text-sm font-medium text-slate-400 uppercase tracking-widest">Ventas (Efectivo)</p>
+                    <h3 class="text-3xl font-bold text-emerald-400 mt-1" id="dash-sales">$0.00</h3>
+                    <p class="text-xs text-slate-500 mt-2">Acumulado del turno actual</p>
+                </div>
+            </div>
+
+            <!-- Inflow / Outflow Summary -->
+            <div class="grid grid-cols-2 gap-4">
+                <div class="bg-indigo-500/10 border border-indigo-500/20 rounded-xl p-4">
+                    <p class="text-xs font-bold text-indigo-400 mb-1">ENTRADAS EXTRA</p>
+                    <div class="text-xl font-mono text-white" id="dash-inflows">$0.00</div>
+                </div>
+                <div class="bg-rose-500/10 border border-rose-500/20 rounded-xl p-4">
+                    <p class="text-xs font-bold text-rose-400 mb-1">SALIDAS / GASTOS</p>
+                    <div class="text-xl font-mono text-white" id="dash-outflows">$0.00</div>
+                </div>
+            </div>
+
+            <!-- Expected Total Banner -->
+            <div class="bg-slate-800/80 border border-white/10 rounded-xl p-6 flex items-center justify-between">
+                <div>
+                    <h4 class="text-xl font-bold text-white">Total Esperado en Caja</h4>
+                    <p class="text-sm text-slate-400">Calculado por sistema</p>
+                </div>
+                <div class="text-4xl font-bold text-white font-mono" id="dash-expected">$0.00</div>
+            </div>
+        </div>
+
+        <!-- Actions Panel -->
+        <div class="bg-slate-900/50 border border-white/5 rounded-2xl p-6 flex flex-col gap-4">
+            <h3 class="text-lg font-bold text-white mb-2">Acciones Rápidas</h3>
+
+            <button onclick="openMoveModal('IN')"
+                class="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold shadow-lg shadow-indigo-500/20 transition flex items-center justify-center gap-3">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                </svg>
+                Registrar Entrada
+            </button>
+
+            <button onclick="openMoveModal('OUT')"
+                class="w-full py-4 bg-rose-600 hover:bg-rose-500 text-white rounded-xl font-bold shadow-lg shadow-rose-500/20 transition flex items-center justify-center gap-3">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path>
+                </svg>
+                Registrar Gasto / Salida
+            </button>
+
+            <div class="flex-1"></div>
+
+            <button onclick="openCloseModal()"
+                class="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold shadow-lg shadow-emerald-500/20 transition flex items-center justify-center gap-3 animate-pulse">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                HACER CORTE (CERRAR)
+            </button>
+        </div>
+    </div>
+
+    <!-- NO ACTIVE SESSION ALERT -->
+    <div id="no-session-panel"
+        class="hidden glass-card p-12 text-center rounded-2xl border-dashed border-2 border-slate-700">
+        <div class="w-20 h-20 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-6">
+            <svg class="w-10 h-10 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15">
+                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z">
                 </path>
             </svg>
+        </div>
+        <h2 class="text-2xl font-bold text-white mb-2">La caja está cerrada</h2>
+        <p class="text-slate-400 mb-8 max-w-md mx-auto">Para comenzar a vender y registrar movimientos, debes iniciar un
+            nuevo turno.</p>
+        <button onclick="openOpenModal()"
+            class="px-8 py-3 bg-primary-600 hover:bg-primary-500 text-white rounded-xl font-bold shadow-lg transition">
+            Abrir Nuevo Turno
         </button>
     </div>
 
-    <!-- History Table -->
-    <div class="glass-card rounded-2xl overflow-hidden border border-white/5">
-        <div class="overflow-x-auto">
-            <table class="w-full text-left border-collapse">
-                <thead>
-                    <tr class="bg-slate-900/50 text-slate-400 text-xs uppercase tracking-wider border-b border-white/5">
-                        <th class="p-4 font-semibold">ID</th>
-                        <th class="p-4 font-semibold">Usuario</th>
-                        <th class="p-4 font-semibold">Apertura</th>
-                        <th class="p-4 font-semibold">Cierre</th>
-                        <th class="p-4 font-semibold text-right">Inicio</th>
-                        <th class="p-4 font-semibold text-right">Fin</th>
-                        <th class="p-4 font-semibold text-right">Diferencia</th>
-                        <th class="p-4 font-semibold text-center">Estado</th>
-                    </tr>
-                </thead>
-                <tbody id="history-body" class="text-sm divide-y divide-white/5">
-                    <tr>
-                        <td colspan="8" class="p-8 text-center text-slate-500 italic">Cargando...</td>
-                    </tr>
-                </tbody>
-            </table>
+    <!-- HISTORY TABLE -->
+    <div class="mt-12">
+        <h3 class="text-xl font-bold text-white mb-4">Historial de Cortes Recientes</h3>
+        <div class="glass-card rounded-2xl overflow-hidden border border-white/5">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr
+                            class="bg-slate-900/50 text-slate-400 text-xs uppercase tracking-wider border-b border-white/5">
+                            <th class="p-4 font-semibold">ID</th>
+                            <th class="p-4 font-semibold">Usuario</th>
+                            <th class="p-4 font-semibold">Apertura / Cierre</th>
+                            <th class="p-4 font-semibold text-right">Fondo</th>
+                            <th class="p-4 font-semibold text-right">Ventas</th>
+                            <th class="p-4 font-semibold text-right">Total Final</th>
+                            <th class="p-4 font-semibold text-right">Diferencia</th>
+                            <th class="p-4 font-semibold text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="history-body" class="text-sm divide-y divide-white/5">
+                        <!-- JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: REGISTER MOVEMENT (IN/OUT) -->
+<div id="movement-modal" class="fixed inset-0 z-50 hidden">
+    <div class="absolute inset-0 bg-slate-950/80 backdrop-blur-sm" onclick="closeModal('movement-modal')"></div>
+    <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-md">
+        <div class="glass-card p-6 rounded-2xl shadow-xl border border-white/10 animate-scale-in">
+            <h3 class="text-xl font-bold text-white mb-1" id="move-modal-title">Registrar Movimiento</h3>
+            <p class="text-sm text-slate-400 mb-6" id="move-modal-desc">...</p>
+
+            <form id="move-form" class="space-y-4">
+                <input type="hidden" name="type" id="move-type">
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 mb-1">Monto</label>
+                    <div class="relative">
+                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">$</span>
+                        <input type="number" name="amount" step="0.01" required
+                            class="w-full bg-slate-900/50 border border-slate-700 rounded-lg py-2 pl-8 pr-4 text-white focus:border-primary-500 outline-none text-lg font-bold">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 mb-1">Motivo / Razón</label>
+                    <textarea name="reason" required rows="3"
+                        class="w-full bg-slate-900/50 border border-slate-700 rounded-lg p-3 text-white focus:border-primary-500 outline-none"
+                        placeholder="Ej: Pago de agua, Cambio para caja..."></textarea>
+                </div>
+                <div class="pt-4 flex gap-3">
+                    <button type="button" onclick="closeModal('movement-modal')"
+                        class="flex-1 py-3 text-slate-400 hover:text-white font-medium">Cancelar</button>
+                    <button type="submit"
+                        class="flex-1 py-3 bg-primary-600 hover:bg-primary-500 text-white rounded-xl font-bold shadow-lg">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: OPEN SESSION -->
+<div id="open-modal" class="fixed inset-0 z-50 hidden">
+    <div class="absolute inset-0 bg-slate-950/80 backdrop-blur-sm" onclick="closeModal('open-modal')"></div>
+    <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-md">
+        <div class="glass-card p-8 rounded-2xl shadow-xl border border-white/10 animate-fade-in">
+            <div class="w-16 h-16 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg class="w-8 h-8 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                </svg>
+            </div>
+            <h2 class="text-2xl font-bold text-white text-center mb-2">Apertura de Turno</h2>
+            <p class="text-slate-400 text-center mb-6 text-sm">Ingresa el monto de efectivo inicial en caja.</p>
+
+            <form id="open-form" class="space-y-6">
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 mb-2 uppercase tracking-wider">Fondo
+                        Inicial</label>
+                    <div class="relative">
+                        <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 text-xl">$</span>
+                        <input type="number" name="opening_balance" step="0.01" required value="0.00"
+                            class="w-full bg-slate-900 border border-slate-700 rounded-xl py-4 pl-10 pr-4 text-white text-2xl font-bold text-center focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none transition">
+                    </div>
+                </div>
+                <button type="submit"
+                    class="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold shadow-lg transform hover:translate-y-[-2px] transition">
+                    INICIAR TURNO
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: CLOSE SESSION (CORTE) -->
+<div id="close-modal" class="fixed inset-0 z-50 hidden">
+    <div class="absolute inset-0 bg-slate-950/80 backdrop-blur-sm" onclick="closeModal('close-modal')"></div>
+    <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-lg">
+        <div class="glass-card p-8 rounded-2xl shadow-2xl border border-white/10 animate-scale-in">
+            <h2 class="text-2xl font-bold text-white mb-1">Corte de Caja</h2>
+            <p class="text-slate-400 mb-6 text-sm">Verifica el efectivo físico antes de cerrar.</p>
+
+            <div
+                class="bg-indigo-900/20 border border-indigo-500/30 rounded-xl p-4 mb-6 flex justify-between items-center px-6">
+                <span class="text-indigo-300 font-medium">Debe haber en caja:</span>
+                <span class="text-2xl font-bold text-white" id="close-expected">$0.00</span>
+            </div>
+
+            <form id="close-form" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 mb-2">EFECTIVO CONTADO (REAL)</label>
+                    <div class="relative">
+                        <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 text-lg">$</span>
+                        <input type="number" id="closing-balance" name="closing_balance" step="0.01" required
+                            class="w-full bg-slate-900 border border-slate-600 rounded-xl py-3 pl-10 pr-4 text-white text-xl font-bold focus:border-indigo-500 outline-none">
+                    </div>
+                </div>
+
+                <div id="diff-alert" class="hidden p-3 rounded-lg text-sm font-bold text-center">
+                    <!-- JS Injected Diff -->
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 mb-1">Notas / Observaciones</label>
+                    <textarea name="notes" rows="2"
+                        class="w-full bg-slate-900/50 border border-slate-700 rounded-lg p-3 text-white focus:border-indigo-500 outline-none"></textarea>
+                </div>
+
+                <div class="pt-4 flex gap-3">
+                    <button type="button" onclick="closeModal('close-modal')"
+                        class="flex-1 py-3 text-slate-400 hover:text-white font-medium">Cancelar</button>
+                    <button type="submit"
+                        class="flex-1 py-3 bg-red-600 hover:bg-red-500 text-white rounded-xl font-bold shadow-lg">CERRAR
+                        TURNO</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
@@ -51,63 +269,257 @@
 
 {% block scripts %}
 <script>
+    const API_BASE = 'http://127.0.0.1:8000'; // Adjust if needed
+    const ACCESS_TOKEN = sessionStorage.getItem('ACCESS_TOKEN'); // Assuming token logic
+
+    // Globals
+    let currentSession = null;
+    let expectedAmount = 0;
+
+    // --- INIT ---
     document.addEventListener('DOMContentLoaded', () => {
-        const API_BASE = 'http://127.0.0.1:8000';
-        const ACCESS_TOKEN = sessionStorage.getItem('ACCESS_TOKEN');
-        if (!ACCESS_TOKEN) window.location.href = '/auth';
-
-        window.loadHistory = async () => {
-            const tbody = document.getElementById('history-body');
-            tbody.innerHTML = '<tr><td colspan="8" class="p-8 text-center text-slate-500 italic">Cargando...</td></tr>';
-
-            try {
-                const res = await fetch(`${API_BASE}/api/cash/history`, {
-                    headers: { 'Authorization': `Bearer ${ACCESS_TOKEN}` }
-                });
-                if (!res.ok) throw new Error('Error al cargar historial');
-                const data = await res.json();
-                renderTable(data);
-            } catch (e) {
-                tbody.innerHTML = `<tr><td colspan="8" class="p-8 text-center text-rose-500 font-bold">${e.message}</td></tr>`;
-            }
-        };
-
-        function renderTable(sessions) {
-            const tbody = document.getElementById('history-body');
-            if (sessions.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="8" class="p-8 text-center text-slate-500 italic">No hay historial disponible</td></tr>';
-                return;
-            }
-
-            tbody.innerHTML = sessions.map(s => {
-                const openDate = new Date(s.opened_at).toLocaleString('es-MX');
-                const closeDate = s.closed_at ? new Date(s.closed_at).toLocaleString('es-MX') : '-';
-
-                const diff = s.difference || 0;
-                let diffClass = 'text-slate-400';
-                if (diff < 0) diffClass = 'text-rose-400 font-bold';
-                if (diff > 0) diffClass = 'text-emerald-400 font-bold';
-
-                const statusBadge = s.status === 'OPEN'
-                    ? '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">ABIERTO</span>'
-                    : '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-700 text-slate-400">CERRADO</span>';
-
-                return `
-                <tr class="hover:bg-slate-800/50 transition">
-                    <td class="p-4 font-mono text-slate-400">#${s.id}</td>
-                    <td class="p-4 text-slate-300 font-medium">UI: ${s.user_id}</td>
-                    <td class="p-4 text-slate-400 text-xs">${openDate}</td>
-                    <td class="p-4 text-slate-400 text-xs">${closeDate}</td>
-                    <td class="p-4 text-right text-slate-300">$${s.opening_balance.toFixed(2)}</td>
-                    <td class="p-4 text-right text-slate-300">${s.closing_balance ? '$' + s.closing_balance.toFixed(2) : '-'}</td>
-                    <td class="p-4 text-right ${diffClass}">${diff !== 0 ? '$' + diff.toFixed(2) : '-'}</td>
-                    <td class="p-4 text-center">${statusBadge}</td>
-                </tr>
-                `;
-            }).join('');
-        }
-
+        checkSession();
         loadHistory();
     });
+
+    // --- CORE LOGIC ---
+    async function checkSession() {
+        try {
+            const res = await fetch(`${API_BASE}/api/cash/status`, {
+                headers: { 'Authorization': `Bearer ${ACCESS_TOKEN}` }
+            });
+            const session = await res.json(); // returns obj or null
+
+            if (session) {
+                currentSession = session;
+                showActiveDashboard();
+                loadSummary();
+            } else {
+                currentSession = null;
+                showNoSession();
+            }
+        } catch (e) { console.error(e); }
+    }
+
+    async function loadSummary() {
+        if (!currentSession) return;
+        try {
+            const res = await fetch(`${API_BASE}/api/cash/summary`, {
+                headers: { 'Authorization': `Bearer ${ACCESS_TOKEN}` }
+            });
+            const data = await res.json();
+
+            // Update UI
+            document.getElementById('dash-opening').textContent = fmtCheck(data.opening_balance);
+            document.getElementById('dash-sales').textContent = fmtCheck(data.sales_cash);
+            document.getElementById('dash-inflows').textContent = fmtCheck(data.inflows);
+            document.getElementById('dash-outflows').textContent = fmtCheck(data.outflows);
+            document.getElementById('dash-expected').textContent = fmtCheck(data.expected_in_drawer);
+
+            expectedAmount = data.expected_in_drawer;
+            document.getElementById('close-expected').textContent = fmtCheck(expectedAmount);
+
+        } catch (e) { console.error("Summary error", e); }
+    }
+
+    async function loadHistory() {
+        try {
+            const res = await fetch(`${API_BASE}/api/cash/history`, {
+                headers: { 'Authorization': `Bearer ${ACCESS_TOKEN}` }
+            });
+            const list = await res.json();
+            renderTable(list);
+        } catch (e) { console.error(e); }
+    }
+
+    // --- UI HELPERS ---
+    const fmtCheck = (n) => '$' + Number(n).toFixed(2);
+
+    function showActiveDashboard() {
+        document.getElementById('active-session-panel').classList.remove('hidden');
+        document.getElementById('no-session-panel').classList.add('hidden');
+        document.getElementById('session-status-badge').innerHTML =
+            `<span class="px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-bold rounded-lg animate-pulse flex items-center gap-2">
+                <span class="w-2 h-2 bg-emerald-500 rounded-full"></span> TURNO ACTIVO
+            </span>`;
+        document.getElementById('session-status-badge').classList.remove('hidden');
+    }
+
+    function showNoSession() {
+        document.getElementById('active-session-panel').classList.add('hidden');
+        document.getElementById('no-session-panel').classList.remove('hidden');
+        document.getElementById('session-status-badge').classList.add('hidden');
+    }
+
+    function renderTable(list) {
+        const tbody = document.getElementById('history-body');
+        if (!list.length) {
+            tbody.innerHTML = '<tr><td colspan="8" class="p-8 text-center text-slate-500 italic">Sin historial</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = list.map(item => {
+            const diff = item.difference || 0;
+            let diffColor = 'text-slate-500';
+            if (diff < -0.01) diffColor = 'text-rose-400 font-bold';
+            if (diff > 0.01) diffColor = 'text-emerald-400 font-bold';
+
+            const isClosed = item.status === 'CLOSED';
+
+            return `
+            <tr class="hover:bg-slate-800/50 transition border-b border-white/5">
+                <td class="p-4 font-mono text-slate-400">#${item.id}</td>
+                <td class="p-4 text-slate-300 text-xs">${item.user_id}</td> <!-- TODO user name -->
+                <td class="p-4 text-slate-400 text-xs">
+                    <div>IN: ${new Date(item.opened_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                    ${item.closed_at ? `<div class="text-slate-500">OUT: ${new Date(item.closed_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>` : ''}
+                </td>
+                <td class="p-4 text-right font-mono text-slate-300">$${Number(item.opening_balance).toFixed(2)}</td>
+                <td class="p-4 text-right font-mono text-emerald-400">$${Number(item.total_cash_sales || 0).toFixed(2)}</td>
+                <td class="p-4 text-right font-mono font-bold text-white">$${Number(item.closing_balance || 0).toFixed(2)}</td>
+                <td class="p-4 text-right font-mono ${diffColor}">
+                    ${diff > 0 ? '+' : ''}${Number(diff).toFixed(2)}
+                </td>
+                <td class="p-4">
+                    <div class="flex items-center justify-center gap-2">
+                        ${isClosed ? `
+                        <button onclick="printTicket(${item.id})" title="Imprimir Ticket" class="p-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-white transition"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2.4-9h6m-1 9v3H7v-3m10-4v-3.5a1.5 1.5 0 00-1.5-1.5h-5A1.5 1.5 0 009 5.5V11m8.5 4H7"></path></svg></button>
+                        <button onclick="downloadPDF(${item.id})" title="Descargar PDF" class="p-2 bg-rose-600 hover:bg-rose-500 rounded-lg text-white transition"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg></button>
+                        ` : '<span class="text-[10px] text-emerald-400 font-bold border border-emerald-500/30 px-2 py-1 rounded">ACTIVO</span>'}
+                    </div>
+                </td>
+            </tr>`;
+        }).join('');
+    }
+
+    // --- ACTIONS ---
+    window.downloadPDF = (id) => {
+        window.open(`${API_BASE}/api/cash/${id}/pdf`, '_blank');
+    };
+
+    window.printTicket = async (id) => {
+        // Here you would send the JSON from /ticket endpoint to your local printer service
+        // For now, we just open the raw json or debug
+        window.open(`${API_BASE}/api/cash/${id}/ticket`, '_blank');
+    };
+
+    // --- MODALS ---
+    window.openModal = (id) => document.getElementById(id).classList.remove('hidden');
+    window.closeModal = (id) => document.getElementById(id).classList.add('hidden');
+
+    window.openOpenModal = () => {
+        document.getElementById('open-form').reset();
+        openModal('open-modal');
+    };
+
+    window.openCloseModal = () => {
+        loadSummary(); // refresh expected
+        document.getElementById('close-form').reset();
+        document.getElementById('diff-alert').classList.add('hidden');
+        openModal('close-modal');
+    };
+
+    window.openMoveModal = (type) => {
+        const title = type === 'IN' ? 'Entrada de Efectivo' : 'Salida de Efectivo';
+        const desc = type === 'IN' ? 'Registra cambio inicial o aportes extra.' : 'Registra gastos menores o retiros parciales.';
+
+        document.getElementById('move-modal-title').textContent = title;
+        document.getElementById('move-modal-desc').textContent = desc;
+        document.getElementById('move-type').value = type;
+        document.getElementById('move-form').reset();
+        openModal('movement-modal');
+    };
+
+    // --- FORMS ---
+
+    // OPEN SESSION
+    document.getElementById('open-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const data = new FormData(e.target);
+        try {
+            const res = await fetch(`${API_BASE}/api/cash/open`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${ACCESS_TOKEN}` },
+                body: JSON.stringify({ opening_balance: parseFloat(data.get('opening_balance')) })
+            });
+            if (!res.ok) throw new Error('Error al abrir turno');
+
+            closeModal('open-modal');
+            checkSession();
+        } catch (err) { alert(err.message); }
+    });
+
+    // MOVEMENTS (IN/OUT)
+    document.getElementById('move-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const data = new FormData(e.target);
+        const type = document.getElementById('move-type').value; // IN or OUT
+        const endpoint = type === 'IN' ? 'inflow' : 'outflow';
+
+        try {
+            const res = await fetch(`${API_BASE}/api/cash/${endpoint}?amount=${data.get('amount')}&reason=${encodeURIComponent(data.get('reason'))}`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${ACCESS_TOKEN}` }
+            });
+            if (!res.ok) throw new Error('Error al registrar movimiento');
+
+            closeModal('movement-modal');
+            loadSummary(); // Refresh dashboards
+        } catch (err) { alert(err.message); }
+    });
+
+    // CLOSE SESSION
+    const closingInput = document.getElementById('closing-balance');
+    closingInput.addEventListener('input', () => {
+        const val = parseFloat(closingInput.value) || 0;
+        const diff = val - expectedAmount;
+        const alertBox = document.getElementById('diff-alert');
+
+        alertBox.classList.remove('hidden', 'bg-emerald-500/20', 'text-emerald-400', 'bg-rose-500/20', 'text-rose-400');
+
+        if (Math.abs(diff) < 0.1) {
+            alertBox.classList.add('bg-emerald-500/20', 'text-emerald-400');
+            alertBox.textContent = "CUADRE PERFECTO";
+        } else if (diff > 0) {
+            alertBox.classList.add('bg-emerald-500/20', 'text-emerald-400');
+            alertBox.textContent = `SOBRANTE: +$${diff.toFixed(2)}`;
+        } else {
+            alertBox.classList.add('bg-rose-500/20', 'text-rose-400');
+            alertBox.textContent = `FALTANTE: $${diff.toFixed(2)}`;
+        }
+    });
+
+    document.getElementById('close-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (!confirm("¿Estás seguro de cerrar el turno? Esta acción no se puede deshacer.")) return;
+
+        const data = new FormData(e.target);
+        const json = {
+            closing_balance: parseFloat(data.get('closing_balance')),
+            notes: data.get('notes')
+        };
+
+        try {
+            const res = await fetch(`${API_BASE}/api/cash/close`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${ACCESS_TOKEN}` },
+                body: JSON.stringify(json)
+            });
+            if (!res.ok) throw new Error('Error al cerrar turno');
+
+            const closedSession = await res.json();
+
+            closeModal('close-modal');
+            checkSession(); // Will switch to "No active session"
+            loadHistory();
+
+            // Auto open Report?
+            if (confirm("Turno cerrado. ¿Ver reporte PDF?")) {
+                downloadPDF(closedSession.id);
+            }
+
+        } catch (err) { alert(err.message); }
+    });
+
 </script>
 {% endblock %}

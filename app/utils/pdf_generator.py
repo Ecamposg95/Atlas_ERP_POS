@@ -133,3 +133,189 @@ def generate_quote_pdf(quote):
     )
 
     return pdf.output()
+
+def generate_cash_cut_pdf(session, user_name, branch_name, sales_cash, inflows, outflows):
+    """
+    Genera el PDF del Corte de Caja (Cash Session).
+    session: Objeto CashSession
+    user_name: Nombre del cajero
+    branch_name: Nombre de la sucursal
+    sales_cash: Total ventas efectivo (Decimal)
+    inflows: Total entradas (Decimal)
+    outflows: Total salidas (Decimal)
+    """
+    pdf = PDFQuote()
+    pdf.add_page()
+    pdf.set_auto_page_break(auto=True, margin=15)
+
+    # HEADER
+    pdf.set_font("Arial", "B", 16)
+    pdf.cell(0, 10, "CORTE DE CAJA", 0, 1, 'C')
+    
+    pdf.set_font("Arial", "", 10)
+    pdf.cell(0, 5, f"Sucursal: {branch_name}", 0, 1, 'C')
+    pdf.cell(0, 5, f"Cajero: {user_name}", 0, 1, 'C')
+    pdf.ln(5)
+
+    # FECHAS
+    pdf.set_fill_color(240, 240, 240)
+    pdf.rect(10, pdf.get_y(), 190, 15, 'F')
+    pdf.set_y(pdf.get_y() + 3)
+    
+    pdf.set_font("Arial", "B", 9)
+    pdf.cell(95, 5, f"Apertura: {session.opened_at.strftime('%d/%m/%Y %H:%M')}", 0, 0, 'C')
+    close_time = session.closed_at.strftime('%d/%m/%Y %H:%M') if session.closed_at else "EN PROCESO"
+    pdf.cell(95, 5, f"Cierre: {close_time}", 0, 1, 'C')
+    pdf.ln(10)
+
+    # TABLA RESUMEN
+    pdf.set_font("Arial", "B", 12)
+    pdf.cell(0, 10, "BALANCE GENERAL", 0, 1, 'L')
+
+    def row(label, amount, bold=False):
+        pdf.set_font("Arial", "B" if bold else "", 10)
+        pdf.cell(140, 8, label, 1, 0, 'L')
+        pdf.cell(50, 8, f"${amount:,.2f}", 1, 1, 'R')
+
+    row("fondo Inicial (Apertura)", session.opening_balance)
+    row("(+) Ventas en Efectivo", sales_cash)
+    row("(+) Entradas / Ingresos", inflows)
+    row("(-) Salidas / Gastos", outflows)
+    
+    # Expected calculation
+    expected = session.opening_balance + sales_cash + inflows - outflows
+    pdf.set_fill_color(230, 240, 255) # Light Blue
+    
+    pdf.cell(140, 8, "(=) Total Esperado en Caja", 1, 0, 'L', True)
+    pdf.cell(50, 8, f"${expected:,.2f}", 1, 1, 'R', True)
+
+    pdf.ln(5)
+    
+    # REPORTED
+    pdf.set_fill_color(255, 255, 255)
+    row("Dinero Contado (Reportado)", session.closing_balance or 0, bold=True)
+    
+    diff = (session.closing_balance or 0) - expected
+    
+    # Diferencia Color
+    if diff < 0:
+        pdf.set_text_color(200, 50, 50) # Red
+        label = "DIFERENCIA (FALTANTE)"
+    elif diff > 0:
+        pdf.set_text_color(50, 150, 50) # Green
+        label = "DIFERENCIA (SOBRANTE)"
+    else:
+        pdf.set_text_color(0, 0, 0)
+        label = "DIFERENCIA"
+        
+    pdf.set_font("Arial", "B", 11)
+    pdf.cell(140, 10, label, 1, 0, 'R')
+    pdf.cell(50, 10, f"${diff:,.2f}", 1, 1, 'R')
+    
+    pdf.set_text_color(0, 0, 0)
+    pdf.ln(10)
+
+    # MOVIMIENTOS DETALLE (Opcional, si hay inflows/outflows)
+    if inflows > 0 or outflows > 0:
+        pdf.set_font("Arial", "B", 11)
+        pdf.cell(0, 8, "Detalle de Movimientos Manuales", 0, 1)
+        
+        pdf.set_font("Arial", "B", 9)
+        pdf.set_fill_color(220, 220, 220)
+        pdf.cell(30, 6, "Hora", 1, 0, 'C', True)
+        pdf.cell(20, 6, "Tipo", 1, 0, 'C', True)
+        pdf.cell(100, 6, "Motivo / Razón", 1, 0, 'L', True)
+        pdf.cell(40, 6, "Monto", 1, 1, 'R', True)
+        
+        pdf.set_font("Arial", "", 9)
+        for m in session.movements:
+            pdf.cell(30, 6, m.created_at.strftime('%H:%M'), 1, 0, 'C')
+            pdf.cell(20, 6, "ENTRADA" if m.type == 'IN' else "SALIDA", 1, 0, 'C')
+            pdf.cell(100, 6, m.reason[:55], 1, 0, 'L')
+            pdf.cell(40, 6, f"${m.amount:,.2f}", 1, 1, 'R')
+
+    pdf.ln(10)
+    pdf.set_font("Arial", "I", 9)
+    if session.notes:
+        pdf.multi_cell(0, 5, f"Notas del cierre: {session.notes}")
+
+    # FIRMA
+    pdf.set_y(-40)
+    pdf.line(70, pdf.get_y(), 140, pdf.get_y())
+    pdf.cell(0, 5, "Firma del Cajero / Supervisor", 0, 1, 'C')
+
+    return pdf.output()
+
+def generate_account_statement_pdf(customer, entries):
+    pdf = PDFQuote()
+    pdf.add_page()
+    pdf.set_auto_page_break(auto=True, margin=15)
+
+    # Header de Estado de Cuenta
+    pdf.set_font("Arial", "B", 16)
+    pdf.cell(0, 10, "ESTADO DE CUENTA", 0, 1, 'R')
+    pdf.set_font("Arial", "", 10)
+    pdf.cell(0, 5, f"Fecha de corte: {datetime.now().strftime('%d/%m/%Y')}", 0, 1, 'R')
+    pdf.ln(5)
+
+    # Info Cliente
+    pdf.set_fill_color(240, 245, 250)
+    pdf.rect(10, pdf.get_y(), 190, 25, 'F')
+    pdf.set_xy(15, pdf.get_y() + 5)
+    
+    pdf.set_font("Arial", "B", 11)
+    pdf.cell(100, 5, customer.name.upper(), 0, 1)
+    pdf.set_font("Arial", "", 9)
+    pdf.set_x(15)
+    pdf.cell(100, 5, f"RFC: {customer.tax_id or 'N/A'}", 0, 1)
+    pdf.set_x(15)
+    pdf.cell(100, 5, f"Dirección: {customer.address[:80] if customer.address else 'N/A'}", 0, 1)
+    
+    pdf.ln(20)
+
+    # Resumen Financiero
+    pdf.set_font("Arial", "B", 10)
+    pdf.cell(100, 10, "RESUMEN DE MOVIMIENTOS RECIENTES", 0, 1)
+
+    # Table Header
+    pdf.set_fill_color(50, 60, 70)
+    pdf.set_text_color(255, 255, 255)
+    pdf.cell(30, 8, "Fecha", 1, 0, 'C', True)
+    pdf.cell(90, 8, "Descripción / Concepto", 1, 0, 'L', True)
+    pdf.cell(35, 8, "Cargo", 1, 0, 'R', True)
+    pdf.cell(35, 8, "Abono", 1, 1, 'R', True)
+
+    # Body
+    pdf.set_text_color(0, 0, 0)
+    pdf.set_font("Arial", "", 9)
+    
+    total_cargos = 0
+    total_abonos = 0
+    
+    for entry in entries:
+        is_charge = entry.amount > 0
+        charge = entry.amount if is_charge else 0
+        payment = abs(entry.amount) if not is_charge else 0
+        
+        total_cargos += charge
+        total_abonos += payment
+
+        pdf.cell(30, 8, entry.created_at.strftime('%d/%m/%Y'), 1, 0, 'C')
+        pdf.cell(90, 8, entry.description[:45], 1, 0, 'L')
+        pdf.cell(35, 8, f"${charge:,.2f}" if charge > 0 else "-", 1, 0, 'R')
+        pdf.cell(35, 8, f"${payment:,.2f}" if payment > 0 else "-", 1, 1, 'R')
+
+    pdf.ln(5)
+    
+    # Footer Totals
+    pdf.set_font("Arial", "B", 10)
+    pdf.cell(120, 8, "Totales del Periodo:", 0, 0, 'R')
+    pdf.cell(35, 8, f"${total_cargos:,.2f}", 1, 0, 'R')
+    pdf.cell(35, 8, f"${total_abonos:,.2f}", 1, 1, 'R')
+
+    pdf.ln(5)
+    pdf.set_font("Arial", "B", 12)
+    pdf.set_text_color(200, 50, 50) # Red for Debt
+    pdf.cell(0, 10, f"SALDO ACTUAL PENDIENTE: ${customer.current_balance:,.2f}", 0, 1, 'R')
+
+    return pdf.output()

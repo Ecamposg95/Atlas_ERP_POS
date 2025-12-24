@@ -229,11 +229,13 @@
                 </td>
                 <td class="p-4 text-right font-mono text-slate-400">$${Number(c.credit_limit).toFixed(2)}</td>
                 <td class="p-4 text-right font-mono ${balanceClass}">$${Number(c.current_balance).toFixed(2)}</td>
-                <td class="p-4 text-center">
+                <td class="p-4 text-center flex justify-center gap-2">
                     <button onclick="openPaymentModal(${c.id}, '${c.name}')" class="text-emerald-400 hover:text-emerald-300 font-bold text-xs bg-emerald-500/10 px-3 py-1.5 rounded-lg border border-emerald-500/20 hover:bg-emerald-500/20 transition">
                         Abonar
                     </button>
-                    <!-- Future: Edit btn -->
+                    <button onclick="openProfileModal(${c.id}, '${c.name}')" class="text-blue-400 hover:text-blue-300 transition" title="Ver Perfil">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                    </button>
                 </td>
             </tr>
             `;
@@ -264,6 +266,82 @@
         document.getElementById('payment-form').reset();
         openModal('payment-modal');
     };
+
+    // --- FINANCIAL PROFILE LOGIC ---
+    let chartInstance = null;
+
+    window.openProfileModal = async (id, name) => {
+        document.getElementById('profile-customer-name').textContent = name;
+        document.getElementById('profile-customer-id').value = id;
+        openModal('profile-modal');
+
+        try {
+            const res = await fetch(`${API_BASE}/api/customers/${id}/statement`, { headers: { 'Authorization': `Bearer ${ACCESS_TOKEN}` } });
+            const entries = await res.json();
+
+            renderStatement(entries);
+            renderChart(entries);
+
+            // Pre-fill PDF button
+            document.getElementById('btn-pdf-statement').onclick = () => {
+                window.open(`${API_BASE}/api/customers/${id}/pdf-statement`, '_blank');
+            };
+        } catch (e) { console.error("Error loading profile", e); }
+    };
+
+    function renderStatement(entries) {
+        const tbody = document.getElementById('statement-body');
+        if (!entries.length) {
+            tbody.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-slate-500">Sin movimientos recientes</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = entries.map(e => {
+            const isCharge = parseFloat(e.amount) > 0;
+            const amt = Math.abs(parseFloat(e.amount));
+            return `
+                <tr class="border-b border-white/5 text-xs hover:bg-slate-800/50">
+                    <td class="p-3 text-slate-400">${new Date(e.created_at).toLocaleDateString()}</td>
+                    <td class="p-3 text-slate-300">${e.description}</td>
+                    <td class="p-3 text-right ${isCharge ? 'text-rose-400' : 'text-slate-600'}">${isCharge ? '$' + amt.toFixed(2) : '-'}</td>
+                    <td class="p-3 text-right ${!isCharge ? 'text-emerald-400' : 'text-slate-600'}">${!isCharge ? '$' + amt.toFixed(2) : '-'}</td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    function renderChart(entries) {
+        const ctx = document.getElementById('profile-chart').getContext('2d');
+        if (chartInstance) chartInstance.destroy();
+
+        let totalCharges = 0;
+        let totalPayments = 0;
+
+        entries.forEach(e => {
+            const val = parseFloat(e.amount);
+            if (val > 0) totalCharges += val;
+            else totalPayments += Math.abs(val);
+        });
+
+        chartInstance = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Cargos (Deuda Generada)', 'Pagos Realizados'],
+                datasets: [{
+                    data: [totalCharges, totalPayments],
+                    backgroundColor: ['#f43f5e', '#10b981'], // Rose-500, Emerald-500
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom', labels: { color: '#94a3b8' } }
+                }
+            }
+        });
+    }
 
     // Forms
     document.getElementById('create-customer-form').addEventListener('submit', async (e) => {
