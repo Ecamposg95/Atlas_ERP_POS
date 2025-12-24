@@ -13,3 +13,5 @@ pyusb
 Pillow
 pandas
 openpyxl
+xhtml2pdf
+fpdf2

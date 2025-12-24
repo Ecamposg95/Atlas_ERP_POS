@@ -1,5 +1,7 @@
 // app/static/js/pos.js
-import { apiFetch } from "./api.js";
+// ES Module (cargado con <script type="module">)
+
+const API_BASE = "/api";
 
 const els = {
     cashStatus: document.getElementById("cashStatus"),
@@ -12,9 +14,10 @@ const els = {
     searchInput: document.getElementById("searchInput"),
     btnClearSearch: document.getElementById("btnClearSearch"),
     suggestions: document.getElementById("suggestions"),
+    posMsg: document.getElementById("posMsg"),
 
-    cartTbody: document.getElementById("cartTbody"),
     cartMeta: document.getElementById("cartMeta"),
+    cartTbody: document.getElementById("cartTbody"),
     subtotal: document.getElementById("subtotal"),
     total: document.getElementById("total"),
 
@@ -25,348 +28,476 @@ const els = {
 
     btnPay: document.getElementById("btnPay"),
     btnVoid: document.getElementById("btnVoid"),
-
-    msg: document.getElementById("posMsg"),
 };
 
-let cashSession = null; // /api/cash/status -> objeto o null
-let cart = [];          // { product, qty, unit_price, sku }
+let cashSession = null;
+
+// Carrito: trabajamos por VARIANT (tu precio y sku viven en ProductVariant)
+let cart = []; // items: { product_id, variant_id, name, sku, unit_price, quantity }
+
+let debounceTimer = null;
+
+// ------------------------------
+// Utilidades
+// ------------------------------
+function token() {
+    return localStorage.getItem("access_token");
+}
+
+function authHeaders(extra = {}) {
+    return {
+        Authorization: `Bearer ${token()}`,
+        ...extra,
+    };
+}
+
+async function apiFetch(path, { method = "GET", headers = {}, body } = {}) {
+    const res = await fetch(`${API_BASE}${path}`, {
+        method,
+        headers: {
+            Accept: "application/json",
+            ...authHeaders(headers),
+        },
+        body,
+    });
+
+    // Manejo de sesión expirada / no autorizado
+    if (res.status === 401) {
+        localStorage.removeItem("access_token");
+        window.location.href = "/login";
+        return;
+    }
+
+    let data = null;
+    const contentType = res.headers.get("content-type") || "";
+    if (contentType.includes("application/json")) {
+        data = await res.json();
+    } else {
+        data = await res.text();
+    }
+
+    if (!res.ok) {
+        const err = new Error(`HTTP ${res.status}`);
+        err.status = res.status;
+        err.data = data;
+        throw err;
+    }
+
+    return data;
+}
 
 function money(n) {
-    const x = Number(n || 0);
-    return x.toLocaleString("es-MX", { style: "currency", currency: "MXN" });
+    const num = Number(n || 0);
+    return `$${num.toFixed(2)}`;
 }
 
-function setMsg(t) { els.msg.textContent = t || ""; }
-
-function isCashOpen(session) {
-    if (!session) return false;
-    const st = String(session.status || "").toUpperCase();
-    return st === "OPEN" && (session.closed_at === null || session.closed_at === undefined);
+function num(n) {
+    const x = Number(n);
+    return Number.isFinite(x) ? x : 0;
 }
 
-function getBestPrice(product) {
-    if (product?.price != null) return Number(product.price);
-    if (product?.sale_price != null) return Number(product.sale_price);
-    if (product?.base_price != null) return Number(product.base_price);
-    if (product?.unit_price != null) return Number(product.unit_price);
-
-    const prices = product?.prices;
-    if (Array.isArray(prices) && prices.length) {
-        const p0 = prices[0];
-        const v = p0?.price ?? p0?.amount ?? p0?.sale_price ?? p0?.unit_price ?? p0?.value ?? 0;
-        return Number(v || 0);
-    }
-
-    const variants = product?.variants;
-    if (Array.isArray(variants) && variants.length) {
-        const v0 = variants[0];
-        if (v0?.price != null) return Number(v0.price);
-        if (v0?.sale_price != null) return Number(v0.sale_price);
-    }
-
-    return 0;
+function setMsg(text, isError = false) {
+    els.posMsg.textContent = text || "";
+    els.posMsg.className = isError ? "danger" : "muted";
 }
 
-function getTotal() {
-    return cart.reduce((a, x) => a + Number(x.unit_price || 0) * Number(x.qty || 0), 0);
+function showSuggestions(show) {
+    els.suggestions.style.display = show ? "block" : "none";
+    if (!show) els.suggestions.innerHTML = "";
 }
 
-function updateChangeAndWarnings() {
-    const method = els.paymentMethod.value;
-    const total = getTotal();
-    const received = Number(els.cashReceived.value || 0);
-
-    if (method === "CASH") {
-        const change = received - total;
-        els.changeDue.textContent = money(Math.max(0, change));
-
-        if (received > 0 && received < total) {
-            els.cashWarn.textContent = "Efectivo insuficiente.";
-            els.cashWarn.className = "muted danger";
-        } else {
-            els.cashWarn.textContent = "";
-            els.cashWarn.className = "muted";
-        }
-    } else {
-        els.changeDue.textContent = money(0);
-        els.cashWarn.textContent = "";
-        els.cashWarn.className = "muted";
+// ------------------------------
+// Caja
+// ------------------------------
+async function loadCashStatus() {
+    try {
+        cashSession = await apiFetch("/cash/status");
+        renderCashStatus();
+    } catch (e) {
+        cashSession = null;
+        renderCashStatus();
+        setMsg("No se pudo validar caja (revisa auth o backend).", true);
+        console.error("cash/status error:", e);
     }
 }
 
-async function refreshCashStatus() {
-    cashSession = await apiFetch("/api/cash/status");
-    const open = isCashOpen(cashSession);
-
+function renderCashStatus() {
+    const open = !!cashSession && cashSession.status === "OPEN";
     els.cashStatus.textContent = open ? "Caja: ABIERTA" : "Caja: CERRADA (requiere apertura)";
+    els.sessionPill.textContent = "Sesión activa";
+
+    // Botones caja
     els.btnOpenCash.disabled = open;
     els.btnCloseCash.disabled = !open;
-    els.btnPay.disabled = !open;
+
+    els.btnOpenCash.style.opacity = open ? 0.5 : 1;
+    els.btnCloseCash.style.opacity = !open ? 0.5 : 1;
 }
 
 async function openCash() {
-    const opening = prompt("Saldo inicial (apertura):", "0");
+    const opening = prompt("Monto de apertura (ej: 100.00):", "0");
     if (opening === null) return;
 
-    const opening_balance = Number(opening);
+    const opening_balance = num(opening);
 
     try {
-        await apiFetch("/api/cash/open", {
+        cashSession = await apiFetch("/cash/open", {
             method: "POST",
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ opening_balance }),
         });
-
-        setMsg("Caja abierta.");
-        await refreshCashStatus();
+        renderCashStatus();
+        setMsg("Caja abierta correctamente.");
     } catch (e) {
-        setMsg(`No se pudo abrir caja: ${String(e.message || e)}`);
-        console.error("OPEN CASH ERROR:", e);
+        console.error("cash/open error:", e);
+        setMsg(e?.data?.detail || "Error al abrir caja.", true);
     }
 }
 
 async function closeCash() {
-    const closing = prompt("Saldo final (cierre):", "0");
+    const closing = prompt("Monto de cierre (ej: 250.00):", "0");
     if (closing === null) return;
 
-    const closing_balance = Number(closing);
-    const notes = prompt("Notas (opcional):", "") ?? "";
+    const notes = prompt("Notas de cierre (opcional):", "") ?? "";
+    const closing_balance = num(closing);
 
     try {
-        await apiFetch("/api/cash/close", {
+        cashSession = await apiFetch("/cash/close", {
             method: "POST",
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ closing_balance, notes }),
         });
-
-        setMsg("Caja cerrada.");
-        await refreshCashStatus();
+        renderCashStatus();
+        setMsg("Caja cerrada correctamente.");
     } catch (e) {
-        setMsg(`No se pudo cerrar caja: ${String(e.message || e)}`);
-        console.error("CLOSE CASH ERROR:", e);
+        console.error("cash/close error:", e);
+        setMsg(e?.data?.detail || "Error al cerrar caja.", true);
     }
 }
 
-function computeTotals() {
-    const total = getTotal();
-    els.subtotal.textContent = money(total);
-    els.total.textContent = money(total);
-    els.cartMeta.textContent = `${cart.reduce((a, x) => a + x.qty, 0)} ítems`;
-    updateChangeAndWarnings();
+// ------------------------------
+// Productos - búsqueda
+// ------------------------------
+async function searchProducts(q) {
+    const query = (q || "").trim();
+    if (query.length < 2) {
+        showSuggestions(false);
+        return;
+    }
+
+    try {
+        const list = await apiFetch(`/products/search?q=${encodeURIComponent(query)}`);
+
+        if (!Array.isArray(list) || list.length === 0) {
+            els.suggestions.innerHTML = `<div style="padding:12px;" class="muted">Sin resultados</div>`;
+            showSuggestions(true);
+            return;
+        }
+
+        els.suggestions.innerHTML = "";
+        list.forEach((p) => {
+            // Tu API ya devuelve variants[0].sku y variants[0].price
+            const v = p?.variants?.[0];
+
+            // Fallbacks defensivos
+            const sku = v?.sku || `ID-${p.id}`;
+            const price = num(v?.price);
+            const name = p?.name || "(Sin nombre)";
+
+            const btn = document.createElement("button");
+            btn.type = "button";
+            btn.innerHTML = `<strong>${name}</strong> · ${money(price)} <span class="muted">(${sku})</span>`;
+            btn.addEventListener("click", () => {
+                addToCartFromApiProduct(p);
+                els.searchInput.value = "";
+                showSuggestions(false);
+            });
+            els.suggestions.appendChild(btn);
+        });
+
+        showSuggestions(true);
+    } catch (e) {
+        console.error("products/search error:", e);
+        setMsg("Error al buscar productos.", true);
+        showSuggestions(false);
+    }
+}
+
+function addToCartFromApiProduct(p) {
+    const v = p?.variants?.[0];
+    if (!v?.id) {
+        // Esto ya no debería pasar con tu endpoint corregido
+        setMsg("Producto sin variante principal. Revisa catálogo (variants).", true);
+        return;
+    }
+
+    const item = {
+        product_id: p.id,
+        variant_id: v.id,
+        name: p.name,
+        sku: v.sku,
+        unit_price: num(v.price),
+        quantity: 1,
+    };
+
+    const found = cart.find((x) => x.variant_id === item.variant_id);
+    if (found) {
+        found.quantity += 1;
+    } else {
+        cart.push(item);
+    }
+
+    renderCart();
+    setMsg("");
+}
+
+// ------------------------------
+// Carrito - render, totales
+// ------------------------------
+function cartCount() {
+    return cart.reduce((acc, it) => acc + num(it.quantity), 0);
+}
+
+function cartSubtotal() {
+    return cart.reduce((acc, it) => acc + num(it.unit_price) * num(it.quantity), 0);
 }
 
 function renderCart() {
     els.cartTbody.innerHTML = "";
 
-    cart.forEach((line, idx) => {
-        const name = line.product?.name ?? "Producto";
-        const sku = line.sku ?? "";
-        const price = Number(line.unit_price || 0);
-
+    cart.forEach((it) => {
         const tr = document.createElement("tr");
-        tr.innerHTML = `
-      <td>
-        <div style="font-weight:900;">${name}</div>
-        <div style="opacity:.65;font-size:12px;">SKU: ${sku}</div>
-      </td>
-      <td class="right">
-        <input data-idx="${idx}" class="qtyInput" value="${line.qty}" inputmode="numeric"
-               style="width:70px; text-align:right;" />
-      </td>
-      <td class="right">${money(price)}</td>
-      <td class="right">
-        <button data-idx="${idx}" class="rmBtn" title="Quitar">X</button>
-      </td>
+
+        const tdProd = document.createElement("td");
+        tdProd.innerHTML = `
+      <div style="font-weight:800;">${it.name}</div>
+      <div class="muted">SKU: ${it.sku || "-"}</div>
     `;
+
+        const tdQty = document.createElement("td");
+        tdQty.className = "right";
+
+        const qtyInput = document.createElement("input");
+        qtyInput.type = "number";
+        qtyInput.min = "1";
+        qtyInput.step = "1";
+        qtyInput.value = String(it.quantity);
+        qtyInput.style.width = "80px";
+        qtyInput.addEventListener("change", () => {
+            const q = Math.max(1, Math.floor(num(qtyInput.value)));
+            it.quantity = q;
+            renderCart();
+        });
+
+        tdQty.appendChild(qtyInput);
+
+        const tdPrice = document.createElement("td");
+        tdPrice.className = "right";
+        tdPrice.textContent = money(num(it.unit_price) * num(it.quantity));
+
+        const tdX = document.createElement("td");
+        tdX.className = "right";
+
+        const btnX = document.createElement("button");
+        btnX.className = "btn-muted";
+        btnX.textContent = "X";
+        btnX.style.padding = "8px 10px";
+        btnX.addEventListener("click", () => {
+            cart = cart.filter((x) => x.variant_id !== it.variant_id);
+            renderCart();
+        });
+
+        tdX.appendChild(btnX);
+
+        tr.appendChild(tdProd);
+        tr.appendChild(tdQty);
+        tr.appendChild(tdPrice);
+        tr.appendChild(tdX);
+
         els.cartTbody.appendChild(tr);
     });
 
-    document.querySelectorAll(".qtyInput").forEach((inp) => {
-        inp.addEventListener("change", (e) => {
-            const i = Number(e.target.dataset.idx);
-            cart[i].qty = Math.max(1, Number(e.target.value || 1));
-            computeTotals();
-            renderCart();
-        });
-    });
+    const items = cartCount();
+    els.cartMeta.textContent = `${items} ítems`;
 
-    document.querySelectorAll(".rmBtn").forEach((btn) => {
-        btn.addEventListener("click", (e) => {
-            cart.splice(Number(e.target.dataset.idx), 1);
-            computeTotals();
-            renderCart();
-        });
-    });
+    const sub = cartSubtotal();
+    els.subtotal.textContent = money(sub);
+    els.total.textContent = money(sub);
+
+    updateChange();
 }
 
-function addToCart(product) {
-    console.log("PRODUCT RAW:", product);
-
-    const id = product?.id ?? product?.product_id;
-    if (id == null) { setMsg("Producto inválido (sin id)."); return; }
-
-    // Fallback para no bloquear pruebas si tu catálogo viene sin sku
-    const sku = String(product?.sku || product?.barcode || `ID-${id}` || "").trim();
-    const unit_price = getBestPrice(product);
-
-    const found = cart.find((x) => (x.product?.id ?? x.product?.product_id) === id);
-    if (found) found.qty += 1;
-    else cart.push({ product, qty: 1, unit_price, sku });
-
-    computeTotals();
-    renderCart();
-}
-
-let searchTimer = null;
-
-async function searchProducts(q) {
-    const data = await apiFetch(`/api/products/search?q=${encodeURIComponent(q)}`);
-    return Array.isArray(data) ? data : (data.items || []);
-}
-
-function renderSuggestions(items) {
-    if (!items.length) {
-        els.suggestions.style.display = "none";
-        els.suggestions.innerHTML = "";
-        return;
-    }
-
-    els.suggestions.style.display = "block";
-    els.suggestions.innerHTML = "";
-
-    items.forEach((p) => {
-        const btn = document.createElement("button");
-        btn.type = "button";
-
-        const name = p.name ?? "Producto";
-        const sku = String(p.sku || p.barcode || "").trim();
-        const price = getBestPrice(p);
-
-        btn.textContent = `${name}${sku ? " · " + sku : ""} · ${money(price)}`;
-        btn.addEventListener("click", () => {
-            addToCart(p);
-            els.searchInput.value = "";
-            renderSuggestions([]);
-            els.searchInput.focus();
-        });
-
-        els.suggestions.appendChild(btn);
-    });
-}
-
-async function submitSale() {
-    if (!isCashOpen(cashSession)) { setMsg("Caja cerrada: abre caja para cobrar."); return; }
-    if (!cart.length) { setMsg("Carrito vacío."); return; }
-
-    const method = els.paymentMethod.value;
-    const total = getTotal();
-
-    const received = Number(els.cashReceived.value || 0);
-    const change = method === "CASH" ? Math.max(0, received - total) : 0;
-
-    if (method === "CASH" && received < total) { setMsg("Efectivo insuficiente."); return; }
-
-    const items = cart.map((x) => ({
-        product_id: x.product.id ?? x.product.product_id,
-        sku: x.sku,
-        quantity: x.qty,
-        unit_price: Number(x.unit_price || 0),
-    }));
-
-    const payments = [
-        { method, amount: total, cash_received: method === "CASH" ? received : null, change },
-    ];
-
-    // Incluimos branch_id/cash_session_id por si tu backend lo requiere
-    const payload = {
-        total,
-        items,
-        payments,
-        branch_id: cashSession?.branch_id ?? null,
-        cash_session_id: cashSession?.id ?? null,
-    };
-
-    console.log("SALE PAYLOAD:", payload);
-
-    try {
-        const sale = await apiFetch("/api/sales/", { method: "POST", body: JSON.stringify(payload) });
-
-        cart = [];
-        els.cashReceived.value = "";
-        computeTotals();
-        renderCart();
-        setMsg(`Venta registrada. Folio: ${sale?.id ?? sale?.sale_id ?? "OK"}`);
-    } catch (e) {
-        setMsg(`Error al cobrar: ${String(e.message || e)}`);
-        console.error("SALE ERROR:", e);
-    }
-}
-
-function clearAll() {
+function clearCart() {
     cart = [];
-    els.searchInput.value = "";
-    els.cashReceived.value = "";
-    renderSuggestions([]);
-    computeTotals();
     renderCart();
     setMsg("");
 }
 
-function logout() {
-    localStorage.removeItem("access_token");
-    window.location.href = "/login";
+// ------------------------------
+// Pago / Cambio
+// ------------------------------
+function updateChange() {
+    const total = cartSubtotal();
+    const method = els.paymentMethod.value;
+
+    // Solo efectivo calcula cambio; otros métodos fuerzan recibido == total
+    if (method !== "CASH") {
+        els.cashReceived.value = total ? String(total.toFixed(2)) : "";
+        els.changeDue.textContent = money(0);
+        els.cashWarn.textContent = "";
+        return;
+    }
+
+    const received = num(els.cashReceived.value);
+    const change = received - total;
+
+    els.changeDue.textContent = money(Math.max(0, change));
+
+    if (total === 0) {
+        els.cashWarn.textContent = "";
+        return;
+    }
+
+    if (received < total) {
+        els.cashWarn.textContent = "Recibido insuficiente.";
+        els.cashWarn.className = "danger";
+    } else {
+        els.cashWarn.textContent = "";
+        els.cashWarn.className = "muted";
+    }
 }
 
-/* INIT */
-document.addEventListener("DOMContentLoaded", async () => {
-    els.sessionPill.textContent = "Sesión activa";
-    try {
-        setMsg("Inicializando POS...");
-        await refreshCashStatus();
-        computeTotals();
-        renderCart();
-        setMsg("");
-    } catch (e) {
-        setMsg(`Error inicializando POS: ${String(e.message || e)}`);
+// ------------------------------
+// Cobro (POST /api/sales)
+// IMPORTANTE: aquí hay 2 posibles contratos.
+// Sin ver tu sales.py, dejo 2 payloads; usaremos el #1 por default.
+// Si te vuelve a dar 422, pegas el error y ajusto el payload exacto.
+// ------------------------------
+async function submitSale() {
+    if (!cashSession || cashSession.status !== "OPEN") {
+        setMsg("Caja cerrada. Abre caja antes de cobrar.", true);
+        return;
     }
-});
 
-/* EVENTS */
-els.btnLogout?.addEventListener("click", logout);
-els.btnOpenCash?.addEventListener("click", openCash);
-els.btnCloseCash?.addEventListener("click", closeCash);
+    if (cart.length === 0) {
+        setMsg("Carrito vacío.", true);
+        return;
+    }
 
-els.btnPay?.addEventListener("click", async () => {
-    setMsg("Procesando venta...");
-    await submitSale();
-});
+    const total = cartSubtotal();
+    const method = els.paymentMethod.value;
 
-els.btnVoid?.addEventListener("click", clearAll);
+    let received = num(els.cashReceived.value);
+    if (method !== "CASH") received = total;
 
-els.btnClearSearch?.addEventListener("click", () => {
-    els.searchInput.value = "";
-    renderSuggestions([]);
-    els.searchInput.focus();
-});
+    if (method === "CASH" && received < total) {
+        setMsg("Recibido insuficiente para cobrar.", true);
+        return;
+    }
 
-els.paymentMethod?.addEventListener("change", () => {
-    if (els.paymentMethod.value !== "CASH") els.cashReceived.value = "";
-    updateChangeAndWarnings();
-});
+    // Payload #1 (probable, por tu error previo: items[*].sku requerido + payments requerido)
+    const payload = {
+        items: cart.map((it) => ({
+            product_id: it.product_id,
+            variant_id: it.variant_id,
+            sku: it.sku,
+            quantity: it.quantity,
+            unit_price: it.unit_price,
+        })),
+        payments: [
+            {
+                method: method,
+                amount: total,
+                cash_received: method === "CASH" ? received : undefined,
+            },
+        ],
+    };
 
-els.cashReceived?.addEventListener("input", updateChangeAndWarnings);
+    // Limpia undefined para no romper validaciones estrictas
+    payload.payments = payload.payments.map((p) => {
+        const clean = {};
+        Object.keys(p).forEach((k) => {
+            if (p[k] !== undefined) clean[k] = p[k];
+        });
+        return clean;
+    });
 
-els.searchInput?.addEventListener("input", (e) => {
-    const q = e.target.value.trim();
-    clearTimeout(searchTimer);
+    try {
+        const sale = await apiFetch("/sales/", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+        });
 
-    if (q.length < 2) { renderSuggestions([]); return; }
+        console.log("SALE OK:", sale);
+        setMsg("Venta realizada correctamente.");
+        clearCart();
+        els.cashReceived.value = "";
+        updateChange();
+    } catch (e) {
+        console.error("SALE ERROR:", e?.data || e);
+        // Mostrar detalle útil
+        const detail = e?.data?.detail ? JSON.stringify(e.data.detail) : (e?.data?.message || "");
+        setMsg(`Error al cobrar. ${detail}`.trim(), true);
+    }
+}
 
-    searchTimer = setTimeout(async () => {
-        try {
-            const items = await searchProducts(q);
-            renderSuggestions(items);
-        } catch {
-            renderSuggestions([]);
+// ------------------------------
+// Eventos UI
+// ------------------------------
+function bindEvents() {
+    els.btnLogout.addEventListener("click", () => {
+        localStorage.removeItem("access_token");
+        window.location.href = "/login";
+    });
+
+    els.btnOpenCash.addEventListener("click", openCash);
+    els.btnCloseCash.addEventListener("click", closeCash);
+
+    els.btnClearSearch.addEventListener("click", () => {
+        els.searchInput.value = "";
+        showSuggestions(false);
+        setMsg("");
+        els.searchInput.focus();
+    });
+
+    els.searchInput.addEventListener("input", () => {
+        const q = els.searchInput.value;
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => searchProducts(q), 160);
+    });
+
+    els.searchInput.addEventListener("keydown", (ev) => {
+        // Escape cierra sugerencias
+        if (ev.key === "Escape") {
+            showSuggestions(false);
+            return;
         }
-    }, 200);
-});
+    });
+
+    document.addEventListener("click", (ev) => {
+        // Cerrar sugerencias si das click fuera del input/sugerencias
+        const t = ev.target;
+        if (!els.suggestions.contains(t) && t !== els.searchInput) {
+            showSuggestions(false);
+        }
+    });
+
+    els.paymentMethod.addEventListener("change", updateChange);
+    els.cashReceived.addEventListener("input", updateChange);
+
+    els.btnVoid.addEventListener("click", clearCart);
+    els.btnPay.addEventListener("click", submitSale);
+}
+
+// ------------------------------
+// Init
+// ------------------------------
+async function init() {
+    bindEvents();
+    await loadCashStatus();
+    renderCart();
+    els.searchInput.focus();
+}
+
+init();
