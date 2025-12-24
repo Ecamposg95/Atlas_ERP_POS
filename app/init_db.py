@@ -1,3 +1,9 @@
+import sys
+import os
+
+# Agregamos el directorio raíz al path para poder importar 'app'
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from sqlalchemy.orm import Session
 from decimal import Decimal
 import random
@@ -7,7 +13,7 @@ from app.models import (
     User, Branch, Product, ProductVariant, StockOnHand, 
     Category, ProductPrice, InventoryMovement, MovementType
 )
-from app.auth import get_password_hash
+from app.security import get_password_hash
 
 def init_db():
     Base.metadata.create_all(bind=engine)
@@ -31,10 +37,10 @@ def init_db():
     if not admin:
         admin = User(
             username="admin",
-            email="admin@atlas.com",
-            hashed_password=get_password_hash("admin123"),
+            # email="admin@atlas.com",  <-- Removed as per model
+            password_hash=get_password_hash("admin123"), # Matches User.password_hash
             full_name="Administrador",
-            role="admin",
+            role="ADMINISTRADOR", # Matches Role enum string
             branch_id=branch.id
         )
         db.add(admin)
