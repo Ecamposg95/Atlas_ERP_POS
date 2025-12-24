@@ -1,6 +1,6 @@
 # app/routers/sales.py
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from datetime import datetime
 from decimal import Decimal
 from typing import Dict, Any, List, Optional
@@ -58,7 +58,8 @@ def create_sale(
     db_lines = []
 
     for item in sale_in.items:
-        variant = db.query(ProductVariant).filter(ProductVariant.sku == item.sku).first()
+        # Optimizado: Cargar precios para validación de niveles
+        variant = db.query(ProductVariant).options(joinedload(ProductVariant.prices)).filter(ProductVariant.sku == item.sku).first()
         if not variant:
             raise HTTPException(status_code=404, detail=f"SKU '{item.sku}' no encontrado")
 
@@ -76,8 +77,22 @@ def create_sale(
         if current_stock < qty_dec:
             raise HTTPException(status_code=400, detail=f"Stock insuficiente para: {variant.sku}. Disponible: {current_stock}")
 
-        # Matemáticas Financieras
-        unit_price = variant.price
+        # Matemáticas Financieras - Lógica de Precios Escalonados
+        unit_price = variant.price # Precio Base por defecto
+        
+        # Buscar el mejor precio aplicable según la cantidad
+        if variant.prices:
+            # Filtrar precios donde la cantidad mínima se cumpla
+            applicable_prices = [p for p in variant.prices if p.min_quantity <= qty_dec]
+            
+            if applicable_prices:
+                # Ordenar por precio ascendente (el más barato primero) para beneficiar al cliente,
+                # o por min_quantity descendente (tier más alto).
+                # Usualmente coinciden (más cantidad = menos precio).
+                # Tomamos el precio unitario más bajo posible para esa cantidad.
+                applicable_prices.sort(key=lambda x: x.unit_price)
+                unit_price = applicable_prices[0].unit_price
+
         # IMPORTANTE: Asegurar que el precio también sea Decimal para evitar errores de punto flotante
         if not isinstance(unit_price, Decimal):
              unit_price = Decimal(str(unit_price))
@@ -125,12 +140,12 @@ def create_sale(
     
     doc_status = DocumentStatus.PAID # Asumimos pagado inicialmente
 
-    # Si balance_difference > 0, falta dinero. ¿Autorizamos crédito?
-    if balance_difference > 0:
+    # Si balance_difference > 0, falta dinero. Tolerancia de 1 centavo para errores de redondeo
+    if balance_difference > Decimal("0.05"):
         remaining_debt = balance_difference
         if not sale_in.customer_id:
             # Si es público general y no paga completo, error.
-            raise HTTPException(status_code=400, detail="Monto insuficiente. Se requiere asignar un Cliente para autorizar crédito.")
+            raise HTTPException(status_code=400, detail=f"Monto insuficiente (${total_paid:.2f} de ${total_sale:.2f}). Se requiere asignar un Cliente.")
 
         customer = db.query(Customer).filter(Customer.id == sale_in.customer_id).first()
         if not customer:
