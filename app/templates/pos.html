@@ -89,8 +89,22 @@
             <!-- Ticket Header -->
             <div class="px-4 py-2 border-b border-white/5 bg-slate-900/50 flex justify-between items-center shrink-0">
                 <h2 class="font-bold text-xs text-slate-200 uppercase tracking-wider">Ticket de Venta</h2>
-                <button id="clear-cart-btn"
-                    class="text-[10px] text-rose-400 hover:text-rose-300 font-bold uppercase tracking-wider">Limpiar</button>
+                <div class="flex gap-2">
+                    <button id="park-sale-btn"
+                        class="text-[10px] bg-slate-800 hover:bg-slate-700 text-amber-400 hover:text-amber-300 px-2 py-1 rounded border border-slate-700 transition"
+                        title="Guardar como pendiente">
+                        PAUSAR
+                    </button>
+                    <button id="view-parked-btn"
+                        class="text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white px-2 py-1 rounded border border-slate-700 transition"
+                        title="Ver ventas pendientes">
+                        PENDIENTES
+                        <span id="parked-badge"
+                            class="ml-1 px-1 bg-amber-500 text-slate-900 rounded-full text-[9px] font-bold hidden">0</span>
+                    </button>
+                    <button id="clear-cart-btn"
+                        class="text-[10px] text-rose-400 hover:text-rose-300 font-bold hover:underline">LIMPIAR</button>
+                </div>
             </div>
 
             <!-- Items Area -->
@@ -118,6 +132,26 @@
                     class="flex justify-between text-lg font-black pt-1 border-t border-dashed border-white/10 items-end">
                     <span class="text-white text-sm">Total</span>
                     <span id="ticket-total" class="text-emerald-400 leading-none">$0.00</span>
+                </div>
+            </div>
+
+            <!-- Parked Sales Modal -->
+            <div id="parked-sales-modal"
+                class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50 backdrop-blur-sm">
+                <div
+                    class="bg-slate-900 w-full max-w-md rounded-2xl border border-slate-700 shadow-2xl overflow-hidden flex flex-col max-h-[80vh]">
+                    <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-950/50">
+                        <h3 class="font-bold text-lg text-white">Ventas Pendientes</h3>
+                        <button id="close-parked-modal" class="text-slate-400 hover:text-white transition">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                    </div>
+                    <div id="parked-sales-list" class="p-4 space-y-3 overflow-y-auto custom-scrollbar flex-1">
+                        <!-- Items will be injected here -->
+                    </div>
                 </div>
             </div>
 
@@ -477,25 +511,50 @@
             };
 
             // --- CLIENT-SIDE CART LOGIC ---
-            window.addToCart = function (product, qty = 1) {
+            function addToCart(product, qty = 1, forcedPrice = null) {
                 const existing = cart.find(i => i.id === product.id);
+
+                // Base price determination
+                let basePrice = 0;
+                if (product.prices && product.prices.length > 0) basePrice = product.prices[0].unit_price;
+                else if (product.variants && product.variants.length > 0) basePrice = product.variants[0].price;
+
+                // Prices array for calculations
+                const prices = product.prices || [];
+
                 if (existing) {
+                    if (forcedPrice !== null) {
+                        // Update existing item with forced price
+                        existing.unit_price = forcedPrice;
+                        existing.locked_price = true;
+                    }
                     existing.qty += qty;
+                    // Only recalc if NOT locked
+                    if (!existing.locked_price) {
+                        existing.unit_price = getBestPrice({ prices: prices, variants: [{ price: basePrice }] }, existing.qty);
+                    }
                 } else {
-                    // Initial Price Calculation
-                    const bestPrice = getBestPrice(product, qty);
+                    let finalPrice = basePrice;
+                    let isLocked = false;
+
+                    if (forcedPrice !== null) {
+                        finalPrice = forcedPrice;
+                        isLocked = true;
+                    } else {
+                        finalPrice = getBestPrice({ prices: prices, variants: [{ price: basePrice }] }, qty);
+                    }
+
                     cart.push({
                         id: product.id,
+                        sku: product.sku || product.variants?.[0]?.sku || 'SIN-SKU',
                         name: product.name,
-                        sku: product.sku || product.variants?.[0]?.sku || '-',
-                        unit_price: Number(bestPrice),
+                        unit_price: finalPrice,
                         qty: qty,
-                        // Persist pricing rules for dynamic updates
-                        _prices: product.prices || [],
-                        _base_price: product.variants?.[0]?.price || 0
+                        _base_price: basePrice,
+                        _prices: prices,
+                        locked_price: isLocked
                     });
                 }
-                recalcCartPrices(); // Dynamic Update based on new quantities
                 renderCart();
 
                 // Limpiar buscador
@@ -718,29 +777,140 @@
                 tiersDiv.innerHTML = '';
                 if (p.prices && p.prices.length) {
                     p.prices.forEach(pr => {
-                        tiersDiv.innerHTML += `
-                            <div class="flex justify-between text-[10px] text-slate-400 border-b border-white/5 py-1">
-                                <span>Min. ${pr.min_quantity}</span>
+                        const row = document.createElement('div');
+                        row.className = "flex justify-between items-center text-[10px] text-slate-400 border-b border-white/5 py-1.5";
+                        row.innerHTML = `
+                            <span>Min. ${pr.min_quantity} u.</span>
+                            <div class="flex items-center gap-2">
                                 <span class="text-emerald-400 font-bold">$${Number(pr.unit_price).toFixed(2)}</span>
+                                <button class="select-price-btn bg-slate-700 hover:bg-emerald-600 text-white px-2 py-0.5 rounded text-[9px] transition">
+                                    Usar
+                                </button>
                             </div>
                         `;
+                        // Click to use this price
+                        row.querySelector('.select-price-btn').onclick = () => {
+                            addToCart(p, 1, parseFloat(pr.unit_price)); // Pass specific price
+                            hideModal(modal);
+                        };
+                        tiersDiv.appendChild(row);
                     });
                 } else {
                     tiersDiv.innerHTML = '<span class="text-[10px] text-slate-600 italic">No hay precios escalonados</span>';
                 }
 
-                // Add to Cart Action
+                // Add to Cart Action (Default Price)
                 const btn = document.getElementById('modal-add-to-cart-btn');
-                // Remove old listeners to prevent multiple additions
                 const newBtn = btn.cloneNode(true);
                 btn.parentNode.replaceChild(newBtn, btn);
 
                 newBtn.onclick = () => {
                     addToCart(p);
-                    hideModal(modal); // Use hideModal utility
+                    hideModal(modal);
                 };
 
-                showModal(modal); // Use showModal utility
+                showModal(modal);
+            }
+
+            // --- PARK SALE (DRAFTS) ---
+            document.getElementById('park-sale-btn').onclick = () => {
+                if (cart.length === 0) {
+                    alert('El carrito está vacío');
+                    return;
+                }
+                const note = prompt('Nota para esta venta pendiente (opcional):', `Ticket ${new Date().toLocaleTimeString()}`);
+                if (note === null) return;
+
+                const parkedSales = JSON.parse(localStorage.getItem('parked_sales') || '[]');
+                const sale = {
+                    id: Date.now(),
+                    timestamp: new Date().toISOString(),
+                    note: note,
+                    cart: cart
+                };
+                parkedSales.push(sale);
+                localStorage.setItem('parked_sales', JSON.stringify(parkedSales));
+
+                cart = [];
+                renderCart();
+                updateParkedBadge();
+                alert('Venta guardada en pendientes');
+            };
+
+            document.getElementById('view-parked-btn').onclick = () => {
+                renderParkedSales();
+                showModal(document.getElementById('parked-sales-modal'));
+            };
+
+            document.getElementById('close-parked-modal').onclick = () => hideModal(document.getElementById('parked-sales-modal'));
+
+            function updateParkedBadge() {
+                const parkedSales = JSON.parse(localStorage.getItem('parked_sales') || '[]');
+                const badge = document.getElementById('parked-badge');
+                if (parkedSales.length > 0) {
+                    badge.textContent = parkedSales.length;
+                    badge.classList.remove('hidden');
+                } else {
+                    badge.classList.add('hidden');
+                }
+            }
+            // Init badge
+            updateParkedBadge();
+
+            function renderParkedSales() {
+                const container = document.getElementById('parked-sales-list');
+                const parkedSales = JSON.parse(localStorage.getItem('parked_sales') || '[]');
+                container.innerHTML = '';
+
+                if (parkedSales.length === 0) {
+                    container.innerHTML = '<div class="text-center text-slate-500 py-8 italic">No hay ventas pendientes</div>';
+                    return;
+                }
+
+                parkedSales.forEach(s => {
+                    const total = s.cart.reduce((acc, i) => acc + (i.unit_price * i.qty), 0);
+                    const el = document.createElement('div');
+                    el.className = "bg-slate-800 p-3 rounded-xl border border-slate-700 flex justify-between items-center";
+                    el.innerHTML = `
+                        <div>
+                            <div class="font-bold text-white text-sm">${s.note}</div>
+                            <div class="text-[10px] text-slate-400 font-mono">${new Date(s.timestamp).toLocaleString()}</div>
+                            <div class="text-xs text-emerald-400 font-bold mt-1">${s.cart.length} items - ${fmtMoney(total)}</div>
+                        </div>
+                        <div class="flex gap-2">
+                            <button class="restore-btn bg-emerald-600 hover:bg-emerald-500 text-white p-2 rounded-lg transition" title="Recuperar">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                            </button>
+                            <button class="discard-btn bg-rose-600 hover:bg-rose-500 text-white p-2 rounded-lg transition" title="Descartar">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                            </button>
+                        </div>
+                    `;
+
+                    el.querySelector('.restore-btn').onclick = () => {
+                        if (cart.length > 0 && !confirm('¿Sobreescribir el carrito actual?')) return;
+                        cart = s.cart;
+                        renderCart();
+                        removeParkedSale(s.id);
+                        hideModal(document.getElementById('parked-sales-modal'));
+                    };
+
+                    el.querySelector('.discard-btn').onclick = () => {
+                        if (confirm('¿Eliminar esta venta pendiente?')) {
+                            removeParkedSale(s.id);
+                            renderParkedSales();
+                        }
+                    };
+
+                    container.appendChild(el);
+                });
+            }
+
+            function removeParkedSale(id) {
+                let parkedSales = JSON.parse(localStorage.getItem('parked_sales') || '[]');
+                parkedSales = parkedSales.filter(s => s.id !== id);
+                localStorage.setItem('parked_sales', JSON.stringify(parkedSales));
+                updateParkedBadge();
             }
 
             searchInput.addEventListener('input', debounce(async (e) => {
