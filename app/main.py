@@ -11,7 +11,7 @@ from app.models import Base
 from app.routers import (
     auth, users, branches, departments, products, 
     inventory, sales, cash, customers, reports,
-    printer, returns, documents, quotes
+    printer, returns, documents, quotes, organization
 )
 
 # 1. CREACIÓN AUTOMÁTICA DE TABLAS
@@ -42,6 +42,7 @@ templates.env.globals["now_utc"] = jinja_now_utc
 
 # 4. REGISTRO DE ROUTERS (BACKEND API)
 app.include_router(auth.router, prefix="/api/auth", tags=["🔑 Autenticación"])
+app.include_router(organization.router, prefix="/api/organization", tags=["🏢 Organización"])
 app.include_router(users.router, prefix="/api/users", tags=["👤 Usuarios"])
 app.include_router(branches.router, prefix="/api/branches", tags=["🏢 Sucursales"])
 app.include_router(departments.router, prefix="/api/departments", tags=["📂 Departamentos"])
@@ -116,6 +117,15 @@ async def quotes_page(request: Request):
 @app.get("/departments", response_class=HTMLResponse)
 async def departments_page(request: Request):
     return templates.TemplateResponse("departments.html", {"request": request})
+
+@app.get("/home", response_class=HTMLResponse)
+async def home(request: Request):
+    return templates.TemplateResponse("home.html", {"request": request})
+
+@app.get("/organization", response_class=HTMLResponse)
+async def organization_page(request: Request):
+    """Gestión de Organización y Sucursales"""
+    return templates.TemplateResponse("organization.html", {"request": request})
 
 @app.get("/quotes/new", response_class=HTMLResponse)
 async def quotes_new_page(request: Request):

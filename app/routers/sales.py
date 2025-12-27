@@ -31,6 +31,9 @@ def read_sales(
 ):
     query = db.query(SalesDocument).filter(SalesDocument.branch_id == current_user.branch_id)
     
+    # Optimización: Cargar relaciones para evitar N+1 y completar el esquema
+    query = query.options(joinedload(SalesDocument.lines), joinedload(SalesDocument.payments))
+
     if start_date:
         query = query.filter(SalesDocument.created_at >= start_date)
     if end_date:

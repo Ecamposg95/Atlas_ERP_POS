@@ -2,33 +2,39 @@
 
 {% block title %}Historial de Ventas - Atlas ERP{% endblock %}
 
+{% block header_title %}
+<div>
+    <h1 class="text-lg font-bold text-slate-800 dark:text-white tracking-tight">Historial de Ventas</h1>
+    <p class="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-widest font-semibold">
+        Transacciones
+    </p>
+</div>
+{% endblock %}
+
+{% block header_actions %}
+<div class="flex items-center gap-3">
+    <!-- Filtros de Fecha -->
+    <div
+        class="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 p-1 rounded-lg border border-slate-200 dark:border-slate-700">
+        <input type="date" id="filter-date-start"
+            class="bg-transparent text-xs text-slate-600 dark:text-slate-300 outline-none px-2 py-1 w-28">
+        <span class="text-slate-400">-</span>
+        <input type="date" id="filter-date-end"
+            class="bg-transparent text-xs text-slate-600 dark:text-slate-300 outline-none px-2 py-1 w-28">
+        <button id="refresh-btn" class="p-1 rounded text-slate-400 hover:text-white hover:bg-slate-700 transition"
+            title="Actualizar / Filtrar">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15">
+                </path>
+            </svg>
+        </button>
+    </div>
+</div>
+{% endblock %}
+
 {% block content %}
 <div class="space-y-6 animate-fade-in">
-    <!-- Header -->
-    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-            <h1 class="text-3xl font-bold text-white tracking-tight">Historial de Ventas</h1>
-            <p class="text-slate-400 mt-1">Consulta y gestiona las transacciones realizadas</p>
-        </div>
-
-        <!-- Filters -->
-        <div class="flex items-center gap-2">
-            <input type="date" id="filter-date-start"
-                class="bg-slate-900/50 border border-white/10 rounded-xl px-4 py-2.5 text-slate-200 text-sm focus:ring-2 focus:ring-violet-500 outline-none transition">
-            <span class="text-slate-500">-</span>
-            <input type="date" id="filter-date-end"
-                class="bg-slate-900/50 border border-white/10 rounded-xl px-4 py-2.5 text-slate-200 text-sm focus:ring-2 focus:ring-violet-500 outline-none transition">
-            <button id="refresh-btn"
-                class="p-2.5 bg-primary-600/20 hover:bg-primary-600/40 text-primary-400 rounded-xl border border-primary-500/30 transition">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15">
-                    </path>
-                </svg>
-            </button>
-        </div>
-    </div>
-
     <!-- Sales Table -->
     <div class="glass-card rounded-2xl overflow-hidden border border-white/5">
         <div class="overflow-x-auto">
@@ -61,7 +67,6 @@
             </div>
         </div>
     </div>
-
 </div>
 
 <!-- Sale Details Modal -->
@@ -122,12 +127,17 @@
                 </svg>
                 Reimprimir Ticket
             </button>
-            <button class="px-4 py-2 bg-slate-800 text-slate-500 cursor-not-allowed rounded-lg text-sm font-medium"
-                disabled>Devolución (WIP)</button>
+            <button id="return-btn"
+                class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-rose-400 hover:text-white rounded-lg text-sm font-medium transition flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"></path>
+                </svg>
+                Devolución
+            </button>
         </div>
     </div>
 </div>
-
 {% endblock %}
 
 {% block scripts %}
@@ -148,7 +158,7 @@
             const end = document.getElementById('filter-date-end').value;
             let query = '?limit=100';
             if (start) query += `&start_date=${start}`;
-            if (end) query += `&end_date=${end}`; // Note: backend might need ISO format adj, keeping simple for now
+            if (end) query += `&end_date=${end}`;
 
             try {
                 const res = await fetch(`${API_BASE}/api/sales/${query}`, {
@@ -177,9 +187,6 @@
                 });
                 const statusColor = s.status === 'PAID' ? 'text-emerald-400 bg-emerald-400/10' : 'text-amber-400 bg-amber-400/10';
 
-                // Encode whole object for modal
-                const sEnc = encodeURIComponent(JSON.stringify(s));
-
                 return `
                 <tr class="hover:bg-slate-800/50 transition group">
                     <td class="p-4 font-mono text-slate-300 font-bold">${s.series || ''}-${s.folio || s.id}</td>
@@ -190,7 +197,7 @@
                         <span class="px-2 py-1 rounded text-xs font-bold ${statusColor}">${s.status}</span>
                     </td>
                     <td class="p-4 text-right">
-                         <button class="text-primary-400 hover:text-white text-sm font-medium transition" onclick="openDetails('${sEnc}')">Ver Detalles</button>
+                         <button class="text-primary-400 hover:text-white text-sm font-medium transition" onclick="openDetails(${s.id})">Ver Detalles</button>
                     </td>
                 </tr>
                 `;
@@ -198,8 +205,10 @@
         }
 
         // --- DETAILS MODAL ---
-        window.openDetails = function (encSales) {
-            const sale = JSON.parse(decodeURIComponent(encSales));
+        window.openDetails = function (id) {
+            const sale = currentSales.find(s => s.id === id);
+            if (!sale) return;
+
             const modal = document.getElementById('details-modal');
             const date = new Date(sale.created_at).toLocaleString();
 
@@ -210,41 +219,59 @@
             badge.textContent = sale.status;
             badge.className = `text-[10px] px-2 py-0.5 rounded-full font-bold ${sale.status === 'PAID' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400'}`;
 
-            document.getElementById('detail-total').textContent = `$${sale.total_amount.toFixed(2)}`;
+            document.getElementById('detail-total').textContent = `$${Number(sale.total_amount).toFixed(2)}`;
 
             const itemsBody = document.getElementById('detail-items');
             itemsBody.innerHTML = sale.lines.map(l => `
                 <tr>
                     <td class="p-2">${l.description}</td>
                     <td class="p-2 text-center text-slate-400">x${l.quantity}</td>
-                    <td class="p-2 text-right text-slate-400">$${l.unit_price.toFixed(2)}</td>
-                    <td class="p-2 text-right font-medium text-slate-200">$${l.total_line.toFixed(2)}</td>
+                    <td class="p-2 text-right text-slate-400">$${Number(l.unit_price).toFixed(2)}</td>
+                    <td class="p-2 text-right font-medium text-slate-200">$${Number(l.total_line).toFixed(2)}</td>
                 </tr>
             `).join('');
 
             // Reprint handler
-            document.getElementById('reprint-btn').onclick = async () => {
-                const btn = document.getElementById('reprint-btn');
-                btn.disabled = true; btn.textContent = 'Enviando...';
-                try {
-                    await fetch(`${API_BASE}/api/printer/reprint-ticket/${sale.id}`, {
-                        method: 'POST',
-                        headers: { 'Authorization': `Bearer ${ACCESS_TOKEN}` }
-                    });
-                    alert('Ticket enviado a reimpresión');
-                } catch (e) { alert('Error: ' + e.message); }
-                btn.disabled = false; btn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg> Reimprimir Ticket';
-            };
+            const reprintBtn = document.getElementById('reprint-btn');
+            if (reprintBtn) {
+                reprintBtn.onclick = async () => {
+                    reprintBtn.disabled = true;
+                    reprintBtn.textContent = 'Enviando...';
+                    try {
+                        await fetch(`${API_BASE}/api/printer/reprint-ticket/${sale.id}`, {
+                            method: 'POST',
+                            headers: { 'Authorization': `Bearer ${ACCESS_TOKEN}` }
+                        });
+                        alert('Ticket enviado a reimpresión');
+                    } catch (e) { alert('Error: ' + e.message); }
+                    reprintBtn.disabled = false;
+                    reprintBtn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2-2v4h10z"></path></svg> Reimprimir Ticket';
+                };
+            }
+
+            // Returns Handler
+            const returnBtn = document.getElementById('return-btn');
+            if (returnBtn) {
+                returnBtn.onclick = () => {
+                    if (confirm('¿Iniciar proceso de devolución para esta venta?')) {
+                        alert('Función de devolución iniciada (Backend pendiente)');
+                    }
+                };
+            }
 
             modal.classList.remove('hidden');
         };
 
-        document.getElementById('close-details-btn').onclick = () => {
-            document.getElementById('details-modal').classList.add('hidden');
-        };
+        const closeBtn = document.getElementById('close-details-btn');
+        if (closeBtn) {
+            closeBtn.onclick = () => {
+                document.getElementById('details-modal').classList.add('hidden');
+            };
+        }
 
         // --- INIT ---
-        document.getElementById('refresh-btn').onclick = loadSales;
+        const refreshBtn = document.getElementById('refresh-btn');
+        if (refreshBtn) refreshBtn.onclick = loadSales;
         loadSales(); // Initial load
     });
 </script>

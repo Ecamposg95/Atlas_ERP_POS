@@ -2,23 +2,26 @@
 
 {% block title %}Dashboard - DataX POS{% endblock %}
 
+{% block header_title %}
+<div>
+    <h1 class="text-lg font-bold text-slate-800 dark:text-white tracking-tight">Dashboard General</h1>
+    <p
+        class="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-widest font-semibold flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+        En vivo
+    </p>
+</div>
+{% endblock %}
+
+{% block header_actions %}
+<div class="hidden sm:block text-right">
+    <p class="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-bold" id="last-update-label">Actualizando...
+    </p>
+</div>
+{% endblock %}
+
 {% block content %}
-<!-- HEADER PROPIO DEL DASHBOARD -->
-<header
-    class="h-16 border-b border-white/5 bg-slate-900/50 backdrop-blur-md flex justify-between items-center px-6 shrink-0 z-10 sticky top-0">
-    <div>
-        <h1 class="text-lg font-bold text-white tracking-tight">Dashboard General</h1>
-        <p class="text-[10px] text-slate-400 uppercase tracking-widest font-semibold flex items-center gap-2">
-            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            En vivo
-        </p>
-    </div>
-    <div class="flex items-center gap-4">
-        <div class="text-right hidden sm:block">
-            <p class="text-[10px] text-slate-400 uppercase font-bold" id="last-update-label">Actualizando...</p>
-        </div>
-    </div>
-</header>
+<!-- CONTENT SCROLLABLE -->
 
 <!-- CONTENT SCROLLABLE -->
 <div class="flex-1 overflow-y-auto p-6 custom-scrollbar">
@@ -299,26 +302,32 @@
         }
 
         function updateCharts(sales) {
-            const salesByDay = {}, salesByHour = {}, products = {};
+            const salesByDay = {}, salesByHour = {};
+            const paymentMethods = { CASH: 0, CARD: 0, TRANSFER: 0, OTHER: 0 };
+
             sales.forEach(o => {
                 const day = new Date(o.created_at).toLocaleDateString('es-MX', { weekday: 'short' });
                 salesByDay[day] = (salesByDay[day] || 0) + Number(o.total_amount);
+
                 const hour = new Date(o.created_at).getHours();
                 salesByHour[hour] = (salesByHour[hour] || 0) + Number(o.total_amount);
 
-                // Note: SaleRead schema might not include lines/items unless we requested them. 
-                // The current SaleRead default does NOT return lines in the list view for performance.
-                // So we might skip product breakdown here or need to fetch details.
-                // For now, let's skip product chart to avoid errors or 0s
+                // Payment Methods
+                if (o.payments && o.payments.length > 0) {
+                    o.payments.forEach(p => {
+                        const m = p.method || 'OTHER';
+                        paymentMethods[m] = (paymentMethods[m] || 0) + Number(p.amount);
+                    });
+                } else if (o.status === 'PAID') {
+                    // Fallback if payments missing but logic assumes CASH
+                    paymentMethods['CASH'] += Number(o.total_amount);
+                }
             });
 
             renderChart('trend', 'chart-trend', 'line', {
                 labels: Object.keys(salesByDay),
                 datasets: [{ label: 'Ventas', data: Object.values(salesByDay), borderColor: '#2EA98C', backgroundColor: 'rgba(46, 169, 140, 0.1)', fill: true, tension: 0.4 }]
             });
-
-            // Skipping Top Products Chart for now as list doesn't have items
-            // ... OR fetch details if critical.
 
             const hours = Array.from({ length: 14 }, (_, i) => i + 8);
             renderChart('hourly', 'chart-hourly', 'bar', {
@@ -327,8 +336,12 @@
             });
 
             renderChart('payments', 'chart-payments', 'doughnut', {
-                labels: ['Efectivo', 'Tarjeta', 'Otros'],
-                datasets: [{ data: [70, 25, 5], backgroundColor: ['#10b981', '#3b82f6', '#f43f5e'], borderWidth: 0 }]
+                labels: ['Efectivo', 'Tarjeta', 'Transferencia', 'Otro'],
+                datasets: [{
+                    data: [paymentMethods.CASH, paymentMethods.CARD, paymentMethods.TRANSFER, paymentMethods.OTHER],
+                    backgroundColor: ['#10b981', '#3b82f6', '#8b5cf6', '#64748b'],
+                    borderWidth: 0
+                }]
             });
         }
 

@@ -2,24 +2,25 @@
 
 {% block title %}Usuarios - Atlas ERP{% endblock %}
 
+{% block header_title %}
+<div>
+    <h1 class="text-xl font-bold text-white tracking-tight">Gestión de Usuarios</h1>
+    <p class="text-xs text-slate-400 mt-0.5">Administra el equipo y sus accesos</p>
+</div>
+{% endblock %}
+
+{% block header_actions %}
+<button id="new-user-btn"
+    class="px-4 py-2 bg-primary-600 hover:bg-primary-500 text-white rounded-lg shadow-lg shadow-primary-600/20 font-bold text-xs transition transform active:scale-95 flex items-center gap-2">
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+    </svg>
+    Nuevo Usuario
+</button>
+{% endblock %}
+
 {% block content %}
-<div class="space-y-6 animate-fade-in">
-    <!-- Header -->
-    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-            <h1 class="text-3xl font-bold text-white tracking-tight">Gestión de Usuarios</h1>
-            <p class="text-slate-400 mt-1">Administra el equipo y sus accesos</p>
-        </div>
-
-        <button id="new-user-btn"
-            class="px-5 py-2.5 bg-primary-600 hover:bg-primary-500 text-white rounded-xl shadow-lg shadow-primary-600/20 font-bold text-sm transition transform active:scale-95 flex items-center gap-2">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-            </svg>
-            Nuevo Usuario
-        </button>
-    </div>
-
+<div class="space-y-6 animate-fade-in p-6">
     <!-- Users Grid -->
     <div id="users-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         <!-- Loaded via JS -->
@@ -28,12 +29,20 @@
 
 <!-- Create/Edit Modal -->
 <div id="user-modal"
-    class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-    <div class="bg-slate-900 rounded-3xl shadow-2xl max-w-lg w-full p-8 border border-white/10 relative">
+    class="hidden fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4 transition-all duration-300">
+    <div
+        class="glass-card bg-slate-900/90 backdrop-blur-xl rounded-2xl shadow-2xl max-w-lg w-full p-8 border border-white/10 relative scale-100 transition-all duration-300">
         <button id="close-modal-btn"
-            class="absolute top-4 right-4 text-slate-500 hover:text-white transition">✕</button>
+            class="absolute top-4 right-4 text-slate-500 hover:text-white transition bg-white/5 rounded-full p-1 hover:bg-white/10">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+        </button>
 
-        <h3 id="modal-title" class="text-xl font-bold mb-6 text-white">Nuevo Usuario</h3>
+        <h3 id="modal-title" class="text-2xl font-bold mb-6 text-white tracking-tight flex items-center gap-3">
+            <span class="w-2 h-8 rounded-full bg-primary-500"></span>
+            Nuevo Usuario
+        </h3>
 
         <form id="user-form" class="space-y-4">
             <input type="hidden" id="user-id">
@@ -101,6 +110,8 @@
         const ACCESS_TOKEN = sessionStorage.getItem('ACCESS_TOKEN');
         if (!ACCESS_TOKEN) window.location.href = '/auth';
 
+        let currentUsers = [];
+
         // --- FETCH USERS ---
         async function loadUsers() {
             const grid = document.getElementById('users-grid');
@@ -111,8 +122,8 @@
                     headers: { 'Authorization': `Bearer ${ACCESS_TOKEN}` }
                 });
                 if (!res.ok) throw new Error('Error cargando usuarios');
-                const users = await res.json();
-                renderUsers(users);
+                currentUsers = await res.json();
+                renderUsers(currentUsers);
             } catch (e) {
                 grid.innerHTML = `<p class="text-rose-500 col-span-full text-center">${e.message}</p>`;
             }
@@ -126,7 +137,6 @@
             }
 
             grid.innerHTML = users.map(u => {
-                const uEnc = encodeURIComponent(JSON.stringify(u));
                 const colors = {
                     admin: 'bg-rose-500/10 text-rose-400 border-rose-500/20',
                     manager: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
@@ -134,7 +144,7 @@
                 }[u.role] || 'bg-slate-500/10 text-slate-400';
 
                 return `
-                <div class="glass-card p-6 rounded-2xl border border-white/5 hover:border-white/10 transition group relative">
+                <div class="glass-card p-6 rounded-2xl border border-white/5 hover:border-white/10 transition group relative bg-slate-900/50">
                     <div class="flex items-start justify-between mb-4">
                         <div class="w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center text-xl font-bold text-slate-300">
                             ${u.username.substring(0, 2).toUpperCase()}
@@ -153,7 +163,7 @@
                     </div>
 
                     <div class="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition">
-                        <button onclick="editUser('${uEnc}')" class="p-2 hover:bg-slate-700 rounded-lg text-slate-400 hover:text-white transition">
+                        <button onclick="editUser(${u.id})" class="p-2 hover:bg-slate-700 rounded-lg text-slate-400 hover:text-white transition">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
                         </button>
                     </div>
@@ -176,9 +186,11 @@
             modal.classList.remove('hidden');
         };
 
-        window.editUser = function (uEnc) {
+        window.editUser = function (id) {
             isEdit = true;
-            const u = JSON.parse(decodeURIComponent(uEnc));
+            const u = currentUsers.find(x => x.id === id);
+            if (!u) return;
+
             document.getElementById('modal-title').textContent = 'Editar Usuario';
 
             document.getElementById('user-id').value = u.id;
@@ -205,7 +217,7 @@
                 email: document.getElementById('email').value,
                 role: document.getElementById('role').value,
                 is_active: document.getElementById('is_active').checked,
-                branch_id: 1 // Hardcoded for now, or fetch from current user
+                branch_id: 1 // Hardcoded for now
             };
 
             const pass = document.getElementById('password').value;

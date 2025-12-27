@@ -1,191 +1,213 @@
 {% extends "base.html" %}
 
-{% block content %}
-<div class="h-screen w-full flex flex-col overflow-hidden">
-    <!-- Header -->
-    <header
-        class="bg-white/40 dark:bg-black/40 backdrop-blur-md border-b border-slate-200 dark:border-white/5 p-4 flex justify-between items-center z-10 sticky top-0">
-        <div>
-            <h1
-                class="text-2xl font-black text-slate-800 dark:text-transparent dark:bg-clip-text dark:bg-gradient-to-r dark:from-emerald-400 dark:to-cyan-400">
-                Departamentos
-            </h1>
-            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium">Gestión de categorías de productos
-            </p>
-        </div>
-        <div>
-            <!-- Tools if needed -->
-        </div>
-    </header>
 
-    <!-- Main Content -->
-    <main class="flex-1 overflow-auto p-6 relative">
-        <div class="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6">
-
-            <!-- Left: Form -->
-            <div class="md:col-span-1">
-                <div class="bg-slate-900 rounded-2xl border border-slate-800 p-6 sticky top-6 shadow-lg">
-                    <h2 class="text-lg font-bold text-white mb-4">Nuevo / Editar</h2>
-                    <form id="dept-form" class="space-y-4">
-                        <input type="hidden" id="dept-id">
-                        <div>
-                            <label class="block text-xs font-bold text-slate-500 mb-1 uppercase">Nombre
-                                Departamento</label>
-                            <input type="text" id="dept-name" required
-                                class="w-full px-4 py-2 bg-slate-950 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition"
-                                placeholder="Ej. Abarrotes">
-                        </div>
-
-                        <div class="flex gap-2 pt-2">
-                            <button type="submit"
-                                class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 rounded-lg transition shadow-lg shadow-emerald-500/20">
-                                Guardar
-                            </button>
-                            <button type="button" onclick="resetForm()"
-                                class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-lg transition">
-                                Limpiar
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-
-            <!-- Right: List -->
-            <div class="md:col-span-2">
-                <div class="bg-slate-900 rounded-2xl border border-slate-800 p-6 shadow-lg">
-                    <div class="flex justify-between items-center mb-6">
-                        <h2 class="text-lg font-bold text-white">Lista de Departamentos (<span id="dept-count">0</span>)
-                        </h2>
-                        <button onclick="loadDepts()" class="text-slate-400 hover:text-white transition">
-                            🔄 Actualizar
-                        </button>
-                    </div>
-
-                    <div id="loading" class="hidden text-center py-10">
-                        <div
-                            class="w-8 h-8 border-4 border-slate-700 border-t-emerald-500 rounded-full animate-spin mx-auto">
-                        </div>
-                    </div>
-
-                    <ul id="dept-list" class="space-y-2">
-                        <!-- Items injected via JS -->
-                    </ul>
-                </div>
-            </div>
-
-        </div>
-    </main>
+{% block header_title %}
+<div>
+    <h1 class="text-lg font-bold text-slate-800 dark:text-white tracking-tight">Departamentos</h1>
+    <p class="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-widest font-semibold">
+        Gestión de Categorías
+    </p>
 </div>
 {% endblock %}
 
-{% block scripts %}
-<script>
-    const API_BASE_URL = 'http://127.0.0.1:8000';
-    const ACCESS_TOKEN = sessionStorage.getItem('ACCESS_TOKEN');
+{% block header_actions %}
+<button onclick="openModal()"
+    class="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg font-bold text-xs transition shadow-lg shadow-emerald-900/20">
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+    </svg>
+    Nuevo Departamento
+</button>
+{% endblock %}
 
-    // Auth helpers
-    async function apiFetch(endpoint, options = {}) {
-        const headers = { 'Authorization': `Bearer ${ACCESS_TOKEN}`, 'Content-Type': 'application/json', ...options.headers };
-        const res = await fetch(`${API_BASE_URL}${endpoint}`, { ...options, headers });
-        if (res.status === 401) window.location.href = '/auth';
-        if (!res.ok) {
-            const err = await res.json().catch(() => ({}));
-            throw new Error(err.detail || 'Error en la petición');
-        }
-        return res.status === 204 ? null : res.json();
-    }
+{% block content %}
+<div class="h-full flex flex-col overflow-hidden">
+    <div class="flex-1 overflow-auto p-6 relative custom-scrollbar">
+        <div class="max-w-7xl mx-auto space-y-8">
 
-    // Load
-    async function loadDepts() {
-        const list = document.getElementById('dept-list');
-        const loader = document.getElementById('loading');
-        const countSpan = document.getElementById('dept-count');
-
-        list.innerHTML = '';
-        loader.classList.remove('hidden');
-
-        try {
-            const depts = await apiFetch('/api/departments/');
-            countSpan.textContent = depts.length;
-
-            if (depts.length === 0) {
-                list.innerHTML = '<li class="text-slate-500 text-center py-4">No hay departamentos registrados.</li>';
-                return;
-            }
-
-            list.innerHTML = depts.map(d => `
-                <li class="flex justify-between items-center bg-slate-950/50 border border-slate-800 p-4 rounded-xl hover:border-slate-600 transition group">
+            <!-- KPI Section -->
+            <section class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="bg-slate-900/50 border border-white/5 p-4 rounded-2xl flex items-center justify-between">
                     <div>
-                        <span class="text-white font-bold block">${d.name}</span>
-                        <span class="text-xs text-slate-500">ID: ${d.id}</span>
+                        <p class="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Total Departamentos</p>
+                        <p id="kpi-total" class="text-3xl font-black text-white mt-1">0</p>
                     </div>
-                    <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button onclick="editDept(${d.id}, '${d.name}')" 
-                            class="px-3 py-1 text-xs font-bold bg-blue-900/30 text-blue-400 hover:bg-blue-900/50 rounded-lg transition">
-                            Editar
-                        </button>
-                        <button onclick="deleteDept(${d.id})" 
-                            class="px-3 py-1 text-xs font-bold bg-rose-900/30 text-rose-400 hover:bg-rose-900/50 rounded-lg transition">
-                            Eliminar
-                        </button>
+                    <div class="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-400">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10">
+                            </path>
+                        </svg>
                     </div>
-                </li>
+                </div>
+                <!-- Placeholders for future KPIs if backend supports it (e.g. Products Count) -->
+                <div
+                    class="bg-slate-900/50 border border-white/5 p-4 rounded-2xl flex items-center justify-between opacity-50">
+                    <div>
+                        <p class="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Productos Activos</p>
+                        <p class="text-xl font-bold text-slate-400 mt-1">-</p>
+                    </div>
+                    <div
+                        class="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                        </svg>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Cards Grid -->
+            <div id="loading" class="hidden text-center py-12">
+                <div class="w-10 h-10 border-4 border-slate-800 border-t-emerald-500 rounded-full animate-spin mx-auto">
+                </div>
+                <p class="text-xs text-slate-500 mt-4 font-mono">Cargando datos...</p>
+            </div>
+
+            <div id="dept-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pb-20">
+                <!-- Injected via JS -->
+            </div>
+        </div>
+    </div>
+    {% endblock %}
+
+    {% block modals %}
+    <!-- Modal Dept -->
+    <div id="dept-modal"
+        class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 transition-opacity">
+        <div
+            class="bg-slate-900 rounded-2xl shadow-2xl max-w-md w-full p-8 border border-slate-700 relative scale-100 transition-transform">
+            <button onclick="closeModal()"
+                class="absolute top-4 right-4 text-slate-500 hover:text-white transition">✕</button>
+
+            <h3 id="modal-title" class="text-xl font-bold text-white mb-1">Nuevo Departamento</h3>
+            <p class="text-xs text-slate-500 mb-6">Ingresa los datos del departamento</p>
+
+            <form id="dept-form" class="space-y-4">
+                <input type="hidden" id="dept-id">
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1 uppercase">Nombre</label>
+                    <input type="text" id="dept-name" required
+                        class="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:ring-2 focus:ring-emerald-500 transition"
+                        placeholder="Ej. Bebidas">
+                </div>
+
+                <div class="pt-4 flex gap-3">
+                    <button type="button" onclick="closeModal()"
+                        class="flex-1 px-4 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl transition">Cancelar</button>
+                    <button type="submit"
+                        class="flex-1 px-4 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl shadow-lg transition">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% endblock %}
+
+    {% block scripts %}
+    <script>
+        const API_BASE_URL = 'http://127.0.0.1:8000';
+        const ACCESS_TOKEN = sessionStorage.getItem('ACCESS_TOKEN');
+
+        async function apiFetch(endpoint, options = {}) {
+            const headers = { 'Authorization': `Bearer ${ACCESS_TOKEN}`, 'Content-Type': 'application/json', ...options.headers };
+            const res = await fetch(`${API_BASE_URL}${endpoint}`, { ...options, headers });
+            if (res.status === 401) window.location.href = '/auth';
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                throw new Error(err.detail || 'Error en la petición');
+            }
+            return res.status === 204 ? null : res.json();
+        }
+
+        async function loadDepts() {
+            const grid = document.getElementById('dept-grid');
+            const loader = document.getElementById('loading');
+
+            grid.innerHTML = '';
+            loader.classList.remove('hidden');
+
+            try {
+                const depts = await apiFetch('/api/departments/');
+                document.getElementById('kpi-total').textContent = depts.length;
+
+                if (depts.length === 0) {
+                    grid.innerHTML = '<div class="col-span-full text-slate-500 text-center py-10 italic">No hay departamentos registrados.</div>';
+                    return;
+                }
+
+                grid.innerHTML = depts.map(d => `
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 hover:border-slate-600 transition group relative overflow-hidden shadow-lg">
+                    <div class="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-indigo-500/10 to-purple-500/10 rounded-bl-[4rem] -mr-4 -mt-4 transition group-hover:scale-110"></div>
+                    
+                    <div class="relative z-10 flex justify-between items-start">
+                        <div>
+                             <span class="text-[10px] font-mono bg-slate-950 text-slate-500 px-2 py-0.5 rounded border border-slate-800">ID: ${d.id}</span>
+                             <h3 class="text-xl font-bold text-white mt-3">${d.name}</h3>
+                        </div>
+                        <div class="flex gap-1">
+                            <button onclick="editDept(${d.id}, '${d.name}')" class="p-2 text-slate-500 hover:text-indigo-400 transition bg-slate-950/50 rounded-lg hover:bg-slate-800">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                            </button>
+                            <button onclick="deleteDept(${d.id})" class="p-2 text-slate-500 hover:text-rose-400 transition bg-slate-950/50 rounded-lg hover:bg-slate-800">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 pt-4 border-t border-dashed border-slate-800">
+                         <p class="text-xs text-slate-500">Gestión de inventario y categorización.</p>
+                    </div>
+                </div>
             `).join('');
 
-        } catch (e) {
-            console.error(e);
-            alert('Error cargando departamentos: ' + e.message);
-        } finally {
-            loader.classList.add('hidden');
+            } catch (e) {
+                console.error(e);
+                alert('Error: ' + e.message);
+            } finally {
+                loader.classList.add('hidden');
+            }
         }
-    }
 
-    // Create / Edit
-    const form = document.getElementById('dept-form');
-    form.onsubmit = async (e) => {
-        e.preventDefault();
-        const id = document.getElementById('dept-id').value;
-        const name = document.getElementById('dept-name').value;
+        // Modal Logic
+        const modal = document.getElementById('dept-modal');
+        window.openModal = () => {
+            document.getElementById('dept-form').reset();
+            document.getElementById('dept-id').value = '';
+            document.getElementById('modal-title').textContent = 'Nuevo Departamento';
+            modal.classList.remove('hidden');
+        };
+        window.closeModal = () => modal.classList.add('hidden');
 
-        try {
-            const method = id ? 'PUT' : 'POST';
-            const url = id ? `/api/departments/${id}` : '/api/departments/';
+        window.editDept = (id, name) => {
+            document.getElementById('dept-id').value = id;
+            document.getElementById('dept-name').value = name;
+            document.getElementById('modal-title').textContent = 'Editar Departamento';
+            modal.classList.remove('hidden');
+        };
 
-            await apiFetch(url, {
-                method,
-                body: JSON.stringify({ name })
-            });
+        document.getElementById('dept-form').onsubmit = async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('dept-id').value;
+            const name = document.getElementById('dept-name').value;
 
-            resetForm();
-            loadDepts();
+            try {
+                const method = id ? 'PUT' : 'POST';
+                const url = id ? `/api/departments/${id}` : '/api/departments/';
+                await apiFetch(url, { method, body: JSON.stringify({ name }) });
+                closeModal();
+                loadDepts();
+            } catch (e) { alert(e.message); }
+        };
 
-        } catch (e) {
-            alert(e.message);
-        }
-    };
+        window.deleteDept = async (id) => {
+            if (!confirm('¿Eliminar departamento?')) return;
+            try {
+                await apiFetch(`/api/departments/${id}`, { method: 'DELETE' });
+                loadDepts();
+            } catch (e) { alert(e.message); }
+        };
 
-    window.editDept = (id, name) => {
-        document.getElementById('dept-id').value = id;
-        document.getElementById('dept-name').value = name;
-        document.getElementById('dept-name').focus();
-    };
-
-    window.deleteDept = async (id) => {
-        if (!confirm('¿Seguro que deseas eliminar este departamento?')) return;
-        try {
-            await apiFetch(`/api/departments/${id}`, { method: 'DELETE' });
-            loadDepts();
-        } catch (e) {
-            alert(e.message);
-        }
-    };
-
-    window.resetForm = () => {
-        form.reset();
-        document.getElementById('dept-id').value = '';
-    }
-
-    // Init
-    loadDepts();
-</script>
-{% endblock %}
+        // Init
+        loadDepts();
+    </script>
+    {% endblock %}

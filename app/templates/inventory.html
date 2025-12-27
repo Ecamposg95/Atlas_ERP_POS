@@ -2,29 +2,75 @@
 
 {% block title %}Inventario - Atlas ERP{% endblock %}
 
+{% block header_title %}
+<div>
+    <h1 class="text-lg font-bold text-slate-800 dark:text-white tracking-tight">Inventario y Kardex</h1>
+    <p class="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-widest font-semibold">Control de
+        existencias</p>
+</div>
+{% endblock %}
+
+{% block header_actions %}
+<div class="relative w-64 max-w-md">
+    <span class="absolute inset-y-0 left-3 flex items-center text-slate-400">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+        </svg>
+    </span>
+    <input id="search-input" type="text" placeholder="Buscar SKU o Nombre..."
+        class="w-full pl-9 pr-4 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-xs focus:ring-2 focus:ring-primary-500 outline-none transition placeholder-slate-400">
+</div>
+{% endblock %}
+
 {% block content %}
-<header
-    class="h-16 border-b border-white/5 bg-slate-900/50 backdrop-blur-md flex justify-between items-center px-6 shrink-0 z-10 sticky top-0">
-    <div>
-        <h1 class="text-lg font-bold text-white tracking-tight">Inventario y Kardex</h1>
-        <p class="text-[10px] text-slate-400 uppercase tracking-widest font-semibold">Movimientos de Stock</p>
-    </div>
-</header>
-
 <div class="flex-1 overflow-y-auto p-6 custom-scrollbar">
-    <div class="max-w-6xl mx-auto space-y-6">
+    <div class="max-w-7xl mx-auto space-y-6">
 
-        <!-- Controls -->
-        <div class="glass-card p-4 rounded-xl flex gap-4 items-center">
-            <div class="relative flex-1">
-                <span class="absolute inset-y-0 left-3 flex items-center text-slate-400">🔍</span>
-                <input id="search-input" type="text" placeholder="Buscar producto (SKU, Nombre)..."
-                    class="w-full pl-10 pr-4 py-2 rounded-lg bg-slate-950 border border-slate-800 text-white outline-none focus:ring-2 focus:ring-primary-500 transition">
+        <!-- KPIs -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="glass-card p-4 rounded-xl flex items-center justify-between">
+                <div>
+                    <p class="text-[10px] uppercase text-slate-500 font-bold tracking-wider">Total SKUs</p>
+                    <p class="text-2xl font-bold text-slate-800 dark:text-white" id="kpi-total-skus">0</p>
+                </div>
+                <div class="p-3 bg-blue-500/10 rounded-lg text-blue-500">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                    </svg>
+                </div>
+            </div>
+            <div class="glass-card p-4 rounded-xl flex items-center justify-between">
+                <div>
+                    <p class="text-[10px] uppercase text-slate-500 font-bold tracking-wider">Stock Bajo</p>
+                    <p class="text-2xl font-bold text-slate-800 dark:text-white" id="kpi-low-stock">0</p>
+                </div>
+                <div class="p-3 bg-amber-500/10 rounded-lg text-amber-500">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z">
+                        </path>
+                    </svg>
+                </div>
+            </div>
+            <div class="glass-card p-4 rounded-xl flex items-center justify-between">
+                <div>
+                    <p class="text-[10px] uppercase text-slate-500 font-bold tracking-wider">Valor Inventario</p>
+                    <p class="text-2xl font-bold text-slate-800 dark:text-white" id="kpi-value">$0.00</p>
+                </div>
+                <div class="p-3 bg-emerald-500/10 rounded-lg text-emerald-500">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z">
+                        </path>
+                    </svg>
+                </div>
             </div>
         </div>
 
         <!-- Table -->
-        <div class="glass-card rounded-2xl overflow-hidden glass-panel">
+        <div class="glass-card rounded-2xl overflow-hidden glass-panel border border-white/5">
             <table class="min-w-full divide-y divide-slate-800">
                 <thead class="bg-slate-900/50">
                     <tr>

@@ -2,29 +2,46 @@
 
 {% block title %}Punto de Venta - DataX POS{% endblock %}
 
+{% block header_title %}
+<div>
+    <h1 class="text-lg font-bold text-slate-800 dark:text-white tracking-tight">Punto de Venta</h1>
+    <div class="flex items-center gap-2 mt-1">
+        <!-- Badge Status (Hidden by default, toggled by JS) -->
+        <span id="session-status-badge"
+            class="hidden px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 flex items-center gap-1">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span id="session-status-text">Turno Activo</span>
+        </span>
+
+        <!-- Open Session Button (Hidden if open) -->
+        <button id="open-session-btn"
+            class="hidden px-2 py-0.5 bg-blue-600 text-white rounded text-[10px] font-bold hover:bg-blue-500 transition">
+            Abrir Turno
+        </button>
+    </div>
+</div>
+{% endblock %}
+
+{% block header_actions %}
+<div class="flex items-center gap-2">
+    <button id="reprint-last-btn"
+        class="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
+        title="Reimprimir Último Ticket">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2-4h6a2 2 0 012 2v6a2 2 0 01-2 2H9a2 2 0 01-2-2v-6a2 2 0 012-2zm9-2V3a2 2 0 00-2-2H8a2 2 0 00-2 2v12">
+            </path>
+        </svg>
+    </button>
+    <button id="close-session-btn"
+        class="hidden px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold rounded-lg transition-colors shadow-lg shadow-amber-500/20 flex items-center gap-2">
+        Cerrar Turno
+    </button>
+</div>
+{% endblock %}
+
 {% block content %}
 <div class="h-full flex flex-col overflow-hidden">
-    <!-- HEADER POS -->
-    <header
-        class="h-12 border-b border-white/5 bg-slate-900/50 backdrop-blur-md flex justify-between items-center px-4 shrink-0 z-10">
-        <div class="flex items-center gap-2">
-            <div>
-                <h1 class="text-xs font-bold text-white tracking-tight uppercase">PV DataX</h1>
-                <div id="session-status-badge"
-                    class="hidden inline-flex items-center gap-1.5 px-1.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
-                    <span class="w-1 h-1 rounded-full bg-emerald-500 animate-pulse"></span>
-                    <span id="session-status-text" class="text-[9px] uppercase font-bold text-emerald-400">Activo</span>
-                </div>
-            </div>
-        </div>
-
-        <div class="flex items-center gap-2">
-            <button id="open-session-btn"
-                class="hidden px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold rounded-lg shadow-sm transition">Abrir</button>
-            <button id="close-session-btn"
-                class="hidden px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white text-[10px] font-bold rounded-lg shadow-sm transition">Cerrar</button>
-        </div>
-    </header>
 
     <!-- MAIN POS WRAPPER -->
     <div id="pos-content-wrapper" class="flex-1 flex gap-4 p-2 overflow-hidden relative">
@@ -398,6 +415,59 @@
             </div>
         </div>
     </div>
+    <!-- Success Modal -->
+    <div id="success-modal"
+        class="hidden fixed inset-0 bg-black/90 backdrop-blur-md z-[60] flex items-center justify-center p-4">
+        <div
+            class="bg-slate-900 rounded-3xl shadow-2xl max-w-sm w-full p-8 border border-white/10 relative text-center">
+            <div class="w-20 h-20 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                <svg class="w-10 h-10 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+            </div>
+            <h3 class="text-2xl font-black text-white mb-2">¡Venta Exitosa!</h3>
+            <p id="success-folio" class="text-sm text-slate-400 mb-6 font-mono">Folio: ---</p>
+            <div class="space-y-4 mb-8">
+                <div class="flex justify-between text-sm">
+                    <span class="text-slate-500">Pagado</span>
+                    <span id="success-total-paid" class="font-bold text-white">$0.00</span>
+                </div>
+                <div class="flex justify-between text-sm">
+                    <span class="text-slate-500">Cambio</span>
+                    <span id="success-change" class="font-bold text-emerald-400">$0.00</span>
+                </div>
+            </div>
+            <div class="space-y-3">
+                <button id="print-ticket-button"
+                    class="w-full py-3 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl transition flex items-center justify-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2-2v4a2 2 0 002 2h2m2-4h6a2 2 0 012 2v6a2 2 0 01-2 2H9a2 2 0 01-2-2v-6a2 2 0 012-2zm9-2V3a2 2 0 00-2-2H8a2 2 0 00-2 2v12">
+                        </path>
+                    </svg>
+                    Imprimir Ticket
+                </button>
+                <button id="next-sale-button"
+                    class="w-full py-3 bg-primary-600 hover:bg-primary-500 text-white font-bold rounded-xl transition shadow-lg shadow-primary-900/20">
+                    Nueva Venta
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Price Selection Modal -->
+    <div id="price-selection-modal"
+        class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-slate-900 rounded-3xl shadow-2xl max-w-sm w-full p-6 border border-white/10 relative">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-lg font-bold text-white" id="price-selection-title">Seleccionar Precio</h3>
+                <button id="close-price-modal" class="text-slate-500 hover:text-white transition">✕</button>
+            </div>
+            <div id="price-selection-list" class="space-y-3 max-h-[60vh] overflow-y-auto custom-scrollbar">
+                <!-- JS Injected -->
+            </div>
+        </div>
+    </div>
     {% endblock %}
 
     {% block scripts %}
@@ -643,22 +713,35 @@
                     btns.forEach(b => b ? b.disabled = false : null);
                     cart.forEach(item => {
                         const total = item.unit_price * item.qty;
+                        const hasMultiPrices = item._prices && item._prices.length > 1;
+
                         const div = document.createElement('div');
                         div.className = "flex justify-between items-start p-3 bg-slate-900/50 rounded-xl border border-white/5 group hover:border-white/10 transition";
                         div.innerHTML = `
                             <div class="flex-1">
-                                <div class="flex justify-between">
+                                <div class="flex justify-between items-start">
                                     <h4 class="font-bold text-white text-xs line-clamp-1 mr-2">${item.name}</h4>
-                                    <button onclick="window.forcePrice(${item.id})" class="text-[10px] font-mono font-bold ${item.locked_price ? 'text-amber-400 underline decoration-dashed' : 'text-emerald-400 hover:text-emerald-300'} transition" title="Clic para cambiar precio">
-                                        $${Number(item.unit_price).toFixed(2)} ${item.locked_price ? '🔒' : ''}
-                                    </button>
+                                    <div class="flex items-center gap-2">
+                                        <button onclick="window.forcePrice(${item.id})" class="text-[10px] font-mono font-bold ${item.locked_price ? 'text-amber-400 underline decoration-dashed' : 'text-emerald-400 hover:text-emerald-300'} transition" title="Clic para cambiar precio manual">
+                                            $${Number(item.unit_price).toFixed(2)} ${item.locked_price ? '🔒' : ''}
+                                        </button>
+                                        ${hasMultiPrices ?
+                                `<button onclick="window.openPriceModal(${item.id})" class="bg-indigo-500/20 hover:bg-indigo-500/40 text-indigo-300 hover:text-indigo-200 px-1.5 py-0.5 rounded text-[9px] font-bold transition border border-indigo-500/30">
+                                                LISTA
+                                            </button>` : ''}
+                                    </div>
                                 </div>
                                 <div class="text-[10px] text-slate-500 font-mono mb-1">${item.sku}</div>
                                 
                                 <div class="flex items-center gap-3">
                                     <div class="flex items-center bg-slate-950 rounded-lg p-0.5 border border-slate-800">
                                         <button onclick="updateItem(${item.id}, -1)" class="w-6 h-6 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 rounded transition">-</button>
-                                        <span class="w-8 text-center text-xs font-bold text-white">${item.qty}</span>
+                                        <input type="number" 
+                                               value="${item.qty}" 
+                                               onchange="window.updateItemQty(${item.id}, this.value)" 
+                                               onclick="this.select()"
+                                               class="w-10 text-center text-xs font-bold text-white bg-transparent outline-none appearance-none p-0 border-none focus:ring-0" 
+                                               style="-moz-appearance: textfield;">
                                         <button onclick="updateItem(${item.id}, 1)" class="w-6 h-6 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 rounded transition">+</button>
                                     </div>
                                     <span class="text-xs font-bold text-slate-300 ml-auto">$${total.toFixed(2)}</span>
@@ -670,6 +753,58 @@
                 }
                 updateSummary();
             }
+
+            // --- MANUAL QUANTITY ---
+            window.updateItemQty = function (id, valStr) {
+                const val = parseFloat(valStr);
+                const item = cart.find(i => i.id === id);
+                if (!item) return;
+
+                if (isNaN(val) || val <= 0) {
+                    // Reset to previous valid or remove? Let's reset to 1
+                    item.qty = 1;
+                } else {
+                    item.qty = val;
+                }
+                recalcCartPrices();
+                renderCart();
+            };
+
+            // --- PRICE MODAL LOGIC ---
+            window.openPriceModal = function (id) {
+                const item = cart.find(i => i.id === id);
+                if (!item || !item._prices) return;
+
+                const modal = document.getElementById('price-selection-modal');
+                const container = document.getElementById('price-selection-list');
+                const title = document.getElementById('price-selection-title');
+
+                title.textContent = `Precios para: ${item.name}`;
+                container.innerHTML = '';
+
+                item._prices.forEach(p => {
+                    const btn = document.createElement('button');
+                    btn.className = "w-full text-left p-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-emerald-500/50 transition flex justify-between items-center group";
+                    btn.innerHTML = `
+                        <div>
+                            <span class="text-xs text-slate-400 font-bold uppercase tracking-wider block">Min. ${p.min_quantity} pza(s)</span>
+                            <span class="text-xs text-slate-500">${p.id ? 'Lista ' + p.id : 'Precio Especial'}</span>
+                        </div>
+                        <span class="text-lg font-black text-emerald-400 group-hover:text-emerald-300">$${Number(p.unit_price).toFixed(2)}</span>
+                    `;
+                    btn.onclick = () => {
+                        item.unit_price = parseFloat(p.unit_price);
+                        item.locked_price = true; // Lock it
+                        renderCart();
+                        hideModal(modal);
+                    };
+                    container.appendChild(btn);
+                });
+
+                showModal(modal);
+            };
+
+            document.getElementById('close-price-modal').onclick = () => hideModal(document.getElementById('price-selection-modal'));
 
             function updateSummary() {
                 let total = 0;
@@ -1018,30 +1153,57 @@
                 }
             }
 
+            // --- REPRINT HEADER BUTTON ---
+            const reprintBtn = document.getElementById('reprint-last-btn');
+            if (reprintBtn) {
+                reprintBtn.onclick = async function () {
+                    const btn = this;
+                    // If we have a sale in memory, use it. Otherwise try to print "last ticket" (if backend supports or if we store ID)
+                    // Since we don't persist LAST_SUCCESSFUL_SALE across reloads, we should probably check if it's null.
+                    if (!LAST_SUCCESSFUL_SALE) {
+                        alert('No hay venta reciente en esta sesión para reimprimir.');
+                        return;
+                    }
+
+                    btn.classList.add('animate-pulse', 'text-emerald-400');
+                    try {
+                        await apiFetch('/api/printer/print-ticket', {
+                            method: 'POST', body: JSON.stringify({ order_id: LAST_SUCCESSFUL_SALE.sale_id })
+                        });
+                        // Feedback
+                    } catch (e) { alert('Error: ' + e.message); }
+                    btn.classList.remove('animate-pulse', 'text-emerald-400');
+                };
+            }
+
             // --- PRINTING ---
-            document.getElementById('print-ticket-button').onclick = async function () {
-                const btn = this;
-                if (btn.disabled || !LAST_SUCCESSFUL_SALE) return;
-                btn.disabled = true;
-                const prev = btn.innerHTML;
-                btn.innerHTML = 'Enviando...';
+            const printBtn = document.getElementById('print-ticket-button');
+            if (printBtn) {
+                printBtn.onclick = async function () {
+                    const btn = this;
+                    if (btn.disabled || !LAST_SUCCESSFUL_SALE) return;
+                    btn.disabled = true;
+                    const prev = btn.innerHTML;
+                    btn.innerHTML = 'Enviando...';
 
-                try {
-                    // Endpoint logic from previous conversations implies /api/printer/print-ticket
-                    // But let's check if it exists in main.py. Yes: prefix="/api/printer"
-                    await apiFetch('/api/printer/print-ticket', {
-                        method: 'POST', body: JSON.stringify({ order_id: LAST_SUCCESSFUL_SALE.sale_id })
-                    });
-                    btn.innerHTML = '¡Enviado!';
-                } catch (e) { alert(`Error: ${e.message}`); }
-                setTimeout(() => { btn.innerHTML = prev; btn.disabled = false; }, 2000);
-            };
+                    try {
+                        await apiFetch('/api/printer/print-ticket', {
+                            method: 'POST', body: JSON.stringify({ order_id: LAST_SUCCESSFUL_SALE.sale_id })
+                        });
+                        btn.innerHTML = '¡Enviado!';
+                    } catch (e) { alert(`Error: ${e.message}`); }
+                    setTimeout(() => { btn.innerHTML = prev; btn.disabled = false; }, 2000);
+                };
+            }
 
-            document.getElementById('next-sale-button').onclick = () => {
-                hideModal(document.getElementById('success-modal'));
-                LAST_SUCCESSFUL_SALE = null;
-                document.getElementById('search-input').focus();
-            };
+            const nextSaleBtn = document.getElementById('next-sale-button');
+            if (nextSaleBtn) {
+                nextSaleBtn.onclick = () => {
+                    hideModal(document.getElementById('success-modal'));
+                    LAST_SUCCESSFUL_SALE = null;
+                    document.getElementById('search-input').focus();
+                };
+            }
 
             // --- UTILS ---
             function getCartTotal() {

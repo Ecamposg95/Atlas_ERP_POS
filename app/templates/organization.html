@@ -1,0 +1,271 @@
+{% extends "base.html" %}
+
+{% block title %}Organización - Atlas ERP{% endblock %}
+
+{% block header_title %}
+<div>
+    <h1 class="text-xl font-bold text-white tracking-tight">Organización</h1>
+    <p class="text-xs text-slate-400 mt-0.5">Configuración de empresa y sucursales</p>
+</div>
+{% endblock %}
+
+{% block header_actions %}
+<div class="flex gap-2">
+    <button onclick="saveOrganization()"
+        class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg font-bold text-xs transition shadow-lg shadow-emerald-900/20 flex items-center gap-2">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path>
+        </svg>
+        Guardar Cambios
+    </button>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="flex-1 overflow-auto p-6 custom-scrollbar">
+    <div class="max-w-4xl mx-auto space-y-6">
+
+        <!-- Tabs -->
+        <div class="flex gap-4 border-b border-slate-800">
+            <button class="tab-btn px-4 py-2 text-sm font-bold text-white border-b-2 border-primary-500"
+                data-tab="tab-org">Empresa</button>
+            <button
+                class="tab-btn px-4 py-2 text-sm font-bold text-slate-400 border-b-2 border-transparent hover:text-white"
+                data-tab="tab-branches">Sucursales</button>
+        </div>
+
+        <!-- Org Tab -->
+        <div id="tab-org" class="tab-content animate-fade-in">
+            <div class="glass-card p-6 rounded-2xl border border-white/5 bg-slate-900/50">
+                <form id="org-form" class="space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 mb-1 uppercase">Nombre Empresa</label>
+                            <input type="text" id="org-name"
+                                class="w-full px-4 py-3 bg-slate-950 border border-slate-700 rounded-xl text-white outline-none focus:ring-2 focus:ring-primary-500 transition">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 mb-1 uppercase">RFC / Tax ID</label>
+                            <input type="text" id="org-tax"
+                                class="w-full px-4 py-3 bg-slate-950 border border-slate-700 rounded-xl text-white outline-none focus:ring-2 focus:ring-primary-500 transition">
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-xs font-bold text-slate-500 mb-1 uppercase">Dirección
+                                Fiscal</label>
+                            <input type="text" id="org-address"
+                                class="w-full px-4 py-3 bg-slate-950 border border-slate-700 rounded-xl text-white outline-none focus:ring-2 focus:ring-primary-500 transition">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 mb-1 uppercase">Teléfono</label>
+                            <input type="text" id="org-phone"
+                                class="w-full px-4 py-3 bg-slate-950 border border-slate-700 rounded-xl text-white outline-none focus:ring-2 focus:ring-primary-500 transition">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 mb-1 uppercase">Email</label>
+                            <input type="email" id="org-email"
+                                class="w-full px-4 py-3 bg-slate-950 border border-slate-700 rounded-xl text-white outline-none focus:ring-2 focus:ring-primary-500 transition">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 mb-1 uppercase">Sitio Web</label>
+                            <input type="text" id="org-website"
+                                class="w-full px-4 py-3 bg-slate-950 border border-slate-700 rounded-xl text-white outline-none focus:ring-2 focus:ring-primary-500 transition">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 mb-1 uppercase">URL Logo</label>
+                            <input type="text" id="org-logo"
+                                class="w-full px-4 py-3 bg-slate-950 border border-slate-700 rounded-xl text-white outline-none focus:ring-2 focus:ring-primary-500 transition">
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Branches Tab -->
+        <div id="tab-branches" class="tab-content hidden animate-fade-in">
+            <div class="glass-card p-6 rounded-2xl border border-white/5 bg-slate-900/50">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-lg font-bold text-white">Sucursales Activas</h3>
+                    <button onclick="openBranchModal()"
+                        class="bg-primary-600 hover:bg-primary-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition">
+                        + Nueva Sucursal
+                    </button>
+                </div>
+
+                <div class="space-y-3" id="branches-list">
+                    <!-- JS Injected -->
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}
+
+{% block modals %}
+<!-- Branch Modal -->
+<div id="branch-modal"
+    class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-slate-900 rounded-2xl shadow-2xl max-w-sm w-full p-6 border border-slate-700">
+        <h3 id="branch-modal-title" class="text-lg font-bold text-white mb-4">Nueva Sucursal</h3>
+        <form id="branch-form" class="space-y-4">
+            <input type="hidden" id="branch-id">
+            <div>
+                <label class="block text-xs font-bold text-slate-500 mb-1 uppercase">Nombre</label>
+                <input type="text" id="branch-name" required
+                    class="w-full px-4 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white outline-none focus:ring-2 focus:ring-primary-500">
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-500 mb-1 uppercase">Dirección</label>
+                <input type="text" id="branch-address"
+                    class="w-full px-4 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white outline-none focus:ring-2 focus:ring-primary-500">
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-500 mb-1 uppercase">Teléfono</label>
+                <input type="text" id="branch-phone"
+                    class="w-full px-4 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white outline-none focus:ring-2 focus:ring-primary-500">
+            </div>
+            <div class="flex justify-end gap-2 pt-2">
+                <button type="button" onclick="document.getElementById('branch-modal').classList.add('hidden')"
+                    class="px-4 py-2 text-slate-400 hover:text-white transition">Cancelar</button>
+                <button type="submit"
+                    class="bg-primary-600 hover:bg-primary-500 text-white px-4 py-2 rounded-lg font-bold transition">Guardar</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const API_BASE_URL = 'http://127.0.0.1:8000';
+    const ACCESS_TOKEN = sessionStorage.getItem('ACCESS_TOKEN');
+
+    async function apiFetch(endpoint, options = {}) {
+        const headers = { 'Authorization': `Bearer ${ACCESS_TOKEN}`, 'Content-Type': 'application/json', ...options.headers };
+        const res = await fetch(`${API_BASE_URL}${endpoint}`, { ...options, headers });
+        if (res.status === 401) window.location.href = '/auth';
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.detail || 'Error en la petición');
+        }
+        return res.status === 204 ? null : res.json();
+    }
+
+    // --- TABS ---
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.onclick = () => {
+            document.querySelectorAll('.tab-btn').forEach(b => {
+                b.classList.remove('text-white', 'border-primary-500');
+                b.classList.add('text-slate-400', 'border-transparent');
+            });
+            btn.classList.remove('text-slate-400', 'border-transparent');
+            btn.classList.add('text-white', 'border-primary-500');
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+            document.getElementById(btn.dataset.tab).classList.remove('hidden');
+        };
+    });
+
+    // --- ORG LOGIC ---
+    async function loadOrg() {
+        try {
+            const org = await apiFetch('/api/organization/');
+            document.getElementById('org-name').value = org.name || '';
+            document.getElementById('org-tax').value = org.tax_id || '';
+            document.getElementById('org-address').value = org.address || '';
+            document.getElementById('org-phone').value = org.phone || '';
+            document.getElementById('org-email').value = org.email || '';
+            document.getElementById('org-website').value = org.website || '';
+            document.getElementById('org-logo').value = org.logo_url || '';
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    window.saveOrganization = async () => {
+        const payload = {
+            name: document.getElementById('org-name').value,
+            tax_id: document.getElementById('org-tax').value,
+            address: document.getElementById('org-address').value,
+            phone: document.getElementById('org-phone').value,
+            email: document.getElementById('org-email').value,
+            website: document.getElementById('org-website').value,
+            logo_url: document.getElementById('org-logo').value
+        };
+        try {
+            await apiFetch('/api/organization/', { method: 'PUT', body: JSON.stringify(payload) });
+            alert('Datos de organización guardados');
+        } catch (e) { alert(e.message); }
+    };
+
+    // --- BRANCHES LOGIC ---
+    async function loadBranches() {
+        const list = document.getElementById('branches-list');
+        list.innerHTML = '<p class="text-center text-slate-500">Cargando...</p>';
+        try {
+            const branches = await apiFetch('/api/branches/');
+            if (branches.length === 0) list.innerHTML = '<p class="text-center text-slate-500 italic">No hay sucursales registradas</p>';
+            else list.innerHTML = branches.map(b => `
+                <div class="flex items-center justify-between bg-slate-950 p-4 rounded-xl border border-slate-800">
+                    <div>
+                        <h4 class="font-bold text-white text-sm">${b.name}</h4>
+                        <p class="text-xs text-slate-500">${b.address || 'Sin dirección'}</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="editBranch(${b.id}, '${b.name}', '${b.address || ''}', '${b.phone || ''}')" class="text-blue-400 hover:text-white text-xs font-bold px-2 py-1 bg-blue-900/20 rounded">Editar</button>
+                        <button onclick="deleteBranch(${b.id})" class="text-rose-400 hover:text-white text-xs font-bold px-2 py-1 bg-rose-900/20 rounded">Eliminar</button>
+                    </div>
+                </div>
+            `).join('');
+        } catch (e) { list.innerHTML = `<p class="text-center text-rose-500">${e.message}</p>`; }
+    }
+
+    // Branch Modal
+    const bModal = document.getElementById('branch-modal');
+    window.openBranchModal = () => {
+        document.getElementById('branch-form').reset();
+        document.getElementById('branch-id').value = '';
+        document.getElementById('branch-modal-title').textContent = 'Nueva Sucursal';
+        bModal.classList.remove('hidden');
+    };
+
+    window.editBranch = (id, name, addr, phone) => {
+        document.getElementById('branch-id').value = id;
+        document.getElementById('branch-name').value = name;
+        document.getElementById('branch-address').value = addr;
+        document.getElementById('branch-phone').value = phone;
+        document.getElementById('branch-modal-title').textContent = 'Editar Sucursal';
+        bModal.classList.remove('hidden');
+    };
+
+    document.getElementById('branch-form').onsubmit = async (e) => {
+        e.preventDefault();
+        const id = document.getElementById('branch-id').value;
+        const payload = {
+            name: document.getElementById('branch-name').value,
+            address: document.getElementById('branch-address').value,
+            phone: document.getElementById('branch-phone').value
+        };
+
+        try {
+            const method = id ? 'PUT' : 'POST';
+            const url = id ? `/api/branches/${id}` : '/api/branches/';
+            await apiFetch(url, { method, body: JSON.stringify(payload) });
+            bModal.classList.add('hidden');
+            loadBranches();
+        } catch (e) { alert(e.message); }
+    };
+
+    window.deleteBranch = async (id) => {
+        if (!confirm('¿Eliminar sucursal?')) return;
+        try {
+            await apiFetch(`/api/branches/${id}`, { method: 'DELETE' });
+            loadBranches();
+        } catch (e) { alert(e.message); }
+    };
+
+    // Init
+    loadOrg();
+    loadBranches();
+</script>
+{% endblock %}
