@@ -61,10 +61,12 @@ def create_user(
     new_user = User(
         username=user.username,
         full_name=user.full_name,
-        email=user.email,
+        # email is not in the model, so we don't pass it. Or if we add it later. 
+        # For now, excluding email to avoid error if model doesn't have it.
+        # email=user.email, 
         role=user.role,
         is_active=user.is_active,
-        hashed_password=hashed_password,
+        password_hash=hashed_password,
         branch_id=user.branch_id
     )
     
@@ -102,7 +104,7 @@ def update_user(
         password_raw = update_data.pop('password')
         # Solo hashear si mandaron algo (no string vacío)
         if password_raw: 
-            user_db.hashed_password = get_password_hash(password_raw)
+            user_db.password_hash = get_password_hash(password_raw)
 
     # 5. Actualizar resto de campos (nombre, rol, sucursal, etc.)
     for field, value in update_data.items():

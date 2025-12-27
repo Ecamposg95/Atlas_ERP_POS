@@ -185,17 +185,20 @@
     window.saveOrganization = async () => {
         const payload = {
             name: document.getElementById('org-name').value,
-            tax_id: document.getElementById('org-tax').value,
-            address: document.getElementById('org-address').value,
-            phone: document.getElementById('org-phone').value,
-            email: document.getElementById('org-email').value,
-            website: document.getElementById('org-website').value,
-            logo_url: document.getElementById('org-logo').value
+            tax_id: document.getElementById('org-tax').value || null,
+            address: document.getElementById('org-address').value || null,
+            phone: document.getElementById('org-phone').value || null,
+            email: document.getElementById('org-email').value || null,
+            website: document.getElementById('org-website').value || null,
+            logo_url: document.getElementById('org-logo').value || null
         };
         try {
             await apiFetch('/api/organization/', { method: 'PUT', body: JSON.stringify(payload) });
             alert('Datos de organización guardados');
-        } catch (e) { alert(e.message); }
+        } catch (e) {
+            console.error(e);
+            alert(e.message || JSON.stringify(e));
+        }
     };
 
     // --- BRANCHES LOGIC ---
@@ -243,8 +246,8 @@
         const id = document.getElementById('branch-id').value;
         const payload = {
             name: document.getElementById('branch-name').value,
-            address: document.getElementById('branch-address').value,
-            phone: document.getElementById('branch-phone').value
+            address: document.getElementById('branch-address').value || null,
+            phone: document.getElementById('branch-phone').value || null
         };
 
         try {

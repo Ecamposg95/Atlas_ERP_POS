@@ -181,9 +181,27 @@
                 </button>
             </div>
 
+            <!-- Store Info -->
+            <div class="px-4 py-4 border-b border-white/5 bg-slate-900/50 sidebar-text hidden lg:block">
+                <div class="flex items-center gap-3">
+                    <div
+                        class="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4">
+                            </path>
+                        </svg>
+                    </div>
+                    <div class="overflow-hidden">
+                        <p class="text-[10px] uppercase text-slate-500 font-bold tracking-wider">Sucursal</p>
+                        <p class="text-xs font-bold text-slate-200 truncate" id="store-name">Matriz Principal</p>
+                    </div>
+                </div>
+            </div>
+
             <!-- Navegación -->
             <nav class="flex-1 py-6 space-y-1 px-2 overflow-y-auto custom-scrollbar">
-                <a href="/home"
+                <a href="/home" id="nav-home"
                     class="nav-item flex items-center px-3 py-2 text-slate-400 rounded-lg group {% if request.path == '/home' %}active text-white bg-white/5{% endif %}">
                     <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -193,7 +211,7 @@
                     <span class="hidden lg:block ml-3 font-medium text-xs sidebar-text">Inicio</span>
                 </a>
 
-                <a href="/"
+                <a href="/" id="nav-dashboard"
                     class="nav-item flex items-center px-3 py-2 text-slate-400 rounded-lg group {% if request.path == '/' or request.path == '/index' %}active text-white bg-white/5{% endif %}">
                     <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -205,7 +223,7 @@
 
                 <div class="my-2 border-t border-white/5 mx-2"></div>
 
-                <a href="/pos"
+                <a href="/pos" id="nav-pos"
                     class="nav-item flex items-center px-3 py-2 text-slate-400 rounded-lg group {% if request.path == '/pos' %}active text-white bg-white/5{% endif %}">
                     <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -215,7 +233,7 @@
                     <span class="hidden lg:block ml-3 font-medium text-xs sidebar-text">Punto de Venta</span>
                 </a>
 
-                <a href="/sales"
+                <a href="/sales" id="nav-sales"
                     class="nav-item flex items-center px-3 py-2 text-slate-400 rounded-lg group {% if request.path == '/sales' %}active text-white bg-white/5{% endif %}">
                     <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -225,7 +243,7 @@
                     <span class="hidden lg:block ml-3 font-medium text-xs sidebar-text">Ventas</span>
                 </a>
 
-                <a href="/cash-history"
+                <a href="/cash-history" id="nav-cash"
                     class="nav-item flex items-center px-3 py-2 text-slate-400 rounded-lg group {% if request.path == '/cash-history' %}active text-white bg-white/5{% endif %}">
                     <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -237,7 +255,7 @@
 
                 <div class="my-2 border-t border-white/5 mx-2"></div>
 
-                <a href="/products"
+                <a href="/products" id="nav-products"
                     class="nav-item flex items-center px-3 py-2 text-slate-400 rounded-lg group {% if request.path == '/products' %}active text-white bg-white/5{% endif %}">
                     <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -246,7 +264,7 @@
                     <span class="hidden lg:block ml-3 font-medium text-xs sidebar-text">Productos</span>
                 </a>
 
-                <a href="/inventory"
+                <a href="/inventory" id="nav-inventory"
                     class="nav-item flex items-center px-3 py-2 text-slate-400 rounded-lg group {% if request.path == '/inventory' %}active text-white bg-white/5{% endif %}">
                     <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -256,7 +274,7 @@
                     <span class="hidden lg:block ml-3 font-medium text-xs sidebar-text">Inventario</span>
                 </a>
 
-                <a href="/departments"
+                <a href="/departments" id="nav-departments"
                     class="nav-item flex items-center px-3 py-2 text-slate-400 rounded-lg group {% if request.path == '/departments' %}active text-white bg-white/5{% endif %}">
                     <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -268,7 +286,7 @@
 
                 <div class="my-2 border-t border-white/5 mx-2"></div>
 
-                <a href="/customers"
+                <a href="/customers" id="nav-customers"
                     class="nav-item flex items-center px-3 py-2 text-slate-400 rounded-lg group {% if request.path == '/customers' %}active text-white bg-white/5{% endif %}">
                     <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -278,7 +296,7 @@
                     <span class="hidden lg:block ml-3 font-medium text-xs sidebar-text">Clientes CRM</span>
                 </a>
 
-                <a href="/users"
+                <a href="/users" id="nav-users"
                     class="nav-item flex items-center px-3 py-2 text-slate-400 rounded-lg group {% if request.path == '/users' %}active text-white bg-white/5{% endif %}">
                     <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -288,7 +306,7 @@
                     <span class="hidden lg:block ml-3 font-medium text-xs sidebar-text">Usuarios</span>
                 </a>
 
-                <a href="/organization"
+                <a href="/organization" id="nav-organization"
                     class="nav-item flex items-center px-3 py-2 text-slate-400 rounded-lg group {% if request.path == '/organization' %}active text-white bg-white/5{% endif %}">
                     <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -298,7 +316,7 @@
                     <span class="hidden lg:block ml-3 font-medium text-xs sidebar-text">Organización</span>
                 </a>
 
-                <a href="/quotes"
+                <a href="/quotes" id="nav-quotes"
                     class="nav-item flex items-center px-3 py-2 text-slate-400 rounded-lg group {% if request.path == '/quotes' %}active text-white bg-white/5{% endif %}">
                     <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -402,6 +420,88 @@
     <!-- Modals & Overlays -->
     {% block modals %}{% endblock %}
 
+    <!-- Global Profile Modal -->
+    <div id="profile-modal" class="fixed inset-0 z-50 hidden" aria-labelledby="modal-title" role="dialog"
+        aria-modal="true">
+        <!-- Backdrop -->
+        <div class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm transition-opacity opacity-0"
+            id="profile-modal-backdrop"></div>
+
+        <div class="fixed inset-0 z-10 overflow-y-auto">
+            <div class="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
+
+                <div class="relative transform overflow-hidden rounded-2xl bg-[#0f172a] border border-white/10 text-left shadow-2xl transition-all sm:my-8 sm:w-full sm:max-w-lg opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                    id="profile-modal-panel">
+                    <!-- Header -->
+                    <div class="px-6 py-4 border-b border-white/5 flex justify-between items-center bg-white/5">
+                        <h3 class="text-base font-semibold leading-6 text-white" id="modal-title">Mi Perfil</h3>
+                        <button onclick="closeProfileModal()"
+                            class="text-slate-400 hover:text-white transition-colors outline-none">
+                            <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path
+                                    d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    <!-- Body -->
+                    <div class="px-6 py-6">
+                        <form id="profile-form" class="space-y-4">
+                            <input type="hidden" id="profile-id">
+
+                            <!-- Username (Readonly) -->
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-1">Usuario</label>
+                                <input type="text" id="profile-username"
+                                    class="w-full bg-slate-900 border border-slate-700/50 rounded-lg px-3 py-2 text-slate-500 text-sm focus:outline-none cursor-not-allowed"
+                                    readonly>
+                            </div>
+
+                            <!-- Role (Readonly) -->
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-1">Rol</label>
+                                <input type="text" id="profile-role-display"
+                                    class="w-full bg-slate-900 border border-slate-700/50 rounded-lg px-3 py-2 text-slate-500 text-sm focus:outline-none cursor-not-allowed"
+                                    readonly>
+                            </div>
+
+                            <!-- Full Name -->
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-1">Nombre Completo</label>
+                                <input type="text" id="profile-fullname"
+                                    class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:ring-1 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all placeholder-slate-600"
+                                    placeholder="Tu nombre completo">
+                            </div>
+
+                            <!-- Password -->
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-1">Nueva Contraseña <span
+                                        class="text-slate-600">(Opcional)</span></label>
+                                <div class="relative">
+                                    <input type="password" id="profile-password"
+                                        class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:ring-1 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all placeholder-slate-600"
+                                        placeholder="••••••••">
+                                </div>
+                                <p class="mt-1 text-[10px] text-slate-500">Deja en blanco para mantener la actual.</p>
+                            </div>
+
+                            <!-- Error/Success Msg -->
+                            <div id="profile-msg" class="hidden p-3 rounded-lg text-xs text-center font-medium"></div>
+
+                            <div class="pt-4 flex justify-end gap-3">
+                                <button type="button" onclick="closeProfileModal()"
+                                    class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-sm font-medium rounded-lg transition-colors">Cancelar</button>
+                                <button type="submit" id="save-profile-btn"
+                                    class="px-4 py-2 bg-primary-600 hover:bg-primary-500 text-white text-sm font-bold rounded-lg shadow-lg shadow-primary-900/20 transition-all">Guardar
+                                    Cambios</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         // Global Logic
         document.addEventListener('DOMContentLoaded', () => {
@@ -410,7 +510,6 @@
             const userStr = sessionStorage.getItem('CURRENT_USER');
 
             if (!token && window.location.pathname !== '/login') {
-                // Redirect to login if not authenticated
                 window.location.href = '/login';
                 return;
             }
@@ -418,30 +517,96 @@
             // 2. Show UI
             document.getElementById('app-root').classList.remove('opacity-0');
 
-            // 3. Populate User Info
-            if (userStr) {
+            // 3. Global User Fetch & State
+            let currentUserData = null;
+
+            async function refreshUserData() {
                 try {
-                    const user = JSON.parse(userStr);
-                    document.getElementById('user-name').textContent = user.username || 'Usuario';
-                    document.getElementById('user-role').textContent = user.role || 'Rol';
-                    document.getElementById('user-avatar').textContent = (user.username || 'U').charAt(0).toUpperCase();
-                } catch (e) { console.error('Error parsing user data', e); }
+                    const res = await fetch('/api/users/me', {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    if (res.ok) {
+                        const user = await res.json();
+                        currentUserData = user;
+
+                        // Update UI
+                        document.getElementById('user-name').textContent = user.username || 'Usuario';
+                        document.getElementById('user-role').textContent = user.role || 'Rol';
+                        document.getElementById('user-avatar').textContent = (user.username || 'U').charAt(0).toUpperCase();
+
+                        // Update Store Info
+                        // Ideally trigger a fetch for branch name here if needed
+                        // For now, assume 'Matriz Principal' is default or show ID
+                        if (user.branch_id) {
+                            // document.getElementById('store-name').textContent = `Sucursal ${user.branch_id}`; 
+                            // Check if we can fetch branch name? 
+                            // Let's just keep 'Matriz Principal' unless we want to fetch more.
+                            // Or simpler: "Atlas POS - Sucursal <ID>"
+                            document.getElementById('store-name').textContent = `Sucursal ${user.branch_id}`;
+                        }
+
+                        // Update SessionStorage if needed (optional)
+                        sessionStorage.setItem('CURRENT_USER', JSON.stringify(user));
+
+                        applyRoleRestrictions(user);
+                    }
+                } catch (e) {
+                    console.error('Error fetching user data', e);
+                }
             }
 
-            // 4. Logout Handler
-            document.getElementById('logout-btn')?.addEventListener('click', (e) => {
-                e.preventDefault();
-                sessionStorage.clear();
-                window.location.href = '/login';
+            function applyRoleRestrictions(user) {
+                if (user.role === 'CAJERO') {
+                    const restrictedIds = [
+                        'nav-dashboard', 'nav-departments', 'nav-customers',
+                        'nav-users', 'nav-organization', 'nav-quotes'
+                    ];
+                    restrictedIds.forEach(id => {
+                        const el = document.getElementById(id);
+                        if (el) el.classList.add('hidden');
+                    });
+                }
+            }
+
+            // Init Data
+            if (token) refreshUserData();
+
+
+            // 4. Sidebar Toggle
+            const sidebar = document.querySelector('aside');
+            const sidebarBtn = document.getElementById('sidebar-toggle');
+            const sidebarTexts = document.querySelectorAll('.sidebar-text');
+            const userLabels = document.querySelector('#user-name')?.parentElement;
+
+            let isCollapsed = localStorage.getItem('sidebar_collapsed') === 'true';
+
+            function updateSidebar() {
+                if (isCollapsed) {
+                    sidebar.classList.remove('lg:w-64');
+                    sidebar.classList.add('lg:w-20');
+                    sidebarTexts.forEach(el => el.classList.add('lg:hidden'));
+                    if (userLabels) userLabels.classList.add('lg:hidden');
+                } else {
+                    sidebar.classList.add('lg:w-64');
+                    sidebar.classList.remove('lg:w-20');
+                    sidebarTexts.forEach(el => el.classList.remove('lg:hidden'));
+                    if (userLabels) userLabels.classList.remove('lg:hidden');
+                }
+            }
+            updateSidebar();
+
+            sidebarBtn?.addEventListener('click', () => {
+                isCollapsed = !isCollapsed;
+                localStorage.setItem('sidebar_collapsed', isCollapsed);
+                updateSidebar();
             });
 
-            // 5. Theme Toggle Logic
+            // 5. Theme Toggle
             const themeToggleBtn = document.getElementById('theme-toggle');
             const iconLight = document.getElementById('icon-light');
             const iconDark = document.getElementById('icon-dark');
             const htmlClass = document.documentElement.classList;
 
-            // Init Theme
             const storedTheme = localStorage.getItem('theme');
             const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
             let isDark = storedTheme === 'dark' || (!storedTheme && systemDark);
@@ -465,7 +630,7 @@
                 updateThemeUI();
             });
 
-            // 6. Footer Clock
+            // 6. Clock
             const clockEl = document.getElementById('footer-clock');
             function updateClock() {
                 if (clockEl) {
@@ -479,34 +644,104 @@
             setInterval(updateClock, 1000);
             updateClock();
 
-            // 7. Sidebar Toggle
-            const sidebar = document.querySelector('aside');
-            const sidebarBtn = document.getElementById('sidebar-toggle');
-            const sidebarTexts = document.querySelectorAll('.sidebar-text');
-            const userLabels = document.querySelector('#user-name')?.parentElement;
+            // 7. Logout
+            document.getElementById('logout-btn')?.addEventListener('click', (e) => {
+                e.preventDefault();
+                sessionStorage.clear();
+                window.location.href = '/login';
+            });
 
-            let isCollapsed = localStorage.getItem('sidebar_collapsed') === 'true';
 
-            function updateSidebar() {
-                if (isCollapsed) {
-                    sidebar.classList.remove('lg:w-64');
-                    sidebar.classList.add('lg:w-20');
-                    sidebarTexts.forEach(el => el.classList.add('lg:hidden'));
-                    if (userLabels) userLabels.classList.add('lg:hidden');
-                } else {
-                    sidebar.classList.add('lg:w-64');
-                    sidebar.classList.remove('lg:w-20');
-                    sidebarTexts.forEach(el => el.classList.remove('lg:hidden'));
-                    if (userLabels) userLabels.classList.remove('lg:hidden');
-                }
+            // --- PROFILE MODAL LOGIC ---
+            const profileModal = document.getElementById('profile-modal');
+            const profileBackdrop = document.getElementById('profile-modal-backdrop');
+            const profilePanel = document.getElementById('profile-modal-panel');
+            const profileForm = document.getElementById('profile-form');
+
+            window.openProfileModal = () => {
+                if (!currentUserData) return;
+
+                // Populate
+                document.getElementById('profile-id').value = currentUserData.id;
+                document.getElementById('profile-username').value = currentUserData.username;
+                document.getElementById('profile-role-display').value = currentUserData.role;
+                document.getElementById('profile-fullname').value = currentUserData.full_name || '';
+                document.getElementById('profile-password').value = ''; // clear
+                document.getElementById('profile-msg').classList.add('hidden');
+
+                profileModal.classList.remove('hidden');
+                setTimeout(() => {
+                    profileBackdrop.classList.remove('opacity-0');
+                    profilePanel.classList.remove('opacity-0', 'translate-y-4', 'sm:translate-y-0', 'sm:scale-95');
+                }, 10);
+            };
+
+            window.closeProfileModal = () => {
+                profileBackdrop.classList.add('opacity-0');
+                profilePanel.classList.add('opacity-0', 'translate-y-4', 'sm:translate-y-0', 'sm:scale-95');
+                setTimeout(() => {
+                    profileModal.classList.add('hidden');
+                }, 300);
+            };
+
+            // Trigger via Sidebar Profile Area
+            const sidebarProfile = document.querySelector('aside .p-4.border-t');
+            if (sidebarProfile) {
+                sidebarProfile.classList.add('cursor-pointer', 'hover:bg-slate-800', 'transition-colors');
+                sidebarProfile.title = "Editar Perfil";
+                sidebarProfile.onclick = window.openProfileModal;
             }
-            // Init
-            updateSidebar();
 
-            sidebarBtn?.addEventListener('click', () => {
-                isCollapsed = !isCollapsed;
-                localStorage.setItem('sidebar_collapsed', isCollapsed);
-                updateSidebar();
+            // Save Profile
+            profileForm?.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const btn = document.getElementById('save-profile-btn');
+                const originalText = btn.innerHTML;
+                const msgDiv = document.getElementById('profile-msg');
+                const userId = document.getElementById('profile-id').value;
+
+                btn.disabled = true;
+                btn.innerHTML = `<svg class="animate-spin h-5 w-5 mx-auto" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>`;
+                msgDiv.classList.add('hidden');
+
+                const payload = {
+                    full_name: document.getElementById('profile-fullname').value.trim(),
+                    password: document.getElementById('profile-password').value || undefined
+                };
+
+                try {
+                    const res = await fetch(`/api/users/${userId}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!res.ok) throw new Error('Error al actualizar perfil');
+
+                    const updatedUser = await res.json();
+
+                    // Success
+                    msgDiv.textContent = 'Perfil actualizado correctamente';
+                    msgDiv.className = 'p-3 rounded-lg text-xs text-center font-medium bg-emerald-500/10 text-emerald-400 block';
+
+                    // Refresh local data
+                    await refreshUserData();
+
+                    setTimeout(() => {
+                        window.closeProfileModal();
+                        btn.disabled = false;
+                        btn.innerHTML = originalText;
+                    }, 1000);
+
+                } catch (err) {
+                    msgDiv.textContent = err.message;
+                    msgDiv.className = 'p-3 rounded-lg text-xs text-center font-medium bg-red-500/10 text-red-400 block';
+                    btn.disabled = false;
+                    btn.innerHTML = originalText;
+                }
             });
         });
     </script>

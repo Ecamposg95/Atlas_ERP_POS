@@ -4,102 +4,242 @@
 
 {% block header_title %}
 <div>
-    <h1 class="text-xl font-bold text-white tracking-tight">Gestión de Usuarios</h1>
-    <p class="text-xs text-slate-400 mt-0.5">Administra el equipo y sus accesos</p>
+    <h1 class="text-xl font-bold text-slate-100 tracking-tight flex items-center gap-2">
+        <span class="p-1 rounded-lg bg-indigo-500/20 text-indigo-400">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z">
+                </path>
+            </svg>
+        </span>
+        Gestión de Usuarios
+    </h1>
+    <p class="text-xs text-slate-400 mt-0.5 ml-9">Administra el equipo, roles y permisos de acceso</p>
 </div>
 {% endblock %}
 
 {% block header_actions %}
 <button id="new-user-btn"
-    class="px-4 py-2 bg-primary-600 hover:bg-primary-500 text-white rounded-lg shadow-lg shadow-primary-600/20 font-bold text-xs transition transform active:scale-95 flex items-center gap-2">
+    class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl shadow-lg shadow-indigo-600/20 font-bold text-xs transition-all transform hover:scale-105 active:scale-95 flex items-center gap-2 border border-white/10">
     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path>
     </svg>
     Nuevo Usuario
 </button>
 {% endblock %}
 
 {% block content %}
-<div class="space-y-6 animate-fade-in p-6">
+<div class="h-full flex flex-col animate-fade-in">
     <!-- Users Grid -->
-    <div id="users-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        <!-- Loaded via JS -->
+    <div class="flex-1 overflow-y-auto p-1 custom-scrollbar">
+        <div id="users-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-6">
+            <!-- Loaded via JS -->
+            <div class="col-span-full flex flex-col items-center justify-center p-12 opacity-50">
+                <div class="w-10 h-10 border-4 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin mb-4">
+                </div>
+                <p class="text-slate-400 text-sm font-medium">Cargando usuarios...</p>
+            </div>
+        </div>
     </div>
 </div>
 
 <!-- Create/Edit Modal -->
 <div id="user-modal"
     class="hidden fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4 transition-all duration-300">
+
     <div
-        class="glass-card bg-slate-900/90 backdrop-blur-xl rounded-2xl shadow-2xl max-w-lg w-full p-8 border border-white/10 relative scale-100 transition-all duration-300">
-        <button id="close-modal-btn"
-            class="absolute top-4 right-4 text-slate-500 hover:text-white transition bg-white/5 rounded-full p-1 hover:bg-white/10">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-            </svg>
-        </button>
+        class="bg-slate-900/90 backdrop-blur-xl rounded-2xl shadow-2xl w-full max-w-lg border border-white/10 relative transform scale-100 transition-all duration-300 flex flex-col max-h-[90vh]">
 
-        <h3 id="modal-title" class="text-2xl font-bold mb-6 text-white tracking-tight flex items-center gap-3">
-            <span class="w-2 h-8 rounded-full bg-primary-500"></span>
-            Nuevo Usuario
-        </h3>
+        <!-- Modal Header -->
+        <div class="px-8 py-6 border-b border-white/5 bg-white/5">
+            <h3 id="modal-title" class="text-xl font-bold text-white tracking-tight flex items-center gap-3">
+                Nuevo Usuario
+            </h3>
+            <p class="text-xs text-slate-400 mt-1">Completa la información para registrar el acceso.</p>
+            <button id="close-modal-btn"
+                class="absolute top-6 right-6 text-slate-500 hover:text-white transition-colors bg-white/5 hover:bg-white/10 rounded-full p-1.5">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                    </path>
+                </svg>
+            </button>
+        </div>
 
-        <form id="user-form" class="space-y-4">
-            <input type="hidden" id="user-id">
+        <!-- Modal Body (Scrollable) -->
+        <div class="p-8 overflow-y-auto custom-scrollbar">
+            <form id="user-form" class="space-y-5">
+                <input type="hidden" id="user-id">
 
-            <div class="grid grid-cols-2 gap-4">
-                <div>
-                    <label class="label">Nombre Usuario</label>
-                    <input type="text" id="username" class="input" required>
+                <!-- Avatar & Basic info grouped -->
+                <div class="flex gap-4">
+                    <div class="flex-shrink-0">
+                        <div id="avatar-preview"
+                            class="w-16 h-16 rounded-2xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-2xl font-bold border border-indigo-500/30">
+                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="flex-1 space-y-4">
+                        <div class="relative group">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <svg class="w-4 h-4 text-slate-500 group-focus-within:text-indigo-400 transition-colors"
+                                    fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                                </svg>
+                            </div>
+                            <input type="text" id="username"
+                                class="w-full pl-10 pr-4 py-3 bg-slate-950/50 border border-slate-700/50 rounded-xl text-white outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all text-sm font-medium placeholder-slate-600"
+                                placeholder="Nombre de usuario (Login)" required>
+                        </div>
+                        <div class="relative group">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <svg class="w-4 h-4 text-slate-500 group-focus-within:text-indigo-400 transition-colors"
+                                    fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0c0 .884-.956 2.01-1.31 2.7l-.166.324A.423.423 0 0013.902 9c.174 0 .323-.122.383-.306L14.71 7.6c.354-.69.91-1.816.91-2.7a4.1 4.1 0 10-8.2 0c0 .884.556 2.01.91 2.7l.418.814A.423.423 0 008.098 9c.174 0 .323-.122.383-.306L8.9 7.6c.354-.69 1.31-1.816 1.31-2.7V4">
+                                    </path>
+                                </svg>
+                            </div>
+                            <select id="role"
+                                class="w-full pl-10 pr-4 py-3 bg-slate-950/50 border border-slate-700/50 rounded-xl text-white outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all text-sm font-medium appearance-none cursor-pointer">
+                                <option value="ADMINISTRADOR">Administrador (Acceso Total)</option>
+                                <option value="GERENTE">Gerente (Supervisión)</option>
+                                <option value="CAJERO">Cajero (Ventas)</option>
+                            </select>
+                        </div>
+                    </div>
                 </div>
-                <div>
-                    <label class="label">Rol</label>
-                    <select id="role" class="input bg-slate-950">
-                        <option value="admin">Administrador</option>
-                        <option value="cashier">Cajero</option>
-                        <option value="manager">Gerente</option>
-                    </select>
+
+                <div class="space-y-4 pt-2">
+                    <div class="relative group">
+                        <label class="text-[10px] uppercase font-bold text-slate-500 mb-1 ml-1 block">Nombre
+                            Completo</label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <svg class="w-4 h-4 text-slate-500 group-focus-within:text-indigo-400 transition-colors"
+                                    fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z">
+                                    </path>
+                                </svg>
+                            </div>
+                            <input type="text" id="full_name"
+                                class="w-full pl-10 pr-4 py-3 bg-slate-950/50 border border-slate-700/50 rounded-xl text-white outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all text-sm"
+                                placeholder="Ej. Juan Pérez" required>
+                        </div>
+                    </div>
+
+                    <div class="relative group">
+                        <label class="text-[10px] uppercase font-bold text-slate-500 mb-1 ml-1 block">Correo Electrónico
+                            (Opcional)</label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <svg class="w-4 h-4 text-slate-500 group-focus-within:text-indigo-400 transition-colors"
+                                    fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z">
+                                    </path>
+                                </svg>
+                            </div>
+                            <input type="email" id="email"
+                                class="w-full pl-10 pr-4 py-3 bg-slate-950/50 border border-slate-700/50 rounded-xl text-white outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all text-sm"
+                                placeholder="correo@ejemplo.com">
+                        </div>
+                    </div>
+
+                    <div class="relative group pt-2 border-t border-white/5 mt-4">
+                        <label
+                            class="text-[10px] uppercase font-bold text-slate-500 mb-1 ml-1 block flex justify-between">
+                            <span>Contraseña / PIN</span>
+                            <span class="text-indigo-400 normal-case font-normal" id="password-hint">Dejar vacío para
+                                mantener</span>
+                        </label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <svg class="w-4 h-4 text-slate-500 group-focus-within:text-indigo-400 transition-colors"
+                                    fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z">
+                                    </path>
+                                </svg>
+                            </div>
+                            <input type="password" id="password"
+                                class="w-full pl-10 pr-4 py-3 bg-slate-950/50 border border-slate-700/50 rounded-xl text-white outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all text-sm"
+                                placeholder="••••••••">
+                        </div>
+                        <p class="text-[10px] text-slate-500 mt-1 ml-1">Mínimo 4 caracteres. Usar una combinación
+                            segura.</p>
+                    </div>
+
+                    <div
+                        class="flex items-center gap-3 p-3 bg-slate-800/30 rounded-xl border border-white/5 cursor-pointer hover:bg-slate-800/50 transition mt-2">
+                        <div class="relative flex items-start">
+                            <div class="flex items-center h-5">
+                                <input type="checkbox" id="is_active" checked
+                                    class="w-5 h-5 rounded bg-slate-900 border-slate-600 text-indigo-600 focus:ring-indigo-500 focus:ring-offset-slate-900 transition cursor-pointer">
+                            </div>
+                            <div class="ml-3 text-sm">
+                                <label for="is_active" class="font-medium text-white cursor-pointer">Usuario
+                                    Activo</label>
+                                <p class="text-xs text-slate-500">Si se desactiva, no podrá iniciar sesión.</p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-            </div>
 
-            <div>
-                <label class="label">Nombre Completo</label>
-                <input type="text" id="full_name" class="input" required>
-            </div>
-
-            <div>
-                <label class="label">Email (Opcional)</label>
-                <input type="email" id="email" class="input">
-            </div>
-
-            <div class="pt-2">
-                <label class="label">Contraseña / PIN</label>
-                <input type="password" id="password" class="input" placeholder="Dejar vacío para mantener actual">
-                <p class="text-[10px] text-slate-500 mt-1">Min. 4 caracteres</p>
-            </div>
-
-            <div class="flex items-center gap-2 pt-2">
-                <input type="checkbox" id="is_active" checked
-                    class="w-4 h-4 rounded bg-slate-800 border-slate-700 text-primary-600 focus:ring-0">
-                <label for="is_active" class="text-sm text-slate-300">Usuario Activo</label>
-            </div>
-
-            <button type="submit"
-                class="w-full py-3 bg-violet-600 hover:bg-violet-500 text-white rounded-xl font-bold shadow-lg mt-4 transition">Guardar
-                Usuario</button>
-        </form>
+                <!-- Action Buttons -->
+                <div class="pt-4 flex gap-3">
+                    <button type="button" id="delete-user-btn"
+                        class="hidden px-4 py-3 bg-slate-800 hover:bg-red-500/10 hover:text-red-400 text-slate-400 rounded-xl font-bold transition border border-transparent hover:border-red-500/20">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16">
+                            </path>
+                        </svg>
+                    </button>
+                    <button type="submit" id="save-user-btn"
+                        class="flex-1 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold shadow-lg shadow-indigo-600/20 transition-all transform hover:scale-[1.02] flex items-center justify-center gap-2">
+                        <span>Guardar Cambios</span>
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7">
+                            </path>
+                        </svg>
+                    </button>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
 
-<style>
-    .label {
-        @apply block text-xs font-bold text-slate-500 uppercase mb-1 ml-1;
-    }
+<!-- Delete Confirmation Modal -->
+<div id="delete-modal"
+    class="hidden fixed inset-0 bg-black/90 backdrop-blur-md z-[60] flex items-center justify-center p-4">
+    <div
+        class="bg-slate-900 rounded-2xl shadow-xl w-full max-w-sm p-6 border border-slate-700 transform scale-100 transition-all">
+        <div class="w-12 h-12 rounded-full bg-red-500/10 text-red-500 flex items-center justify-center mb-4 mx-auto">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z">
+                </path>
+            </svg>
+        </div>
+        <h3 class="text-lg font-bold text-white mb-2 text-center">¿Eliminar Usuario?</h3>
+        <p class="text-sm text-slate-400 mb-6 text-center">Esta acción eliminará permanentemente al usuario <span
+                id="delete-username" class="text-white font-mono font-bold"></span>.</p>
 
-    .input {
-        @apply w-full px-4 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-white focus:border-primary-500 outline-none transition;
-    }
-</style>
+        <div class="flex gap-3">
+            <button type="button" id="cancel-delete-btn"
+                class="flex-1 py-2.5 text-slate-400 hover:bg-slate-800 rounded-xl font-bold transition">Cancelar</button>
+            <button type="button" id="confirm-delete-btn"
+                class="flex-1 py-2.5 bg-red-600 hover:bg-red-500 text-white rounded-xl font-bold shadow-lg transition">Sí,
+                Eliminar</button>
+        </div>
+    </div>
+</div>
 
 {% endblock %}
 
@@ -115,7 +255,7 @@
         // --- FETCH USERS ---
         async function loadUsers() {
             const grid = document.getElementById('users-grid');
-            grid.innerHTML = '<p class="text-slate-500 col-span-full text-center">Cargando...</p>';
+            // grid.innerHTML = '...'; // Keep skeleton or loading state if preferred
 
             try {
                 const res = await fetch(`${API_BASE}/api/users/`, {
@@ -125,48 +265,74 @@
                 currentUsers = await res.json();
                 renderUsers(currentUsers);
             } catch (e) {
-                grid.innerHTML = `<p class="text-rose-500 col-span-full text-center">${e.message}</p>`;
+                grid.innerHTML = `<div class="col-span-full text-center p-8 bg-rose-500/10 rounded-2xl border border-rose-500/20">
+                    <p class="text-rose-400 font-bold mb-1">Error al cargar usuarios</p>
+                    <p class="text-xs text-rose-300 opacity-70">${e.message}</p>
+                </div>`;
             }
         }
 
         function renderUsers(users) {
             const grid = document.getElementById('users-grid');
             if (users.length === 0) {
-                grid.innerHTML = '<p class="text-slate-500 col-span-full text-center">No hay usuarios registrados</p>';
+                grid.innerHTML = `
+                    <div class="col-span-full text-center py-20 flex flex-col items-center">
+                        <div class="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center text-slate-600 mb-4">
+                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                        </div>
+                        <h3 class="text-white font-bold text-lg">No hay usuarios</h3>
+                        <p class="text-slate-500 text-sm">Comienza agregando un nuevo miembro al equipo.</p>
+                    </div>`;
                 return;
             }
 
+
             grid.innerHTML = users.map(u => {
                 const colors = {
-                    admin: 'bg-rose-500/10 text-rose-400 border-rose-500/20',
-                    manager: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
-                    cashier: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                    ADMINISTRADOR: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20',
+                    GERENTE: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+                    CAJERO: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
                 }[u.role] || 'bg-slate-500/10 text-slate-400';
 
+                const initials = u.full_name ? u.full_name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : u.username.substring(0, 2).toUpperCase();
+                const activeClass = u.is_active
+                    ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.4)]'
+                    : 'bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.4)]';
+
+                // Format Role Name Logic - already uppercase from DB/Select
+                const roleName = u.role === 'ADMINISTRADOR' ? 'Administrador' : (u.role === 'CAJERO' ? 'Cajero' : (u.role === 'GERENTE' ? 'Gerente' : u.role));
+
                 return `
-                <div class="glass-card p-6 rounded-2xl border border-white/5 hover:border-white/10 transition group relative bg-slate-900/50">
-                    <div class="flex items-start justify-between mb-4">
-                        <div class="w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center text-xl font-bold text-slate-300">
-                            ${u.username.substring(0, 2).toUpperCase()}
+                <div class="glass-card hover:bg-slate-800/40 p-0 rounded-2xl border border-white/5 hover:border-white/10 transition group relative overflow-hidden flex flex-col">
+                    <div class="p-6 flex-1 relative z-10">
+                        <div class="flex items-start justify-between mb-6">
+                            <div class="relative">
+                                <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-slate-800 to-slate-900 border border-white/10 flex items-center justify-center text-xl font-bold text-slate-300 shadow-inner">
+                                    ${initials}
+                                </div>
+                                <div class="absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-slate-900 ${activeClass}"></div>
+                            </div>
+                            <span class="px-2.5 py-1 rounded-lg text-[10px] uppercase font-bold border ${colors}">
+                                ${roleName}
+                            </span>
                         </div>
-                        <span class="px-2 py-1 rounded text-[10px] uppercase font-bold border ${colors}">
-                            ${u.role}
-                        </span>
-                    </div>
-                    
-                    <h3 class="text-lg font-bold text-white mb-0.5">${u.full_name || u.username}</h3>
-                    <p class="text-xs text-slate-500 mb-4">@${u.username}</p>
-
-                    <div class="flex items-center gap-2">
-                        <span class="w-2 h-2 rounded-full ${u.is_active ? 'bg-emerald-500' : 'bg-rose-500'}"></span>
-                        <span class="text-xs text-slate-400">${u.is_active ? 'Activo' : 'Inactivo'}</span>
+                        
+                        <h3 class="text-lg font-bold text-white mb-0.5 truncate">${u.full_name || 'Sin Nombre'}</h3>
+                        <p class="text-xs text-slate-500 font-mono mb-4">@${u.username}</p>
+                        
+                        <div class="flex gap-2 mt-auto">
+                            ${u.email ? `<span class="text-[10px] text-slate-500 bg-slate-900/50 px-2 py-1 rounded flex items-center gap-1"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>${u.email}</span>` : ''}
+                        </div>
                     </div>
 
-                    <div class="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition">
-                        <button onclick="editUser(${u.id})" class="p-2 hover:bg-slate-700 rounded-lg text-slate-400 hover:text-white transition">
+                    <!-- Botón de Editar Overlay -->
+                    <button onclick="editUser(${u.id})" class="absolute inset-0 z-20 bg-black/0 hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100 cursor-pointer outline-none">
+                         <div class="bg-white text-slate-900 px-4 py-2 rounded-full font-bold text-sm shadow-xl transform translate-y-4 group-hover:translate-y-0 transition-all duration-300 flex items-center gap-2">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
-                        </button>
-                    </div>
+                            Editar Usuario
+                         </div>
+                    </button>
+                    
                 </div>
                 `;
             }).join('');
@@ -175,6 +341,7 @@
         // --- MODAL LOGIC ---
         const modal = document.getElementById('user-modal');
         const form = document.getElementById('user-form');
+        const deleteBtn = document.getElementById('delete-user-btn');
         let isEdit = false;
 
         document.getElementById('new-user-btn').onclick = () => {
@@ -183,6 +350,12 @@
             form.reset();
             document.getElementById('user-id').value = '';
             document.getElementById('password').required = true;
+            document.getElementById('password-hint').textContent = '* Obligatorio';
+
+            // Visual Reset
+            document.getElementById('avatar-preview').innerHTML = '<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>';
+            deleteBtn.classList.add('hidden');
+
             modal.classList.remove('hidden');
         };
 
@@ -192,7 +365,6 @@
             if (!u) return;
 
             document.getElementById('modal-title').textContent = 'Editar Usuario';
-
             document.getElementById('user-id').value = u.id;
             document.getElementById('username').value = u.username;
             document.getElementById('full_name').value = u.full_name || '';
@@ -202,26 +374,60 @@
 
             document.getElementById('password').required = false;
             document.getElementById('password').value = '';
+            document.getElementById('password-hint').textContent = 'Dejar vacío para mantener';
+
+            // Initials Avatar
+            const initials = (u.full_name || u.username).substring(0, 2).toUpperCase();
+            document.getElementById('avatar-preview').textContent = initials;
+
+            if (u.is_active) {
+                deleteBtn.classList.remove('hidden');
+            } else {
+                deleteBtn.classList.add('hidden');
+            }
 
             modal.classList.remove('hidden');
         };
 
-        document.getElementById('close-modal-btn').onclick = () => modal.classList.add('hidden');
+        function closeModal() {
+            modal.classList.add('hidden');
+        }
 
+        document.getElementById('close-modal-btn').onclick = closeModal;
+
+        // --- SAVE ---
         form.onsubmit = async (e) => {
             e.preventDefault();
+            const btn = document.getElementById('save-user-btn');
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<div class="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> Guardando...';
+
             const id = document.getElementById('user-id').value;
+
+            // Helper to clean empty strings
+            const getValue = (id) => {
+                const val = document.getElementById(id).value.trim();
+                return val === '' ? null : val;
+            };
+
             const payload = {
-                username: document.getElementById('username').value,
-                full_name: document.getElementById('full_name').value,
-                email: document.getElementById('email').value,
-                role: document.getElementById('role').value,
-                is_active: document.getElementById('is_active').checked,
-                branch_id: 1 // Hardcoded for now
+                username: getValue('username'),
+                full_name: getValue('full_name'),
+                email: getValue('email'),
+                role: getValue('role'),
+                is_active: document.getElementById('is_active').checked
             };
 
             const pass = document.getElementById('password').value;
-            if (pass) payload.password = pass;
+            if (pass) {
+                if (pass.length < 4) {
+                    alert('La contraseña debe tener al menos 4 caracteres');
+                    btn.disabled = false; btn.innerHTML = originalText;
+                    return;
+                }
+                payload.password = pass;
+            }
 
             try {
                 const url = isEdit ? `${API_BASE}/api/users/${id}` : `${API_BASE}/api/users/`;
@@ -238,15 +444,67 @@
 
                 if (!res.ok) {
                     const err = await res.json();
-                    throw new Error(err.detail || 'Error al guardar');
+                    let msg = 'Error al guardar';
+                    if (err.detail) {
+                        msg = typeof err.detail === 'string' ? err.detail : JSON.stringify(err.detail);
+                    }
+                    throw new Error(msg);
                 }
 
-                modal.classList.add('hidden');
+                closeModal();
                 loadUsers();
             } catch (e) {
                 alert(e.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
             }
         };
+
+        // --- DELETE LOGIC ---
+        const deleteModal = document.getElementById('delete-modal');
+        let deletingUserId = null;
+
+        deleteBtn.onclick = () => {
+            const id = document.getElementById('user-id').value;
+            const u = currentUsers.find(x => x.id == id);
+            if (!u) return;
+
+            deletingUserId = id;
+            document.getElementById('delete-username').textContent = u.username;
+            deleteModal.classList.remove('hidden');
+            closeModal(); // Close the edit modal
+        };
+
+        document.getElementById('cancel-delete-btn').onclick = () => {
+            deleteModal.classList.add('hidden');
+            // Re-open edit modal if desired, or just stay closed. 
+            // Better to stay closed or reopen edit? Let's stay closed for simplicity.
+        };
+
+        document.getElementById('confirm-delete-btn').onclick = async () => {
+            if (!deletingUserId) return;
+            const btn = document.getElementById('confirm-delete-btn');
+            const originalText = btn.innerText;
+            btn.innerText = 'Eliminando...'; btn.disabled = true;
+
+            try {
+                const res = await fetch(`${API_BASE}/api/users/${deletingUserId}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${ACCESS_TOKEN}` }
+                });
+
+                if (!res.ok) throw new Error('Error al eliminar usuario');
+
+                deleteModal.classList.add('hidden');
+                loadUsers();
+            } catch (e) {
+                alert(e.message);
+            } finally {
+                btn.innerText = originalText; btn.disabled = false;
+            }
+        };
+
 
         loadUsers();
     });

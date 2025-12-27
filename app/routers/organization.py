@@ -18,13 +18,16 @@ def get_organization(db: Session = Depends(get_db)):
         db.refresh(org)
     return org
 
+from app.models.users import Role
+
 @router.put("/", response_model=OrganizationRead)
 def update_organization(
     org_in: OrganizationUpdate, 
     db: Session = Depends(get_db), 
     current_user = Depends(get_current_user)
 ):
-    if current_user.role != "admin":
+    # Role check: Ensure comparison with Enum value or Uppercase string
+    if current_user.role != Role.ADMINISTRADOR:
         raise HTTPException(status_code=403, detail="Requiere permisos de administrador")
     
     org = db.query(Organization).first()
