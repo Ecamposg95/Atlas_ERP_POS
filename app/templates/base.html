@@ -27,9 +27,31 @@
         }
     </script>
     <style>
+        <style>
+
         /* Estilos Base & Glassmorphism */
+        :root {
+            --glass-bg: rgba(255, 255, 255, 0.7);
+            --glass-border: rgba(0, 0, 0, 0.1);
+            --body-bg: #f8fafc;
+            /* slate-50 */
+            --text-main: #0f172a;
+            /* slate-900 */
+        }
+
+        html.dark {
+            --glass-bg: rgba(15, 23, 42, 0.6);
+            --glass-border: rgba(255, 255, 255, 0.05);
+            --body-bg: #020617;
+            /* slate-950 */
+            --text-main: #f1f5f9;
+            /* slate-100 */
+        }
+
         body {
             font-family: 'Inter', sans-serif;
+            background-color: var(--body-bg);
+            color: var(--text-main);
         }
 
         .dashboard-bg {
@@ -38,16 +60,16 @@
         }
 
         .glass-panel {
-            background: rgba(15, 23, 42, 0.6);
+            background: var(--glass-bg);
             backdrop-filter: blur(12px);
-            border-right: 1px solid rgba(255, 255, 255, 0.05);
+            border-right: 1px solid var(--glass-border);
         }
 
         .glass-card {
-            background: rgba(15, 23, 42, 0.6);
+            background: var(--glass-bg);
             backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
         }
 
         .nav-item {
@@ -76,6 +98,11 @@
         .nav-item:hover,
         .nav-item.active {
             background: rgba(46, 169, 140, 0.1);
+            color: inherit;
+        }
+
+        html.dark .nav-item:hover,
+        html.dark .nav-item.active {
             color: white;
         }
 
@@ -90,8 +117,14 @@
         }
 
         ::-webkit-scrollbar-thumb {
-            background: #475569;
+            background: #94a3b8;
+            /* slate-400 */
             border-radius: 3px;
+        }
+
+        html.dark ::-webkit-scrollbar-thumb {
+            background: #475569;
+            /* slate-600 */
         }
 
         /* Utilidades */
@@ -123,13 +156,15 @@
     </style>
 </head>
 
-<body class="bg-slate-950 text-slate-100 transition-colors duration-300 overflow-hidden">
+<body
+    class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-300 overflow-hidden">
 
     <!-- Wrapper Principal -->
-    <div id="app-root" class="flex h-screen w-full bg-slate-950 opacity-0 transition-opacity duration-500">
+    <div id="app-root"
+        class="flex h-screen w-full bg-slate-50 dark:bg-slate-950 opacity-0 transition-opacity duration-500">
 
         <!-- Sidebar -->
-        <aside class="w-20 lg:w-64 flex flex-col glass-panel z-20 transition-all duration-300">
+        <aside class="w-20 lg:w-64 flex flex-col bg-[#0f172a] z-20 transition-all duration-300 border-r border-white/5">
             <!-- Logo -->
             <div class="h-16 flex items-center justify-center border-b border-white/5">
                 <div
@@ -142,7 +177,7 @@
             <!-- Navegación -->
             <nav class="flex-1 py-6 space-y-2 px-2 overflow-y-auto">
                 <a href="/"
-                    class="nav-item flex items-center px-4 py-3 text-slate-400 rounded-xl group {% if request.path == '/' %}active text-white{% endif %}">
+                    class="nav-item flex items-center px-4 py-3 text-slate-400 rounded-xl group {% if request.path == '/' %}active text-white bg-white/5{% endif %}">
                     <svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z">
@@ -152,7 +187,7 @@
                 </a>
 
                 <a href="/pos"
-                    class="nav-item flex items-center px-4 py-3 text-slate-400 rounded-xl group {% if request.path == '/pos' %}active text-white{% endif %}">
+                    class="nav-item flex items-center px-4 py-3 text-slate-400 rounded-xl group {% if request.path == '/pos' %}active text-white bg-white/5{% endif %}">
                     <svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z">
@@ -162,7 +197,7 @@
                 </a>
 
                 <a href="/products"
-                    class="nav-item flex items-center px-4 py-3 text-slate-400 rounded-xl group {% if request.path == '/products' %}active text-white{% endif %}">
+                    class="nav-item flex items-center px-4 py-3 text-slate-400 rounded-xl group {% if request.path == '/products' %}active text-white bg-white/5{% endif %}">
                     <svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
@@ -171,7 +206,7 @@
                 </a>
 
                 <a href="/departments"
-                    class="nav-item flex items-center px-4 py-3 text-slate-400 rounded-xl group {% if request.path == '/departments' %}active text-white{% endif %}">
+                    class="nav-item flex items-center px-4 py-3 text-slate-400 rounded-xl group {% if request.path == '/departments' %}active text-white bg-white/5{% endif %}">
                     <svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z">
@@ -181,7 +216,7 @@
                 </a>
 
                 <a href="/sales"
-                    class="nav-item flex items-center px-4 py-3 text-slate-400 rounded-xl group {% if request.path == '/sales' %}active text-white{% endif %}">
+                    class="nav-item flex items-center px-4 py-3 text-slate-400 rounded-xl group {% if request.path == '/sales' %}active text-white bg-white/5{% endif %}">
                     <svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01">
@@ -191,7 +226,7 @@
                 </a>
 
                 <a href="/cash-history"
-                    class="nav-item flex items-center px-4 py-3 text-slate-400 rounded-xl group {% if request.path == '/cash-history' %}active text-white{% endif %}">
+                    class="nav-item flex items-center px-4 py-3 text-slate-400 rounded-xl group {% if request.path == '/cash-history' %}active text-white bg-white/5{% endif %}">
                     <svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z">
@@ -201,7 +236,7 @@
                 </a>
 
                 <a href="/users"
-                    class="nav-item flex items-center px-4 py-3 text-slate-400 rounded-xl group {% if request.path == '/users' %}active text-white{% endif %}">
+                    class="nav-item flex items-center px-4 py-3 text-slate-400 rounded-xl group {% if request.path == '/users' %}active text-white bg-white/5{% endif %}">
                     <svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z">
@@ -211,7 +246,7 @@
                 </a>
 
                 <a href="/customers"
-                    class="nav-item flex items-center px-4 py-3 text-slate-400 rounded-xl group {% if request.path == '/customers' %}active text-white{% endif %}">
+                    class="nav-item flex items-center px-4 py-3 text-slate-400 rounded-xl group {% if request.path == '/customers' %}active text-white bg-white/5{% endif %}">
                     <svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z">
@@ -221,7 +256,7 @@
                 </a>
 
                 <a href="/inventory"
-                    class="nav-item flex items-center px-4 py-3 text-slate-400 rounded-xl group {% if request.path == '/inventory' %}active text-white{% endif %}">
+                    class="nav-item flex items-center px-4 py-3 text-slate-400 rounded-xl group {% if request.path == '/inventory' %}active text-white bg-white/5{% endif %}">
                     <svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01">
@@ -231,7 +266,7 @@
                 </a>
 
                 <a href="/quotes"
-                    class="nav-item flex items-center px-4 py-3 text-slate-400 rounded-xl group {% if request.path == '/quotes' %}active text-white{% endif %}">
+                    class="nav-item flex items-center px-4 py-3 text-slate-400 rounded-xl group {% if request.path == '/quotes' %}active text-white bg-white/5{% endif %}">
                     <svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
@@ -256,7 +291,7 @@
             <!-- User Profile Short -->
             <div class="p-4 border-t border-white/5">
                 <div class="flex items-center gap-3">
-                    <div class="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-xs font-bold ring-2 ring-slate-800"
+                    <div class="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-xs font-bold ring-2 ring-slate-800 text-white"
                         id="user-avatar">
                         U
                     </div>
@@ -272,9 +307,9 @@
         <main class="flex-1 flex flex-col min-w-0 relative h-full overflow-hidden">
             <!-- Global Header -->
             <header
-                class="h-14 bg-slate-900/50 backdrop-blur border-b border-white/5 flex items-center justify-end px-6 shrink-0 z-20">
+                class="h-14 bg-white/50 dark:bg-slate-900/50 backdrop-blur border-b border-slate-200 dark:border-white/5 flex items-center justify-end px-6 shrink-0 z-20">
                 <button id="theme-toggle"
-                    class="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-colors focus:outline-none">
+                    class="p-2 rounded-lg text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-white/5 transition-colors focus:outline-none">
                     <!-- Sun Icon (Light Mode) -->
                     <svg id="icon-light" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -299,10 +334,10 @@
 
             <!-- Footer -->
             <footer
-                class="h-8 bg-slate-950 border-t border-white/5 flex items-center justify-between px-4 text-[10px] text-slate-500 shrink-0 z-20">
+                class="h-8 bg-white dark:bg-slate-950 border-t border-slate-200 dark:border-white/5 flex items-center justify-between px-4 text-[10px] text-slate-500 shrink-0 z-20">
                 <div>
-                    Powered by <span class="font-bold text-primary-500">Atlas Tech</span> & <span
-                        class="font-bold text-primary-500">Smart Site Co</span>
+                    Powered by <span class="font-bold text-primary-600 dark:text-primary-500">Atlas Tech</span> & <span
+                        class="font-bold text-primary-600 dark:text-primary-500">Smart Site Co</span>
                 </div>
                 <div id="footer-clock" class="font-mono font-medium">--/--/---- --:--:--</div>
             </footer>

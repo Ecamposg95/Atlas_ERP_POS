@@ -5,10 +5,11 @@
 {% block content %}
 <!-- HEADER -->
 <header
-    class="h-16 border-b border-white/5 bg-slate-900/50 backdrop-blur-md flex justify-between items-center px-6 shrink-0 z-10 sticky top-0">
+    class="h-16 border-b border-slate-200 dark:border-white/5 bg-white/50 dark:bg-slate-900/50 backdrop-blur-md flex justify-between items-center px-6 shrink-0 z-10 sticky top-0">
     <div>
-        <h1 class="text-lg font-bold text-white tracking-tight">Catálogo de Productos</h1>
-        <p class="text-[10px] text-slate-400 uppercase tracking-widest font-semibold flex items-center gap-2">
+        <h1 class="text-lg font-bold text-slate-800 dark:text-white tracking-tight">Catálogo de Productos</h1>
+        <p
+            class="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-widest font-semibold flex items-center gap-2">
             Administración
         </p>
     </div>
@@ -439,7 +440,7 @@
         function updateStats() {
             setText('stat-total-products', allProducts.length);
             setText('stat-no-price', allProducts.filter(p => !p.prices?.length).length);
-            setText('stat-no-dept', allProducts.filter(p => !p.department_id).length);
+            setText('stat-no-dept', allProducts.filter(p => !p.department).length);
             setText('stat-new-products', allProducts.filter(p => {
                 const d = new Date(p.created_at || Date.now());
                 return (Date.now() - d) < (7 * 24 * 60 * 60 * 1000);
@@ -633,7 +634,7 @@
             document.getElementById('product-unit').value = p.unit;
             document.getElementById('product-base-price').value = p.prices?.[0]?.unit_price || 0; // Approx
             document.getElementById('product-cost').value = p.cost || 0;
-            document.getElementById('product-department').value = p.department_id || '';
+            document.getElementById('product-department').value = p.department ? p.department.id : '';
             document.getElementById('product-description').value = p.description || '';
             document.getElementById('product-uses-inventory').checked = p.uses_inventory;
 
