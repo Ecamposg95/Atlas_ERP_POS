@@ -60,9 +60,11 @@ def _compute_product_read(
         qty = stock.qty_on_hand if stock else Decimal(0)
 
         p_read.stock_total = qty
-        p_read.stock_levels = [
-            StockLevel(branch_id=current_user.branch_id, qty_on_hand=qty)
-        ]
+        p_read.stock_levels = []
+        if current_user.branch_id:
+            p_read.stock_levels.append(
+                StockLevel(branch_id=current_user.branch_id, qty_on_hand=qty)
+            )
 
     return p_read
 

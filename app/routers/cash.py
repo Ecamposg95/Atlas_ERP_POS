@@ -51,7 +51,11 @@ def open_session(
     if active:
         raise HTTPException(400, "Ya tienes una sesión de caja abierta.")
 
-    # 2. Crear Sesión
+    # 2. Validar Sucursal
+    if not current_user.branch_id:
+        raise HTTPException(400, "Tu usuario no tiene una sucursal asignada. Contacte al administrador.")
+
+    # 3. Crear Sesión
     new_session = CashSession(
         branch_id=current_user.branch_id,
         user_id=current_user.id,
