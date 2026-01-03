@@ -12,8 +12,20 @@
 {% endblock %}
 
 {% block header_actions %}
-<div class="flex items-center gap-3">
-    <!-- Filtros de Fecha -->
+<div class="flex flex-col md:flex-row gap-4 items-end md:items-center">
+    <!-- Quick Filters -->
+    <div class="flex bg-slate-800 p-1 rounded-lg border border-white/5">
+        <button onclick="setFilter('today')"
+            class="px-3 py-1 text-xs font-medium text-slate-400 hover:text-white hover:bg-white/10 rounded-md transition">Hoy</button>
+        <button onclick="setFilter('yesterday')"
+            class="px-3 py-1 text-xs font-medium text-slate-400 hover:text-white hover:bg-white/10 rounded-md transition">Ayer</button>
+        <button onclick="setFilter('week')"
+            class="px-3 py-1 text-xs font-medium text-slate-400 hover:text-white hover:bg-white/10 rounded-md transition">Semana</button>
+        <button onclick="setFilter('month')"
+            class="px-3 py-1 text-xs font-medium text-slate-400 hover:text-white hover:bg-white/10 rounded-md transition">Mes</button>
+    </div>
+
+    <!-- Date Range -->
     <div
         class="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 p-1 rounded-lg border border-slate-200 dark:border-slate-700">
         <input type="date" id="filter-date-start"
@@ -22,7 +34,7 @@
         <input type="date" id="filter-date-end"
             class="bg-transparent text-xs text-slate-600 dark:text-slate-300 outline-none px-2 py-1 w-28">
         <button id="refresh-btn" class="p-1 rounded text-slate-400 hover:text-white hover:bg-slate-700 transition"
-            title="Actualizar / Filtrar">
+            title="Actualizar">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15">
@@ -35,6 +47,59 @@
 
 {% block content %}
 <div class="space-y-6 animate-fade-in">
+    <!-- KPI Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <!-- Card 1: Venta Total -->
+        <div class="glass-card p-5 rounded-2xl border border-white/5 relative overflow-hidden group">
+            <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition">
+                <svg class="w-16 h-16 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z">
+                    </path>
+                </svg>
+            </div>
+            <p class="text-xs text-slate-400 font-bold uppercase tracking-wider mb-1">Ventas Totales</p>
+            <h3 id="kpi-total" class="text-2xl font-bold text-white">$0.00</h3>
+        </div>
+
+        <!-- Card 2: Tickets -->
+        <div class="glass-card p-5 rounded-2xl border border-white/5 relative overflow-hidden group">
+            <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition">
+                <svg class="w-16 h-16 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01">
+                    </path>
+                </svg>
+            </div>
+            <p class="text-xs text-slate-400 font-bold uppercase tracking-wider mb-1">Transacciones</p>
+            <h3 id="kpi-count" class="text-2xl font-bold text-white">0</h3>
+        </div>
+
+        <!-- Card 3: Ticket Promedio -->
+        <div class="glass-card p-5 rounded-2xl border border-white/5 relative overflow-hidden group">
+            <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition">
+                <svg class="w-16 h-16 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                </svg>
+            </div>
+            <p class="text-xs text-slate-400 font-bold uppercase tracking-wider mb-1">Ticket Promedio</p>
+            <h3 id="kpi-average" class="text-2xl font-bold text-white">$0.00</h3>
+        </div>
+
+        <!-- Card 4: Método Principal -->
+        <div class="glass-card p-5 rounded-2xl border border-white/5 relative overflow-hidden group">
+            <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition">
+                <svg class="w-16 h-16 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z">
+                    </path>
+                </svg>
+            </div>
+            <p class="text-xs text-slate-400 font-bold uppercase tracking-wider mb-1">Top Método Pago</p>
+            <h3 id="kpi-top-method" class="text-xl font-bold text-white truncate">-</h3>
+        </div>
+    </div>
     <!-- Sales Table -->
     <div class="glass-card rounded-2xl overflow-hidden border border-white/5">
         <div class="overflow-x-auto">
@@ -149,16 +214,20 @@
 
         let currentSales = [];
 
-        // --- FETCH SALES ---
+        // --- FETCH SALES & STATS ---
         async function loadSales() {
             const tbody = document.getElementById('sales-table-body');
-            tbody.innerHTML = '<tr><td colspan="6" class="p-8 text-center text-slate-500 italic">Cargando...</td></tr>';
+            // Show loading state in table only if it's empty or explicitly desired
+            if (!currentSales.length) tbody.innerHTML = '<tr><td colspan="6" class="p-8 text-center text-slate-500 italic">Cargando...</td></tr>';
 
             const start = document.getElementById('filter-date-start').value;
             const end = document.getElementById('filter-date-end').value;
             let query = '?limit=100';
             if (start) query += `&start_date=${start}`;
             if (end) query += `&end_date=${end}`;
+
+            // Load Stats in Parallel
+            loadStats(query);
 
             try {
                 const res = await fetch(`${API_BASE}/api/sales/${query}`, {
@@ -173,6 +242,73 @@
                 tbody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-rose-500 font-bold">Error: ${e.message}</td></tr>`;
             }
         }
+
+        async function loadStats(query) {
+            try {
+                // If query starts with ?, use it. If not (empty), append ?
+                const q = query.startsWith('?') ? query : '?' + query;
+                const res = await fetch(`${API_BASE}/api/sales/stats${q}`, {
+                    headers: { 'Authorization': `Bearer ${ACCESS_TOKEN}` }
+                });
+                if (!res.ok) return; // Silent fail for stats
+
+                const data = await res.json();
+
+                // Animate Numbers (Simple)
+                document.getElementById('kpi-total').textContent = `$${data.total_sales.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                document.getElementById('kpi-count').textContent = data.total_transactions;
+                document.getElementById('kpi-average').textContent = `$${data.average_ticket.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+                // Top Method
+                let topMethod = '-';
+                let maxAmount = 0;
+                for (const [method, amount] of Object.entries(data.payment_methods)) {
+                    if (amount > maxAmount) {
+                        maxAmount = amount;
+                        // Map specific keys if needed, e.g. 'CASH' -> 'Efectivo'
+                        topMethod = method === 'CASH' ? 'Efectivo' : (method === 'CARD' ? 'Tarjeta' : (method === 'TRANSFER' ? 'Transf.' : method));
+                    }
+                }
+                document.getElementById('kpi-top-method').textContent = topMethod;
+
+            } catch (e) {
+                console.error("Error loading stats", e);
+            }
+        }
+
+        window.setFilter = function (range) {
+            const now = new Date();
+            let start = new Date();
+            let end = new Date();
+
+            if (range === 'today') {
+                // Start = Today 00:00, End = Now (or End of Day)
+                start.setHours(0, 0, 0, 0);
+                end.setHours(23, 59, 59, 999);
+            } else if (range === 'yesterday') {
+                start.setDate(now.getDate() - 1);
+                start.setHours(0, 0, 0, 0);
+                end.setDate(now.getDate() - 1);
+                end.setHours(23, 59, 59, 999);
+            } else if (range === 'week') {
+                // First day of current week (assuming Monday start)
+                const day = now.getDay();
+                const diff = now.getDate() - day + (day == 0 ? -6 : 1); // adjust when day is sunday
+                start.setDate(diff);
+                start.setHours(0, 0, 0, 0);
+                end.setHours(23, 59, 59, 999);
+            } else if (range === 'month') {
+                start = new Date(now.getFullYear(), now.getMonth(), 1);
+                end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+            }
+
+            // Format YYYY-MM-DD
+            const fmt = (d) => d.toISOString().split('T')[0];
+            document.getElementById('filter-date-start').value = fmt(start);
+            document.getElementById('filter-date-end').value = fmt(end);
+
+            loadSales();
+        };
 
         function renderTable(sales) {
             const tbody = document.getElementById('sales-table-body');

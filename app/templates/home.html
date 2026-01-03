@@ -4,51 +4,190 @@
 
 {% block header_title %}
 <div>
-    <h1 class="text-lg font-bold text-slate-800 dark:text-white tracking-tight">Bienvenido</h1>
-    <p class="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-widest font-semibold"
-        id="current-date-header">--/--/----</p>
+    <h1 class="text-lg font-bold text-slate-800 dark:text-white tracking-tight" id="greeting-text">Bienvenido</h1>
+    <p
+        class="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-widest font-semibold flex items-center gap-2">
+        <span id="current-date-header">--/--/----</span>
+        <span class="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-600"></span>
+        <span id="live-clock" class="font-mono">--:--</span>
+    </p>
 </div>
 {% endblock %}
 
 {% block content %}
-<div class="h-full flex flex-col items-center justify-center p-6 text-center">
+<div class="p-6 space-y-6 animate-fade-in max-w-7xl mx-auto">
 
-    <div
-        class="glass-card p-10 rounded-3xl max-w-2xl w-full flex flex-col items-center animate-fade-in relative overflow-hidden">
-        <!-- Glow Effect -->
-        <div
-            class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-primary-500/20 blur-[100px] rounded-full pointer-events-none">
-        </div>
-
-        <div
-            class="w-24 h-24 bg-gradient-to-br from-slate-200 to-slate-300 dark:from-slate-700 dark:to-slate-800 rounded-full flex items-center justify-center mb-6 shadow-xl ring-4 ring-white/10 relative z-10">
-            <span class="text-4xl font-bold text-slate-600 dark:text-slate-200" id="home-avatar">U</span>
-        </div>
-
-        <h2 class="text-3xl font-bold text-slate-800 dark:text-white mb-2 relative z-10">Hola, <span id="home-username"
-                class="text-primary-500">Usuario</span></h2>
-        <p class="text-slate-500 dark:text-slate-400 mb-8 relative z-10">¿Qué te gustaría hacer hoy?</p>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full relative z-10">
-            <a href="/pos"
-                class="group bg-gradient-to-br from-primary-600 to-primary-700 hover:from-primary-500 hover:to-primary-600 p-4 rounded-xl shadow-lg hover:shadow-primary-500/25 transition-all transform hover:-translate-y-1 text-white flex flex-col items-center justify-center gap-3">
-                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <!-- Status Widgets Row -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <!-- Widget 1: Cash Status -->
+        <div class="glass-card p-5 rounded-2xl border border-white/5 relative overflow-hidden group">
+            <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition">
+                <svg class="w-16 h-16 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z">
                     </path>
                 </svg>
-                <span class="font-bold text-sm">Ir al Punto de Venta</span>
-            </a>
-            <a href="/"
-                class="group bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-4 rounded-xl shadow-sm hover:border-primary-500/50 transition-all transform hover:-translate-y-1 flex flex-col items-center justify-center gap-3">
-                <svg class="w-8 h-8 text-slate-400 group-hover:text-primary-400 transition-colors" fill="none"
-                    stroke="currentColor" viewBox="0 0 24 24">
+            </div>
+            <p class="text-xs text-slate-400 font-bold uppercase tracking-wider mb-2">Estado de Caja</p>
+            <div class="flex items-center gap-3">
+                <div id="cash-status-indicator" class="w-3 h-3 rounded-full bg-slate-500"></div>
+                <h3 id="cash-status-text" class="text-xl font-bold text-white">Verificando...</h3>
+            </div>
+            <p id="cash-data-detail" class="text-[10px] text-slate-500 mt-1 pl-6">--</p>
+        </div>
+
+        <!-- Widget 2: User Info -->
+        <div class="glass-card p-5 rounded-2xl border border-white/5 relative overflow-hidden group">
+            <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition">
+                <svg class="w-16 h-16 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z">
+                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                </svg>
+            </div>
+            <p class="text-xs text-slate-400 font-bold uppercase tracking-wider mb-2">Usuario Activo</p>
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-400 font-bold text-xs"
+                    id="widget-avatar">U</div>
+                <div>
+                    <h3 id="widget-username" class="text-lg font-bold text-white leading-tight">Usuario</h3>
+                    <p id="widget-role" class="text-[10px] text-blue-400 font-bold uppercase">Rol</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Widget 3: Branch Info -->
+        <div class="glass-card p-5 rounded-2xl border border-white/5 relative overflow-hidden group">
+            <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition">
+                <svg class="w-16 h-16 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4">
                     </path>
                 </svg>
-                <span class="font-bold text-sm text-slate-600 dark:text-slate-300">Ver Dashboard</span>
+            </div>
+            <p class="text-xs text-slate-400 font-bold uppercase tracking-wider mb-2">Sucursal</p>
+            <div class="flex items-center gap-3">
+                <!-- Icono Tienda -->
+                <div class="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-400">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4">
+                        </path>
+                    </svg>
+                </div>
+                <div>
+                    <h3 id="widget-branch" class="text-lg font-bold text-white leading-tight">Cargando...</h3>
+                    <p class="text-[10px] text-slate-500">Sucursal Actual</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions Grid -->
+    <div>
+        <h3 class="text-sm font-bold text-slate-400 uppercase tracking-widest mb-4">Accesos Rápidos</h3>
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+
+            <a href="/pos"
+                class="glass-card p-4 rounded-xl border border-white/5 hover:bg-white/5 hover:border-primary-500/30 transition group flex flex-col items-center justify-center text-center gap-3 h-32 relative overflow-hidden">
+                <div
+                    class="absolute inset-0 bg-gradient-to-br from-primary-600/10 to-transparent opacity-0 group-hover:opacity-100 transition">
+                </div>
+                <div
+                    class="w-10 h-10 rounded-full bg-primary-500/20 text-primary-400 flex items-center justify-center group-hover:scale-110 transition">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z">
+                        </path>
+                    </svg>
+                </div>
+                <span class="text-xs font-bold text-slate-300 group-hover:text-white transition relative z-10">Punto de
+                    Venta</span>
             </a>
+
+            <a href="/sales"
+                class="glass-card p-4 rounded-xl border border-white/5 hover:bg-white/5 hover:border-blue-500/30 transition group flex flex-col items-center justify-center text-center gap-3 h-32 relative overflow-hidden">
+                <div
+                    class="absolute inset-0 bg-gradient-to-br from-blue-600/10 to-transparent opacity-0 group-hover:opacity-100 transition">
+                </div>
+                <div
+                    class="w-10 h-10 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center group-hover:scale-110 transition">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z">
+                        </path>
+                    </svg>
+                </div>
+                <span class="text-xs font-bold text-slate-300 group-hover:text-white transition relative z-10">Historial
+                    Ventas</span>
+            </a>
+
+            <a href="/products"
+                class="glass-card p-4 rounded-xl border border-white/5 hover:bg-white/5 hover:border-indigo-500/30 transition group flex flex-col items-center justify-center text-center gap-3 h-32 relative overflow-hidden">
+                <div
+                    class="absolute inset-0 bg-gradient-to-br from-indigo-600/10 to-transparent opacity-0 group-hover:opacity-100 transition">
+                </div>
+                <div
+                    class="w-10 h-10 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center group-hover:scale-110 transition">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                    </svg>
+                </div>
+                <span
+                    class="text-xs font-bold text-slate-300 group-hover:text-white transition relative z-10">Productos</span>
+            </a>
+
+            <a href="/cash-history"
+                class="glass-card p-4 rounded-xl border border-white/5 hover:bg-white/5 hover:border-amber-500/30 transition group flex flex-col items-center justify-center text-center gap-3 h-32 relative overflow-hidden">
+                <div
+                    class="absolute inset-0 bg-gradient-to-br from-amber-600/10 to-transparent opacity-0 group-hover:opacity-100 transition">
+                </div>
+                <div
+                    class="w-10 h-10 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center group-hover:scale-110 transition">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z">
+                        </path>
+                    </svg>
+                </div>
+                <span class="text-xs font-bold text-slate-300 group-hover:text-white transition relative z-10">Cortes de
+                    Caja</span>
+            </a>
+
+            <a href="/customers"
+                class="glass-card p-4 rounded-xl border border-white/5 hover:bg-white/5 hover:border-teal-500/30 transition group flex flex-col items-center justify-center text-center gap-3 h-32 relative overflow-hidden">
+                <div
+                    class="absolute inset-0 bg-gradient-to-br from-teal-600/10 to-transparent opacity-0 group-hover:opacity-100 transition">
+                </div>
+                <div
+                    class="w-10 h-10 rounded-full bg-teal-500/20 text-teal-400 flex items-center justify-center group-hover:scale-110 transition">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z">
+                        </path>
+                    </svg>
+                </div>
+                <span
+                    class="text-xs font-bold text-slate-300 group-hover:text-white transition relative z-10">Clientes</span>
+            </a>
+
+            <a href="/inventory"
+                class="glass-card p-4 rounded-xl border border-white/5 hover:bg-white/5 hover:border-fuchsia-500/30 transition group flex flex-col items-center justify-center text-center gap-3 h-32 relative overflow-hidden">
+                <div
+                    class="absolute inset-0 bg-gradient-to-br from-fuchsia-600/10 to-transparent opacity-0 group-hover:opacity-100 transition">
+                </div>
+                <div
+                    class="w-10 h-10 rounded-full bg-fuchsia-500/20 text-fuchsia-400 flex items-center justify-center group-hover:scale-110 transition">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01">
+                        </path>
+                    </svg>
+                </div>
+                <span
+                    class="text-xs font-bold text-slate-300 group-hover:text-white transition relative z-10">Inventario</span>
+            </a>
+
         </div>
     </div>
 
@@ -57,20 +196,83 @@
 
 {% block scripts %}
 <script>
-    document.addEventListener('DOMContentLoaded', () => {
-        const userStr = sessionStorage.getItem('CURRENT_USER');
-        const dateEl = document.getElementById('current-date-header');
+    document.addEventListener('DOMContentLoaded', async () => {
+        const token = sessionStorage.getItem('ACCESS_TOKEN');
+        if (!token) {
+            window.location.href = '/auth'; // Just in case
+            return;
+        }
 
+        const dateEl = document.getElementById('current-date-header');
+        const clockEl = document.getElementById('live-clock');
+        const greetingEl = document.getElementById('greeting-text');
+
+        // 1. Clock & Date & Greeting
+        const updateTime = () => {
+            const now = new Date();
+            dateEl.textContent = now.toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+            clockEl.textContent = now.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+
+            const hour = now.getHours();
+            if (hour < 12) greetingEl.textContent = "Buenos Días";
+            else if (hour < 19) greetingEl.textContent = "Buenas Tardes";
+            else greetingEl.textContent = "Buenas Noches";
+        };
+        setInterval(updateTime, 1000);
+        updateTime();
+
+        // 2. Load User Info (From Session or Fetch)
+        const userStr = sessionStorage.getItem('CURRENT_USER');
         if (userStr) {
             try {
                 const user = JSON.parse(userStr);
-                document.getElementById('home-username').textContent = user.username || 'Usuario';
-                document.getElementById('home-avatar').textContent = (user.username || 'U').charAt(0).toUpperCase();
+                document.getElementById('widget-username').textContent = user.username;
+                document.getElementById('widget-role').textContent = user.role;
+                document.getElementById('widget-avatar').textContent = (user.username || 'U').charAt(0).toUpperCase();
+
+                // Fetch Branches for Name
+                fetch('/api/branches/', { headers: { 'Authorization': `Bearer ${token}` } })
+                    .then(r => r.json())
+                    .then(branches => {
+                        const b = branches.find(x => x.id === user.branch_id);
+                        if (b) document.getElementById('widget-branch').textContent = b.name;
+                        else document.getElementById('widget-branch').textContent = `Sucursal ${user.branch_id || '?'}`;
+                    }).catch(() => document.getElementById('widget-branch').textContent = 'Error');
+
             } catch (e) { }
         }
 
-        const now = new Date();
-        dateEl.textContent = now.toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        // 3. Load Cash Status
+        try {
+            const cssInd = document.getElementById('cash-status-indicator');
+            const cssText = document.getElementById('cash-status-text');
+            const cssDet = document.getElementById('cash-data-detail');
+
+            const res = await fetch('/api/cash/status', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (res.ok) {
+                const statusData = await res.json();
+                // Expect: { status: "OPEN" | "CLOSED", session_id, ... }
+                if (statusData.status === 'OPEN') {
+                    cssInd.className = "w-3 h-3 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]";
+                    cssText.textContent = "Caja Abierta";
+                    cssText.className = "text-xl font-bold text-emerald-400";
+                    cssDet.textContent = `Sesión #${statusData.session_id || '?'}`;
+                } else {
+                    cssInd.className = "w-3 h-3 rounded-full bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.5)]";
+                    cssText.textContent = "Caja Cerrada";
+                    cssText.className = "text-xl font-bold text-white"; // or rose-400
+                    cssDet.textContent = "Sin sesión activa";
+                }
+            } else {
+                cssText.textContent = "Error";
+            }
+        } catch (e) {
+            console.error("Cash status error", e);
+        }
+
     });
 </script>
 {% endblock %}

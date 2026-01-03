@@ -1,6 +1,7 @@
 # app/routers/sales.py
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import func
 from datetime import datetime
 from decimal import Decimal
 from typing import Dict, Any, List, Optional
@@ -19,6 +20,59 @@ from app.security import get_current_user
 from app.utils.folios import get_next_folio 
 
 router = APIRouter()
+
+@router.get("/stats")
+def get_sales_stats(
+    start_date: Optional[datetime] = None,
+    end_date: Optional[datetime] = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Calcula KPIs de ventas: Total, Cantidad, Ticket Promedio, Desglose por Método.
+    """
+    # Base Query
+    query = db.query(SalesDocument).filter(
+        SalesDocument.branch_id == current_user.branch_id,
+        SalesDocument.status != DocumentStatus.CANCELLED
+    )
+
+    if start_date:
+        query = query.filter(SalesDocument.created_at >= start_date)
+    if end_date:
+        query = query.filter(SalesDocument.created_at <= end_date)
+
+    # 1. KPIs Generales
+    total_sales = query.with_entities(func.sum(SalesDocument.total_amount)).scalar() or Decimal(0)
+    total_count = query.count()
+    avg_ticket = total_sales / total_count if total_count > 0 else Decimal(0)
+
+    # 2. Desglose por Método de Pago
+    # Join con Payment
+    payment_stats = (
+        db.query(Payment.method, func.sum(Payment.amount))
+        .join(SalesDocument)
+        .filter(
+            SalesDocument.branch_id == current_user.branch_id,
+            SalesDocument.status != DocumentStatus.CANCELLED
+        )
+    )
+    
+    if start_date:
+        payment_stats = payment_stats.filter(SalesDocument.created_at >= start_date)
+    if end_date:
+        payment_stats = payment_stats.filter(SalesDocument.created_at <= end_date)
+
+    payment_stats = payment_stats.group_by(Payment.method).all()
+    
+    methods_data = {method.value: float(amount) for method, amount in payment_stats}
+
+    return {
+        "total_sales": float(total_sales),
+        "total_transactions": total_count,
+        "average_ticket": float(avg_ticket),
+        "payment_methods": methods_data
+    }
 
 @router.get("/", response_model=List[SaleRead])
 def read_sales(
@@ -61,8 +115,11 @@ def create_sale(
     db_lines = []
 
     for item in sale_in.items:
-        # Optimizado: Cargar precios para validación de niveles
-        variant = db.query(ProductVariant).options(joinedload(ProductVariant.prices)).filter(ProductVariant.sku == item.sku).first()
+        # Optimizado: Cargar precios y PRODUCTO para nombre completo
+        variant = db.query(ProductVariant).options(
+            joinedload(ProductVariant.prices),
+            joinedload(ProductVariant.product)
+        ).filter(ProductVariant.sku == item.sku).first()
         if not variant:
             raise HTTPException(status_code=404, detail=f"SKU '{item.sku}' no encontrado")
 
@@ -103,10 +160,15 @@ def create_sale(
         line_total = unit_price * qty_dec
         total_sale += line_total
 
+        # Construir Descripción Robusta: "Producto - Variante" o solo "Producto" si es estándar
+        product_name = variant.product.name if variant.product else "Producto Desconocido"
+        variant_label = f" ({variant.variant_name})" if variant.variant_name and variant.variant_name != "Estándar" else ""
+        full_description = f"{product_name}{variant_label}"
+
         # Preparar línea de venta para BD
         new_line = SalesLineItem(
             variant_id=variant.id,
-            description=f"{variant.sku} - {variant.variant_name}",
+            description=full_description,
             quantity=item.quantity, # Aquí se guarda el valor original (float o int)
             unit_price=unit_price,
             unit_cost=variant.cost,

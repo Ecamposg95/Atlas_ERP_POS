@@ -193,8 +193,9 @@
                         </svg>
                     </div>
                     <div class="overflow-hidden">
-                        <p class="text-[10px] uppercase text-slate-500 font-bold tracking-wider">Sucursal</p>
-                        <p class="text-xs font-bold text-slate-200 truncate" id="store-name">Matriz Principal</p>
+                        <p id="sidebar-label" class="text-[10px] uppercase text-slate-500 font-bold tracking-wider">
+                            Cargando...</p>
+                        <p class="text-xs font-bold text-slate-200 truncate" id="store-name">...</p>
                     </div>
                 </div>
             </div>
@@ -532,6 +533,7 @@
 
             async function refreshUserData() {
                 try {
+                    // 1. Fetch User
                     const res = await fetch('/api/users/me', {
                         headers: { 'Authorization': `Bearer ${token}` }
                     });
@@ -539,21 +541,13 @@
                         const user = await res.json();
                         currentUserData = user;
 
-                        // Update UI
+                        // Update UI - User Info
                         document.getElementById('user-name').textContent = user.username || 'Usuario';
                         document.getElementById('user-role').textContent = user.role || 'Rol';
                         document.getElementById('user-avatar').textContent = (user.username || 'U').charAt(0).toUpperCase();
 
-                        // Update Store Info
-                        // Ideally trigger a fetch for branch name here if needed
-                        // For now, assume 'Matriz Principal' is default or show ID
-                        if (user.branch_id) {
-                            // document.getElementById('store-name').textContent = `Sucursal ${user.branch_id}`; 
-                            // Check if we can fetch branch name? 
-                            // Let's just keep 'Matriz Principal' unless we want to fetch more.
-                            // Or simpler: "Atlas POS - Sucursal <ID>"
-                            document.getElementById('store-name').textContent = `Sucursal ${user.branch_id}`;
-                        }
+                        // Update Store Info (Org & Branch)
+                        updateSidebarHeader(user);
 
                         // Update SessionStorage if needed (optional)
                         sessionStorage.setItem('CURRENT_USER', JSON.stringify(user));
@@ -562,6 +556,29 @@
                     }
                 } catch (e) {
                     console.error('Error fetching user data', e);
+                }
+            }
+
+            async function updateSidebarHeader(user) {
+                try {
+                    // 1. Fetch Organization (for Main Title)
+                    const orgRes = await fetch('/api/organization/', { headers: { 'Authorization': `Bearer ${token}` } });
+                    const org = orgRes.ok ? await orgRes.json() : { name: 'Atlas ERP' };
+                    document.getElementById('store-name').textContent = org.name;
+
+                    // 2. Fetch Branch (for Subtitle)
+                    let branchName = 'Sin Sucursal';
+                    if (user.branch_id) {
+                        const branchRes = await fetch('/api/branches/', { headers: { 'Authorization': `Bearer ${token}` } });
+                        if (branchRes.ok) {
+                            const branches = await branchRes.json();
+                            const myBranch = branches.find(b => b.id === user.branch_id);
+                            if (myBranch) branchName = myBranch.name;
+                        }
+                    }
+                    document.getElementById('sidebar-label').textContent = branchName.toUpperCase();
+                } catch (e) {
+                    console.error("Error updating sidebar header", e);
                 }
             }
 
