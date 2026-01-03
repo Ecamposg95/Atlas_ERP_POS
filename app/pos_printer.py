@@ -14,7 +14,8 @@ IS_WINDOWS = platform.system().lower() == "windows"
 if IS_WINDOWS:
     try:
         import win32print
-    except ImportError:
+    except ImportError as e:
+        print(f"WARNING: win32print not found. Printers will not be detected. Error: {e}")
         win32print = None
 else:
     try:
@@ -25,12 +26,12 @@ else:
 class PosPrinter:
     def __init__(
         self,
-        printer_name: str = "POS-80",
+        printer_name: str = None, # If None, tries to use default or first available
         vendor_id: int = 0x04B8,
         product_id: int = 0x0E28,
         paper_width_mm: int = 80,
     ):
-        self.printer_name = printer_name
+        self.printer_name = printer_name or "POS-80"
         self.vendor_id = vendor_id
         self.product_id = product_id
         self.paper_width_mm = paper_width_mm
@@ -49,6 +50,50 @@ class PosPrinter:
             "SIZE_NORMAL": b"\x1D\x21\x00",
             "SIZE_LARGE": b"\x1D\x21\x11", # Doble alto y ancho
         }
+
+    @staticmethod
+    def get_available_printers() -> List[str]:
+        printers = []
+        if IS_WINDOWS:
+            # Method 1: win32print (Preferred if installed)
+            if win32print:
+                try:
+                    for p in win32print.EnumPrinters(2): 
+                        if p and len(p) > 2:
+                            printers.append(p[2])
+                except Exception as e:
+                    print(f"Error win32print enum: {e}")
+            
+            # Method 2: PowerShell (Fallback)
+            if not printers:
+                try:
+                    import subprocess
+                    cmd = ["powershell", "-Command", "Get-Printer | Select-Object -ExpandProperty Name"]
+                    # Use specific encoding for Windows console (often cp850 or similar, but text=True usually handles it)
+                    output = subprocess.check_output(cmd, text=True)
+                    for line in output.splitlines():
+                        line = line.strip()
+                        if line:
+                            printers.append(line)
+                except Exception as e:
+                    print(f"Error PowerShell printer enum: {e}")
+
+        else:
+            # Linux logic via lpstat -p
+            # Example output: "printer HP-LaserJet-1020 is idle.  enabled since..."
+            try:
+                import subprocess
+                output = subprocess.check_output(['lpstat', '-p'], text=True)
+                for line in output.split('\n'):
+                    if line.startswith('printer '):
+                        # Extract name between 'printer ' and ' is'
+                        parts = line.split(' ')
+                        if len(parts) > 1:
+                            printers.append(parts[1])
+            except Exception:
+                pass 
+                
+        return printers
 
     def print_ticket(self, sale: SalesDocument, cashier_name: str, is_reprint: bool = False, organization = None) -> bool:
         """
@@ -75,100 +120,141 @@ class PosPrinter:
         sep = ("-" * self.cols + "\n").encode("latin-1", "replace")
         raw = b""
         
-        # Defaults
-        header_text = "ATLAS TECHNOLOGIES"
-        sub_header = "Sucursal Centro"
-        footer_text = "Gracias por su compra!"
+        # --- Config Values ---
+        org_name = "ATLAS POS SYSTEM"
+        header_msg = None
+        footer_msg = "Gracias por su compra!"
         
         if organization:
-            if organization.ticket_header: header_text = organization.ticket_header
-            # If you want organization name as subheader or part of header, adjust logic here.
-            # usually organization.name is the main header, ticket_header enables a custom message.
-            # based on user request "modify my ticket", ticket_header is often the company name line.
-            
-            if organization.ticket_footer: footer_text = organization.ticket_footer
-            
-            # Uncomment if you want to use the Organization Name instead of Header string
-            # header_text = organization.name or header_text
+            org_name = organization.name or org_name
+            header_msg = organization.ticket_header
+            footer_msg = organization.ticket_footer or footer_msg
 
-        # 1. Inicio y Encabezado
+        # --- 1. ENCABEZADO (Organization Name First) ---
         raw += self.CMD["INIT"] + self.CMD["SIZE_NORMAL"] + self.CMD["CENTER"]
         
-        # Si es reimpresión, mostrar alerta visual clara
-        if is_reprint:
-            raw += self.CMD["BOLD_ON"] + self.CMD["SIZE_LARGE"]
-            raw += b"*** REIMPRESION ***\n"
-            raw += self.CMD["SIZE_NORMAL"] + b"--- COPIA DEL TICKET ---\n" + self.CMD["BOLD_OFF"]
-            raw += self.CMD["LF"]
-
+        # Org Name (Bold)
         raw += self.CMD["BOLD_ON"]
-        # Allow multi-line header
-        if organization and organization.ticket_header:
-             headers = self._wrap_text(organization.ticket_header, self.cols)
-             for h in headers:
-                 raw += (h + "\n").encode("latin-1", "replace")
-        else:
-             raw += b"ATLAS POS SYSTEM\n"
-
+        raw += self._wrap_line(org_name, 0).replace(b"\n", b"\n" + self.CMD["CENTER"]) 
         raw += self.CMD["BOLD_OFF"]
         
-        # Optional: Print Org info like address/phone if needed
+        # Address & Phone
         if organization:
              if organization.address:
-                 raw += self._wrap_line(organization.address, 0)
+                 addr_lines = self._wrap_text(organization.address, self.cols)
+                 for l in addr_lines: raw += (l + "\n").encode("latin-1", "replace")
              if organization.phone:
                  raw += (f"Tel: {organization.phone}\n").encode("latin-1", "replace")
-
-        # 2. Datos de la Venta
-        fecha = sale.created_at.strftime("%d/%m/%Y %H:%M") if sale.created_at else datetime.now().strftime("%d/%m/%Y %H:%M")
-        raw += f"{fecha}\n".encode("latin-1", "replace") + self.CMD["LF"]
-
-        raw += self.CMD["LEFT"] + sep
-        raw += f"Ticket:  {sale.series}-{sale.folio}\n".encode("latin-1", "replace")
         
+        # Date
+        fecha = sale.created_at.strftime("%d/%m/%Y %H:%M") if sale.created_at else datetime.now().strftime("%d/%m/%Y %H:%M")
+        raw += (f"{fecha}\n").encode("latin-1", "replace")
+        
+        # Custom Header (if any, e.g. "Nota de Venta")
+        if header_msg:
+             raw += self.CMD["LF"]
+             headers = self._wrap_text(header_msg, self.cols)
+             for h in headers: raw += (h + "\n").encode("latin-1", "replace")
+        else:
+             raw += b"NOTA DE VENTA\n"
+
+        # --- 2. DATOS VENTA ---
+        raw += self.CMD["LF"] + self.CMD["LEFT"] + sep
+        
+        # Ticket ID - Aligned Left
+        raw += f"Nota: {sale.series or ''}-{sale.folio}\n".encode("latin-1", "replace")
+        
+        # Customer & Cashier
         c_name = sale.customer.name if sale.customer else "Publico General"
         raw += self._wrap_line(f"Cliente: {c_name}", indent=9)
-        raw += self._wrap_line(f"Cajero:  {cashier}", indent=9)
+        raw += f"Cajero:  {cashier}\n".encode("latin-1", "replace")
         raw += sep
 
-        # 3. Lista de Productos
-        qty_w, total_w, gap = 5, 10, 1
-        name_w = self.cols - qty_w - total_w - gap
+        # --- 3. PRODUCTOS ---
+        # Layout: Cant (4) | Desc (variable) | Total (10)
+        # We need to maximize Description space.
         
+        cols_qty = 4
+        cols_total = 10
+        cols_desc = self.cols - cols_qty - cols_total - 2 # 2 spaces padding
+        
+        # Titles
         raw += self.CMD["BOLD_ON"]
-        header = "Cant".ljust(qty_w) + "Producto".ljust(name_w) + (" " * gap) + "Total".rjust(total_w) + "\n"
-        raw += header.encode("latin-1", "replace") + self.CMD["BOLD_OFF"]
-
+        header_line = "Cant".ljust(cols_qty) + " " + "Producto".ljust(cols_desc) + " " + "Total".rjust(cols_total) + "\n"
+        raw += header_line.encode("latin-1", "replace")
+        raw += self.CMD["BOLD_OFF"]
+        
         for line in sale.lines:
-            qty_str = f"{line.quantity:g}"[:qty_w].ljust(qty_w)
-            name_lines = self._wrap_text(line.description, width=name_w) or [""]
+            # Resolve Product Name
+            # Try to get clean name from relation, fallback to cleaned description
+            p_name = line.description or "Item"
+            try:
+                if line.variant and line.variant.product:
+                     p_name = line.variant.product.name
+                     # Append variant name if significant
+                     if line.variant.variant_name and line.variant.variant_name.lower() not in ["estándar", "standard", "default"]:
+                         p_name += f" ({line.variant.variant_name})"
+            except:
+                pass # Fallback to description
+            
+            # Format Quantity
+            qty_str = f"{line.quantity:g}"
+            
+            # Format Total
             total_val = float(line.total_line)
-            total_str = f"${total_val:.2f}"[:total_w].rjust(total_w)
-
-            l1 = qty_str + name_lines[0].ljust(name_w) + (" " * gap) + total_str + "\n"
+            total_str = f"${total_val:.2f}"
+            
+            # Wrap Name
+            name_lines = self._wrap_text(p_name, cols_desc)
+            
+            # First Line: Qty | Name[0] | Total
+            l1 = qty_str.ljust(cols_qty) + " " + (name_lines[0] if name_lines else "").ljust(cols_desc) + " " + total_str.rjust(cols_total) + "\n"
             raw += l1.encode("latin-1", "replace")
             
+            # Subsequent Lines (Name wrapping)
             for extra in name_lines[1:]:
-                raw += ((" " * qty_w) + extra.ljust(name_w) + "\n").encode("latin-1", "replace")
-
+                l_extra = (" " * cols_qty) + " " + extra.ljust(cols_desc) + "\n"
+                raw += l_extra.encode("latin-1", "replace")
+                
         raw += sep
 
-        # 4. Totales y Pago
+        # --- 4. TOTALES ---
         raw += self.CMD["RIGHT"] + self.CMD["BOLD_ON"]
         raw += self._rline("TOTAL", float(sale.total_amount))
         raw += self.CMD["BOLD_OFF"]
+        
         raw += self._rline("Pagado", float(paid))
         raw += self._rline("Cambio", float(change))
         raw += self.CMD["LF"]
 
-        # 5. Pie de página
+        # --- 5. PIE DE PAGINA ---
         raw += self.CMD["CENTER"]
-        raw += f"Metodo: {method}\n".encode("latin-1", "replace")
         
+        # Translate Method
+        method_map = {
+            "CASH": "EFECTIVO",
+            "CARD": "TARJETA",
+            "TRANSFER": "TRANSFERENCIA",
+            "OTHER": "OTRO"
+        }
+        method_es = method_map.get(str(method).upper(), str(method))
+        raw += f"Metodo: {method_es}\n".encode("latin-1", "replace")
+        raw += self.CMD["LF"]
+
         if is_reprint:
-            raw += b"Documento sin valor contable (COPIA)\n"
+            raw += b"*** COPIA - REIMPRESION ***\n"
         
-        raw += (footer_text + "\n").encode("latin-1", "replace")
+        if footer_msg:
+            lines = self._wrap_text(footer_msg, self.cols)
+            for l in lines: raw += (l + "\n").encode("latin-1", "replace")
+            
+        # Branding
+        raw += self.CMD["LF"]
+        raw += b"Software: Atlas ERPPOS\n"
+        
+        current_year = datetime.now().year
+        raw += b"www.rmazh.mx\n"
+        
         raw += self.CMD["LF"] * 4
         raw += self.CMD["CUT"]
         
@@ -295,3 +381,41 @@ class PosPrinter:
         except Exception as e:
             print(f"Error impresión Linux: {e}")
             return False
+
+    def print_test_ticket(self, organization) -> bool:
+        """
+        Imprime un ticket de prueba con la configuración actual.
+        """
+        sep = ("-" * self.cols + "\n").encode("latin-1", "replace")
+        raw = b""
+        
+        # Header
+        raw += self.CMD["INIT"] + self.CMD["SIZE_NORMAL"] + self.CMD["CENTER"]
+        raw += self.CMD["BOLD_ON"] + b"IMPRESION DE PRUEBA\n" + self.CMD["BOLD_OFF"]
+        raw += b"ATLAS ERP & POS\n"
+        raw += self.CMD["LF"]
+        
+        # Organization Info
+        if organization:
+             headers = self._wrap_text(organization.ticket_header or "Sin Encabezado", self.cols)
+             for h in headers: raw += (h + "\n").encode("latin-1", "replace")
+        
+        raw += sep
+        raw += b"Si puedes leer esto,\n"
+        raw += b"la impresora esta configurada\n"
+        raw += b"correctamente.\n"
+        raw += sep
+        
+        # Footer
+        if organization and organization.ticket_footer:
+            raw += (organization.ticket_footer + "\n").encode("latin-1", "replace")
+            
+        raw += self.CMD["LF"] * 4
+        raw += self.CMD["CUT"]
+        
+        if IS_WINDOWS:
+            if not win32print: return False
+            return self._print_windows_raw(raw, job_name="Test Print")
+        else:
+            if not Usb: return False
+            return self._print_linux_usb(raw)

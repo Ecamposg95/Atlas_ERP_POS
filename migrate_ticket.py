@@ -26,6 +26,16 @@ def migrate_db():
             print("Adding 'ticket_footer' column...")
             cursor.execute("ALTER TABLE organization ADD COLUMN ticket_footer TEXT DEFAULT 'Gracias por su compra!'")
             
+        # 4. Check printer_name
+        cursor.execute("PRAGMA table_info(organization)")
+        columns = [info[1] for info in cursor.fetchall()]
+        
+        if "printer_name" not in columns:
+            print("Adding printer_name column...")
+            cursor.execute("ALTER TABLE organization ADD COLUMN printer_name TEXT")
+        else:
+            print("printer_name column already exists.")
+
         conn.commit()
         print("Migration complete.")
         

@@ -468,6 +468,52 @@
             </div>
         </div>
     </div>
+    <!-- Modal Cut Success -->
+    <div id="cut-success-modal"
+        class="hidden fixed inset-0 bg-black/90 backdrop-blur-md z-[70] flex items-center justify-center p-4">
+        <div
+            class="bg-slate-900 rounded-3xl shadow-2xl max-w-sm w-full p-8 border border-white/10 text-center relative overflow-hidden">
+            <!-- Celebration BG -->
+            <div
+                class="absolute inset-0 pointer-events-none opacity-10 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-amber-500 to-transparent">
+            </div>
+
+            <div
+                class="w-20 h-20 bg-amber-500/20 rounded-full flex items-center justify-center mx-auto mb-6 relative z-10">
+                <svg class="w-10 h-10 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+            </div>
+            <h3 class="text-2xl font-black text-white mb-2 relative z-10">Corte Finalizado</h3>
+            <p id="cut-diff-display" class="text-sm text-slate-400 mb-8 font-mono relative z-10">Diferencia: $0.00</p>
+
+            <div class="space-y-3 relative z-10">
+                <button onclick="window.printCutTicket()"
+                    class="w-full py-3 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl transition flex items-center justify-center gap-2 border border-slate-700 group">
+                    <svg class="w-5 h-5 text-slate-400 group-hover:text-amber-400 transition-colors" fill="none"
+                        stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2-4h6a2 2 0 012 2v6a2 2 0 01-2 2H9a2 2 0 01-2-2v-6a2 2 0 012-2zm9-2V3a2 2 0 00-2-2H8a2 2 0 00-2 2v12">
+                        </path>
+                    </svg>
+                    Imprimir Ticket
+                </button>
+                <button onclick="window.downloadCutPDF()"
+                    class="w-full py-3 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-xl transition shadow-lg flex items-center justify-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+                        </path>
+                    </svg>
+                    Generar PDF
+                </button>
+                <button onclick="window.finishCutProcess()"
+                    class="w-full py-3 text-slate-500 hover:text-white font-bold text-sm transition">Cerrar y
+                    Salir</button>
+            </div>
+        </div>
+    </div>
     {% endblock %}
 
     {% block scripts %}
@@ -481,8 +527,8 @@
             // --- STATE ---
             let CURRENT_CASH_SESSION_ID = null;
             let CURRENT_SESSION_EXPECTED = 0;
+            let LAST_CLOSED_SESSION_ID = null;
             let cart = []; // Client-side cart
-            let LAST_SUCCESSFUL_SALE = null; // Store result from API
 
             // --- AUTH CHECK ---
             if (!ACCESS_TOKEN) window.location.href = '/auth';
@@ -493,9 +539,10 @@
                 if (options.body) headers['Content-Type'] = 'application/json';
                 const res = await fetch(`${API_BASE_URL}${endpoint}`, { ...options, headers });
                 if (res.status === 401) { sessionStorage.clear(); window.location.href = '/auth'; }
+                if (res.headers.get("Content-Type")?.includes("application/pdf")) return res.blob();
                 if (!res.ok) {
                     const err = await res.json().catch(() => ({ detail: res.statusText }));
-                    console.error("API Error Detail:", err); // Log full detailed error
+                    console.error("API Error Detail:", err);
                     throw new Error(err.detail);
                 }
                 return res.status === 204 ? null : res.json();
@@ -504,7 +551,6 @@
             // --- SESSION LOGIC ---
             async function checkSession() {
                 try {
-                    // Correct Endpoint: /api/cash/status
                     const session = await apiFetch('/api/cash/status');
                     const badge = document.getElementById('session-status-badge');
                     const badgeText = document.getElementById('session-status-text');
@@ -531,10 +577,15 @@
                         closeBtn.classList.add('hidden');
 
                         wrapper.classList.add('blur-sm', 'pointer-events-none');
-                        showModal(modal);
-                        document.getElementById('open-session-view').classList.remove('hidden');
-                        document.getElementById('close-session-view').classList.add('hidden');
-                        setTimeout(() => document.getElementById('opening-balance').focus(), 100);
+                        // Do not auto-show modal if we just finished a cut (handled by cut success modal)
+                        if (!document.getElementById('cut-success-modal').classList.contains('hidden')) {
+                            // wait
+                        } else {
+                            showModal(modal);
+                            document.getElementById('open-session-view').classList.remove('hidden');
+                            document.getElementById('close-session-view').classList.add('hidden');
+                            setTimeout(() => document.getElementById('opening-balance').focus(), 100);
+                        }
                     }
                 } catch (e) { console.error('Session Check Failed', e); }
             }
@@ -543,7 +594,6 @@
             document.getElementById('open-session-form').onsubmit = async (e) => {
                 e.preventDefault();
                 try {
-                    // Correct Endpoint: /api/cash/open
                     await apiFetch('/api/cash/open', {
                         method: 'POST',
                         body: JSON.stringify({ opening_balance: parseFloat(document.getElementById('opening-balance').value) })
@@ -567,7 +617,6 @@
             document.getElementById('close-session-form').onsubmit = async (e) => {
                 e.preventDefault();
                 try {
-                    // Correct Endpoint: /api/cash/close
                     const res = await apiFetch(`/api/cash/close`, {
                         method: 'POST',
                         body: JSON.stringify({
@@ -575,9 +624,53 @@
                             notes: document.getElementById('close-notes').value
                         })
                     });
-                    alert(`Turno cerrado.\nDiferencia: ${fmtMoney(res.difference)}`);
-                    checkSession();
+
+                    // Success! Show Cut Modal
+                    LAST_CLOSED_SESSION_ID = res.id;
+                    hideModal(document.getElementById('cash-session-modal'));
+
+                    document.getElementById('cut-diff-display').textContent = `Diferencia: ${fmtMoney(res.difference)}`;
+                    if (res.difference < 0) document.getElementById('cut-diff-display').className = "text-sm text-rose-400 mb-8 font-mono font-bold relative z-10";
+                    else if (res.difference > 0) document.getElementById('cut-diff-display').className = "text-sm text-emerald-400 mb-8 font-mono font-bold relative z-10";
+                    else document.getElementById('cut-diff-display').className = "text-sm text-slate-400 mb-8 font-mono relative z-10";
+
+                    document.getElementById('cut-success-modal').classList.remove('hidden');
+
+                    // We don't call checkSession immediately to avoid the "Open Session" modal overlaying our success modal.
+                    // Instead, we call it when they close this modal.
+
                 } catch (e) { alert(e.message); }
+            };
+
+            // --- CUT ACTIONS ---
+            window.printCutTicket = async () => {
+                if (!LAST_CLOSED_SESSION_ID) return;
+                try {
+                    await apiFetch('/api/printer/print-cash-cut', {
+                        method: 'POST',
+                        body: JSON.stringify({ session_id: LAST_CLOSED_SESSION_ID })
+                    });
+                    alert("Ticket enviado a impresión");
+                } catch (e) { alert('Error impresión: ' + e.message); }
+            };
+
+            window.downloadCutPDF = async () => {
+                if (!LAST_CLOSED_SESSION_ID) return;
+                try {
+                    const blob = await apiFetch(`/api/cash/${LAST_CLOSED_SESSION_ID}/pdf`);
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `Corte_Caja_${LAST_CLOSED_SESSION_ID}.pdf`;
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                } catch (e) { alert('Error descargando PDF: ' + e.message); }
+            };
+
+            window.finishCutProcess = () => {
+                document.getElementById('cut-success-modal').classList.add('hidden');
+                checkSession(); // Will likely show "Open Session" modal now
             };
 
             // --- CLIENT-SIDE CART LOGIC ---

@@ -11,6 +11,7 @@ class OrganizationBase(BaseModel):
     logo_url: Optional[str] = None
     ticket_header: Optional[str] = None
     ticket_footer: Optional[str] = None
+    printer_name: Optional[str] = None
 
 class OrganizationCreate(OrganizationBase):
     pass

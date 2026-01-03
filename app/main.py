@@ -80,6 +80,10 @@ async def login_page(request: Request):
     """Página de acceso - Cambiado a auth.html según tu plan"""
     return templates.TemplateResponse("auth.html", {"request": request})
 
+@app.get("/printer-settings", response_class=HTMLResponse)
+async def printer_settings_page(request: Request):
+    return templates.TemplateResponse("printer_config.html", {"request": request})
+
 @app.get("/pos", response_class=HTMLResponse)
 async def pos_page(request: Request):
     return templates.TemplateResponse("pos.html", {"request": request})

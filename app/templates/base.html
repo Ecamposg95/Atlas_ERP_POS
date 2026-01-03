@@ -316,6 +316,16 @@
                     <span class="hidden lg:block ml-3 font-medium text-xs sidebar-text">Organización</span>
                 </a>
 
+                <a href="/printer-settings" id="nav-printer"
+                    class="nav-item flex items-center px-3 py-2 text-slate-400 rounded-lg group {% if request.path == '/printer-settings' %}active text-white bg-white/5{% endif %}">
+                    <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z">
+                        </path>
+                    </svg>
+                    <span class="hidden lg:block ml-3 font-medium text-xs sidebar-text">Impresora</span>
+                </a>
+
                 <a href="/quotes" id="nav-quotes"
                     class="nav-item flex items-center px-3 py-2 text-slate-400 rounded-lg group {% if request.path == '/quotes' %}active text-white bg-white/5{% endif %}">
                     <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -559,7 +569,7 @@
                 if (user.role === 'CAJERO') {
                     const restrictedIds = [
                         'nav-dashboard', 'nav-departments', 'nav-customers',
-                        'nav-users', 'nav-organization', 'nav-quotes'
+                        'nav-users', 'nav-organization', 'nav-quotes', 'nav-printer'
                     ];
                     restrictedIds.forEach(id => {
                         const el = document.getElementById(id);

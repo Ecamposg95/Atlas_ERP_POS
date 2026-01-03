@@ -38,3 +38,4 @@ class Organization(Base):
     logo_url = Column(String, nullable=True)
     ticket_header = Column(String, nullable=True, default="ATLAS POS - Nota de Venta")
     ticket_footer = Column(String, nullable=True, default="Gracias por su compra!")
+    printer_name = Column(String, nullable=True) # Impresora predeterminada

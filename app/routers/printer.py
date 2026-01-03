@@ -8,12 +8,41 @@ from app.models.sales import DocumentStatus, PaymentMethod
 from sqlalchemy import func
 from decimal import Decimal
 from app.security import get_current_user
-from app.pos_printer import PosPrinter
+from app.pos_printer import PosPrinter, IS_WINDOWS, win32print
 
 router = APIRouter()
 
+@router.post("/test-print")
+def test_print_endpoint(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    from app.models.organization import Organization
+    organization = db.query(Organization).first()
+    
+    p_name = organization.printer_name if (organization and organization.printer_name) else "POS-80"
+    printer = PosPrinter(printer_name=p_name, paper_width_mm=80)
+    
+    # Check for hardware dependencies explicitly
+    if IS_WINDOWS and not win32print:
+         raise HTTPException(500, "Fata la librería 'pywin32' en el servidor. Instale con: pip install pywin32")
+
+    try:
+        success = printer.print_test_ticket(organization)
+        if not success:
+             raise HTTPException(500, "Error enviando prueba a impresora (Hardware)")
+    except Exception as e:
+        raise HTTPException(500, f"Error prueba: {str(e)}")
+        
+    return {"status": "success", "printer": p_name}
+
 class PrintRequest(BaseModel):
     order_id: int
+
+@router.get("/printers")
+def get_printers():
+    """List available printers."""
+    return PosPrinter.get_available_printers()
 
 @router.post("/print-ticket")
 def print_ticket_endpoint(
@@ -29,8 +58,10 @@ def print_ticket_endpoint(
     # Fetch Organization for Ticket Config
     from app.models.organization import Organization
     organization = db.query(Organization).first()
-
-    printer = PosPrinter(printer_name="POS-80", paper_width_mm=80)
+    
+    # Use configured printer or default
+    p_name = organization.printer_name if (organization and organization.printer_name) else "POS-80"
+    printer = PosPrinter(printer_name=p_name, paper_width_mm=80)
     
     try:
         # Pass organization object
@@ -65,7 +96,8 @@ def reprint_ticket_endpoint(
     from app.models.organization import Organization
     organization = db.query(Organization).first()
 
-    printer = PosPrinter(printer_name="POS-80", paper_width_mm=80)
+    p_name = organization.printer_name if (organization and organization.printer_name) else "POS-80"
+    printer = PosPrinter(printer_name=p_name, paper_width_mm=80)
     
     try:
         success = printer.print_ticket(
@@ -120,7 +152,12 @@ def print_cash_cut_endpoint(
     cashier_name = session.user.username if session.user else "Desconocido"
     branch_name = "Sucursal Principal" # Placeholder o tomar de session.user.branch
 
-    printer = PosPrinter(printer_name="POS-80", paper_width_mm=80)
+    # Fetch Organization for Printer Config
+    from app.models.organization import Organization
+    organization = db.query(Organization).first()
+    p_name = organization.printer_name if (organization and organization.printer_name) else "POS-80"
+
+    printer = PosPrinter(printer_name=p_name, paper_width_mm=80)
     
     try:
         success = printer.print_cash_cut(
