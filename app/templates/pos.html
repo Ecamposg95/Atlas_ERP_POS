@@ -141,6 +141,10 @@
 
             <!-- Summary -->
             <div class="p-4 bg-slate-900/80 border-t border-white/5 space-y-1 shrink-0 z-10 backdrop-blur-md">
+                <div class="flex justify-between text-[10px] text-slate-400">
+                    <span>Artículos</span><span id="ticket-items-count" class="font-medium text-slate-300">0
+                        arts.</span>
+                </div>
                 <div class="flex justify-between text-[10px] text-slate-400"><span>Subtotal</span><span
                         id="ticket-subtotal" class="font-medium text-slate-200">$0.00</span></div>
                 <div class="flex justify-between text-[10px] text-slate-400"><span>Impuestos</span><span
@@ -225,16 +229,8 @@
             }
         });
 
-        // Wire up Transfer Button
-        document.getElementById('pay-transfer-button')?.addEventListener('click', async () => {
-            const total = window.cart ? window.cart.reduce((a, b) => a + (b.unit_price * b.qty), 0) : 0;
-            if (confirm(`¿Confirmar cobro de $${total.toFixed(2)} por Transferencia?`)) {
-                // Assuming finalizeSale is globally available or we need to bridge it
-                // It's defined inside another DOMContentLoaded in pos.html, so we might need to move this listener inside the main script block or make finalizeSale global.
-                // For now, let's rely on the main script block to wire this up, I will update the main script block in a separate edit or this one if I can match the context.
-                // Ah, this is outside the main script block. I should just add the button HTML here and wire logic in the script block below.
-            }
-        });
+        // Wire up Transfer Button - REMOVED DUPLICATE LISTENER
+        // The main listener is now inside the main script block using showConfirm()
     </script>
     {% endblock %}
 
@@ -465,6 +461,88 @@
             </div>
             <div id="price-selection-list" class="space-y-3 max-h-[60vh] overflow-y-auto custom-scrollbar">
                 <!-- JS Injected -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Generic Message Modal (Alert/Confirm) -->
+    <div id="message-modal"
+        class="hidden fixed inset-0 bg-black/90 backdrop-blur-md z-[80] flex items-center justify-center p-4">
+        <div
+            class="bg-slate-900 rounded-3xl shadow-2xl max-w-sm w-full p-6 border border-slate-700 text-center transform transition-all scale-100">
+            <h3 id="msg-modal-title" class="text-xl font-bold text-white mb-2">Atención</h3>
+            <p id="msg-modal-text" class="text-slate-400 mb-6">Mensaje...</p>
+            <div id="msg-modal-actions" class="flex gap-3 justify-center">
+                <!-- Injected buttons -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Product Details Modal (Refactored) -->
+    <div id="product-details-modal"
+        class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div
+            class="bg-slate-900 rounded-3xl shadow-2xl max-w-md w-full p-6 border border-slate-700 relative flex flex-col max-h-[90vh]">
+            <!-- Header -->
+            <div class="flex justify-between items-start mb-4 shrink-0">
+                <div>
+                    <h3 id="modal-product-name" class="text-xl font-bold text-white leading-tight">Nombre Producto</h3>
+                    <span id="modal-product-sku"
+                        class="text-xs font-mono text-emerald-400 bg-emerald-900/20 px-2 py-0.5 rounded border border-emerald-500/30 mt-1 inline-block">SKU-123</span>
+                </div>
+                <button onclick="window.hideModal(document.getElementById('product-details-modal'))"
+                    class="text-slate-500 hover:text-white transition bg-slate-800 p-1.5 rounded-lg">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                        </path>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Scrollable Content -->
+            <div class="flex-1 overflow-y-auto custom-scrollbar space-y-6 pr-2">
+                <!-- Main Info -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-slate-950 p-3 rounded-xl border border-slate-800">
+                        <span class="block text-[10px] text-slate-500 uppercase font-bold">Precio Público</span>
+                        <span id="modal-product-price" class="text-2xl font-black text-white">$0.00</span>
+                    </div>
+                    <div class="bg-slate-950 p-3 rounded-xl border border-slate-800">
+                        <span class="block text-[10px] text-slate-500 uppercase font-bold">Stock Dispon.</span>
+                        <span id="modal-product-stock" class="text-md font-bold text-slate-300 mt-1">0 pzas</span>
+                    </div>
+                </div>
+
+                <!-- Description -->
+                <div>
+                    <h4 class="text-xs font-bold text-slate-400 uppercase mb-2">Descripción</h4>
+                    <p id="modal-product-desc"
+                        class="text-sm text-slate-300 leading-relaxed bg-slate-950/50 p-3 rounded-xl border border-slate-800/50">
+                        Sin descripción disponible.
+                    </p>
+                </div>
+
+                <!-- Tiered Prices -->
+                <div>
+                    <h4 class="text-xs font-bold text-slate-400 uppercase mb-2">Precios de Mayoreo / Listas</h4>
+                    <div id="modal-tiered-prices"
+                        class="space-y-1 bg-slate-950/50 p-3 rounded-xl border border-slate-800/50">
+                        <!-- Injected -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer Actions -->
+            <div class="mt-6 pt-4 border-t border-slate-800 shrink-0">
+                <button id="modal-add-to-cart-btn"
+                    class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl shadow-lg transition transform active:scale-95 flex items-center justify-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z">
+                        </path>
+                    </svg>
+                    Agregar al Carrito
+                </button>
             </div>
         </div>
     </div>
@@ -720,10 +798,19 @@
                 }
                 renderCart();
 
-                // Limpiar buscador
-                document.getElementById('search-input').value = '';
-                document.getElementById('search-results').innerHTML = '';
-                document.getElementById('search-input').focus();
+                // Limpiar buscador pero mantener productos si estaba vacío
+                const sInput = document.getElementById('search-input');
+                if (sInput.value.trim() !== '') {
+                    sInput.value = '';
+                    // Reload defaults
+                    (async () => {
+                        try {
+                            const prods = await apiFetch('/api/products/search?q=');
+                            renderSearchResults(prods);
+                        } catch (e) { }
+                    })();
+                }
+                sInput.focus();
             };
 
             window.updateItem = function (id, delta) {
@@ -901,12 +988,17 @@
 
             function updateSummary() {
                 let total = 0;
+                let count = 0;
                 cart.forEach(i => {
                     total += i.unit_price * i.qty;
+                    count += i.qty;
                 });
                 document.getElementById('ticket-subtotal').textContent = fmtMoney(total);
                 document.getElementById('ticket-taxes').textContent = fmtMoney(0);
                 document.getElementById('ticket-total').textContent = fmtMoney(total);
+
+                const countEl = document.getElementById('ticket-items-count');
+                if (countEl) countEl.textContent = `${count} arts.`;
             }
 
             window.forcePrice = function (id) {
@@ -1143,11 +1235,7 @@
 
             searchInput.addEventListener('input', debounce(async (e) => {
                 const q = e.target.value.trim();
-                if (q.length < 2) {
-                    renderSearchResults([]);
-                    return;
-                }
-
+                // Allow empty search to reload defaults
                 try {
                     const prods = await apiFetch(`/api/products/search?q=${encodeURIComponent(q)}`);
                     renderSearchResults(prods);
@@ -1156,17 +1244,35 @@
                 }
             }, 300));
 
+            // Load initial products
+            (async () => {
+                try {
+                    const prods = await apiFetch(`/api/products/search?q=`);
+                    renderSearchResults(prods);
+                } catch (e) { console.error("Init load error", e); }
+            })();
+
             // --- PAYMENTS & CHECKOUT ---
             const cashModal = document.getElementById('cash-modal');
 
             // Show Cash Modal
+            // Show Cash Modal logic
             document.getElementById('pay-cash-button').onclick = () => {
                 const total = getCartTotal();
                 document.getElementById('cash-modal-total').textContent = fmtMoney(total);
-                document.getElementById('amount-received').value = '';
+
+                // Auto-fill Exact Amount to be "More Robust"
+                const input = document.getElementById('amount-received');
+                input.value = total.toFixed(2);
+
                 document.getElementById('cash-modal-error').classList.add('hidden');
                 showModal(cashModal);
-                setTimeout(() => document.getElementById('amount-received').focus(), 50);
+
+                // Focus and Select to allow easy overwrite if they want to type something else
+                setTimeout(() => {
+                    input.focus();
+                    input.select();
+                }, 50);
             };
             document.getElementById('cancel-cash-modal-x').onclick = () => hideModal(cashModal);
 
@@ -1195,20 +1301,52 @@
                 await finalizeSale('CASH', val);
             };
 
+            // --- GENERIC MODAL UTILS ---
+            window.showConfirm = function (title, message, onConfirm) {
+                const modal = document.getElementById('message-modal');
+                document.getElementById('msg-modal-title').textContent = title;
+                document.getElementById('msg-modal-text').textContent = message;
+
+                const actions = document.getElementById('msg-modal-actions');
+                actions.innerHTML = `
+                    <button onclick="hideModal(document.getElementById('message-modal'))" class="px-4 py-2 text-slate-400 hover:text-white transition">Cancelar</button>
+                    <button id="msg-confirm-btn" class="px-6 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg transition shadow-lg">Confirmar</button>
+                `;
+
+                document.getElementById('msg-confirm-btn').onclick = () => {
+                    hideModal(modal);
+                    if (onConfirm) onConfirm();
+                };
+
+                showModal(modal);
+            };
+
+            window.showAlert = function (title, message) {
+                const modal = document.getElementById('message-modal');
+                document.getElementById('msg-modal-title').textContent = title;
+                document.getElementById('msg-modal-text').textContent = message;
+
+                const actions = document.getElementById('msg-modal-actions');
+                actions.innerHTML = `
+                    <button onclick="hideModal(document.getElementById('message-modal'))" class="w-full px-6 py-2 bg-slate-700 hover:bg-slate-600 text-white font-bold rounded-lg transition">Entendido</button>
+                `;
+                showModal(modal);
+            };
+
             // Submit Card Payment
-            document.getElementById('pay-card-button').onclick = async () => {
+            document.getElementById('pay-card-button').onclick = () => {
                 const total = getCartTotal();
-                if (confirm(`¿Confirmar cobro de ${fmtMoney(total)} con Tarjeta?`)) {
+                showConfirm('Cobro con Tarjeta', `¿Confirmar cobro de ${fmtMoney(total)} con Tarjeta?`, async () => {
                     await finalizeSale('CARD', total);
-                }
+                });
             };
 
             // Submit Transfer Payment (NEW)
-            document.getElementById('pay-transfer-button').onclick = async () => {
+            document.getElementById('pay-transfer-button').onclick = () => {
                 const total = getCartTotal();
-                if (confirm(`¿Confirmar cobro de ${fmtMoney(total)} vía Transferencia?`)) {
+                showConfirm('Cobro por Transferencia', `¿Confirmar cobro de ${fmtMoney(total)} vía Transferencia?`, async () => {
                     await finalizeSale('TRANSFER', total);
-                }
+                });
             };
 
             async function finalizeSale(method, amount) {
@@ -1242,7 +1380,7 @@
                     cart = [];
                     renderCart();
                 } catch (e) {
-                    alert(`Error al procesar venta: ${e.message}`);
+                    showAlert('Error en Venta', `No se pudo procesar la venta: ${e.message}`);
                 }
             }
 
@@ -1254,7 +1392,7 @@
                     // If we have a sale in memory, use it. Otherwise try to print "last ticket" (if backend supports or if we store ID)
                     // Since we don't persist LAST_SUCCESSFUL_SALE across reloads, we should probably check if it's null.
                     if (!LAST_SUCCESSFUL_SALE) {
-                        alert('No hay venta reciente en esta sesión para reimprimir.');
+                        showAlert('Atención', 'No hay venta reciente en esta sesión para reimprimir.');
                         return;
                     }
 
@@ -1264,7 +1402,7 @@
                             method: 'POST', body: JSON.stringify({ order_id: LAST_SUCCESSFUL_SALE.sale_id })
                         });
                         // Feedback
-                    } catch (e) { alert('Error: ' + e.message); }
+                    } catch (e) { showAlert('Error Impresión', e.message); }
                     btn.classList.remove('animate-pulse', 'text-emerald-400');
                 };
             }
@@ -1284,7 +1422,7 @@
                             method: 'POST', body: JSON.stringify({ order_id: LAST_SUCCESSFUL_SALE.sale_id })
                         });
                         btn.innerHTML = '¡Enviado!';
-                    } catch (e) { alert(`Error: ${e.message}`); }
+                    } catch (e) { showAlert('Error Impresión', `Error: ${e.message}`); }
                     setTimeout(() => { btn.innerHTML = prev; btn.disabled = false; }, 2000);
                 };
             }
@@ -1306,6 +1444,12 @@
             function hideModal(el) { el.classList.remove('flex'); setTimeout(() => el.classList.add('hidden'), 0); }
             function fmtMoney(val) { return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(val); }
             function debounce(fn, ms) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
+
+            // Export utils to window for HTML onclick access
+            window.showModal = showModal;
+            window.hideModal = hideModal;
+            window.fmtMoney = fmtMoney;
+
         });
     </script>
     {% endblock %}
