@@ -50,7 +50,7 @@ class PosPrinter:
             "SIZE_LARGE": b"\x1D\x21\x11", # Doble alto y ancho
         }
 
-    def print_ticket(self, sale: SalesDocument, cashier_name: str, is_reprint: bool = False) -> bool:
+    def print_ticket(self, sale: SalesDocument, cashier_name: str, is_reprint: bool = False, organization = None) -> bool:
         """
         Método principal de impresión. 
         is_reprint: Si es True, añade la leyenda de copia al inicio.
@@ -62,7 +62,7 @@ class PosPrinter:
         method = sale.payments[0].method.value if sale.payments else "N/A"
 
         # Construir el contenido binario del ticket
-        raw = self._build_ticket_raw(sale, total_paid, change, method, cashier_name, is_reprint)
+        raw = self._build_ticket_raw(sale, total_paid, change, method, cashier_name, is_reprint, organization)
 
         if IS_WINDOWS:
             if not win32print: return False
@@ -71,10 +71,26 @@ class PosPrinter:
             if not Usb: return False
             return self._print_linux_usb(raw)
 
-    def _build_ticket_raw(self, sale: SalesDocument, paid: Decimal, change: Decimal, method: str, cashier: str, is_reprint: bool) -> bytes:
+    def _build_ticket_raw(self, sale: SalesDocument, paid: Decimal, change: Decimal, method: str, cashier: str, is_reprint: bool, organization = None) -> bytes:
         sep = ("-" * self.cols + "\n").encode("latin-1", "replace")
         raw = b""
         
+        # Defaults
+        header_text = "ATLAS TECHNOLOGIES"
+        sub_header = "Sucursal Centro"
+        footer_text = "Gracias por su compra!"
+        
+        if organization:
+            if organization.ticket_header: header_text = organization.ticket_header
+            # If you want organization name as subheader or part of header, adjust logic here.
+            # usually organization.name is the main header, ticket_header enables a custom message.
+            # based on user request "modify my ticket", ticket_header is often the company name line.
+            
+            if organization.ticket_footer: footer_text = organization.ticket_footer
+            
+            # Uncomment if you want to use the Organization Name instead of Header string
+            # header_text = organization.name or header_text
+
         # 1. Inicio y Encabezado
         raw += self.CMD["INIT"] + self.CMD["SIZE_NORMAL"] + self.CMD["CENTER"]
         
@@ -86,10 +102,23 @@ class PosPrinter:
             raw += self.CMD["LF"]
 
         raw += self.CMD["BOLD_ON"]
-        raw += b"ATLAS TECHNOLOGIES\n"
+        # Allow multi-line header
+        if organization and organization.ticket_header:
+             headers = self._wrap_text(organization.ticket_header, self.cols)
+             for h in headers:
+                 raw += (h + "\n").encode("latin-1", "replace")
+        else:
+             raw += b"ATLAS POS SYSTEM\n"
+
         raw += self.CMD["BOLD_OFF"]
-        raw += b"Sucursal Centro\n" 
         
+        # Optional: Print Org info like address/phone if needed
+        if organization:
+             if organization.address:
+                 raw += self._wrap_line(organization.address, 0)
+             if organization.phone:
+                 raw += (f"Tel: {organization.phone}\n").encode("latin-1", "replace")
+
         # 2. Datos de la Venta
         fecha = sale.created_at.strftime("%d/%m/%Y %H:%M") if sale.created_at else datetime.now().strftime("%d/%m/%Y %H:%M")
         raw += f"{fecha}\n".encode("latin-1", "replace") + self.CMD["LF"]
@@ -139,7 +168,7 @@ class PosPrinter:
         if is_reprint:
             raw += b"Documento sin valor contable (COPIA)\n"
         
-        raw += b"Gracias por su compra!\n"
+        raw += (footer_text + "\n").encode("latin-1", "replace")
         raw += self.CMD["LF"] * 4
         raw += self.CMD["CUT"]
         

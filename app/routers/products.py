@@ -434,6 +434,23 @@ def export_products_excel(
     data.append(row)
 
     df = pd.DataFrame(data)
+
+    # Ensure P1-P5 columns exist for template usage
+    for i in range(1, 6):
+        for field in ["Nombre", "Min", "Precio"]:
+            col = f"P{i} {field}"
+            if col not in df.columns:
+                df[col] = ""
+
+    # Reorder columns to be nice
+    base_cols = ["SKU", "Nombre", "Departamento", "Costo", "Precio Base", "Stock", "Unidad", "Codigo Barras", "Descripcion"]
+    price_cols = []
+    for i in range(1, 6):
+        price_cols.extend([f"P{i} Nombre", f"P{i} Min", f"P{i} Precio"])
+    
+    # Filter only columns that actually exist (though we just added them) to avoid errors if base_cols missing
+    final_cols = [c for c in base_cols + price_cols if c in df.columns]
+    df = df[final_cols]
     
     # Save to buffer
     output = io.BytesIO()

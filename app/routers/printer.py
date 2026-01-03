@@ -26,11 +26,19 @@ def print_ticket_endpoint(
     if not sale:
         raise HTTPException(status_code=404, detail="Venta no encontrada")
 
+    # Fetch Organization for Ticket Config
+    from app.models.organization import Organization
+    organization = db.query(Organization).first()
+
     printer = PosPrinter(printer_name="POS-80", paper_width_mm=80)
     
     try:
-        # Aquí podrías pasar un flag 'is_reprint=False' a tu clase PosPrinter
-        success = printer.print_ticket(sale=sale, cashier_name=current_user.username)
+        # Pass organization object
+        success = printer.print_ticket(
+            sale=sale, 
+            cashier_name=current_user.username,
+            organization=organization
+        )
         if not success:
             raise HTTPException(status_code=500, detail="No se pudo conectar con la impresora")
     except Exception as e:
@@ -49,19 +57,22 @@ def reprint_ticket_endpoint(
     if not sale:
         raise HTTPException(status_code=404, detail="Venta no encontrada")
 
-    # Auditoría: Incrementar contador de reimpresiones si tienes el campo
     if hasattr(sale, 'reprint_count'):
         sale.reprint_count += 1
         db.commit()
 
+    # Fetch Organization
+    from app.models.organization import Organization
+    organization = db.query(Organization).first()
+
     printer = PosPrinter(printer_name="POS-80", paper_width_mm=80)
     
     try:
-        # Pasamos un parámetro extra para que el ticket diga "COPIA" o "REIMPRESIÓN"
         success = printer.print_ticket(
             sale=sale, 
             cashier_name=current_user.username,
-            is_reprint=True 
+            is_reprint=True,
+            organization=organization
         )
         if not success:
             raise HTTPException(status_code=500, detail="Fallo en hardware de impresión")

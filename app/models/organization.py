@@ -36,3 +36,5 @@ class Organization(Base):
     email = Column(String, nullable=True)
     website = Column(String, nullable=True)
     logo_url = Column(String, nullable=True)
+    ticket_header = Column(String, nullable=True, default="ATLAS POS - Nota de Venta")
+    ticket_footer = Column(String, nullable=True, default="Gracias por su compra!")

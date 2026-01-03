@@ -11,6 +11,17 @@
 
 {% block header_actions %}
 <div class="flex items-center gap-3">
+    <div class="relative">
+        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+            </svg>
+        </div>
+        <input type="text" id="search-input"
+            class="pl-10 pr-4 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300 focus:ring-1 focus:ring-primary-500 focus:border-primary-500 outline-none transition w-56 placeholder-slate-500"
+            placeholder="Buscar producto...">
+    </div>
     <div class="relative group">
         <select id="department-filter"
             class="appearance-none bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-bold py-1.5 pl-3 pr-8 rounded-lg border border-slate-200 dark:border-slate-700 hover:border-primary-500 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors cursor-pointer outline-none">
@@ -327,6 +338,17 @@
             <h3 class="text-xl font-bold mb-4 text-white">Importar Excel</h3>
             <form id="upload-form">
                 <div id="upload-step-1">
+                    <div class="mb-4 text-xs text-slate-400 bg-slate-800 p-3 rounded-lg">
+                        <p class="font-bold text-white mb-1">Instrucciones:</p>
+                        <ul class="list-disc list-inside space-y-1">
+                            <li>Sube un archivo Excel (.xlsx).</li>
+                            <li>Columnas requeridas: <span class="font-mono text-emerald-400">SKU, Nombre, Precio,
+                                    Costo</span></li>
+                            <li>Precios Escalonados (Opcional): <span class="font-mono text-emerald-400">P1 Nombre, P1
+                                    Min, P1 Precio</span> (hasta P5)</li>
+                        </ul>
+                    </div>
+
                     <label
                         class="block w-full p-8 border-2 border-dashed border-slate-700 rounded-xl text-center cursor-pointer hover:border-primary-500 hover:bg-slate-800/50 transition mb-4">
                         <svg class="w-10 h-10 mx-auto text-slate-500 mb-2" fill="none" stroke="currentColor"
@@ -338,11 +360,21 @@
                         <span class="text-sm font-medium text-slate-400">Clic para subir archivo .xlsx</span>
                         <input type="file" id="excel-file-input" class="hidden" accept=".xlsx" required>
                     </label>
-                    <div class="flex justify-end gap-3">
-                        <button type="button" id="cancel-upload-button"
-                            class="px-4 py-2 text-slate-500 font-bold hover:bg-slate-800 rounded-lg">Cancelar</button>
-                        <button type="submit"
-                            class="px-6 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg shadow">Procesar</button>
+                    <div class="flex justify-between gap-3">
+                        <button type="button" id="download-template-btn"
+                            class="px-4 py-2 text-primary-400 font-bold hover:bg-slate-800 rounded-lg text-xs flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                            </svg>
+                            Descargar Plantilla
+                        </button>
+                        <div class="flex gap-2">
+                            <button type="button" id="cancel-upload-button"
+                                class="px-4 py-2 text-slate-500 font-bold hover:bg-slate-800 rounded-lg">Cancelar</button>
+                            <button type="submit"
+                                class="px-6 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg shadow">Procesar</button>
+                        </div>
                     </div>
                 </div>
                 <div id="upload-step-2" class="hidden text-center py-8">
@@ -799,6 +831,24 @@
                 document.getElementById('upload-step-3').classList.add('hidden');
                 document.getElementById('upload-form').reset();
                 showModal(uploadModal);
+            };
+
+            // Template Download (Reusing export logic)
+            document.getElementById('download-template-btn').onclick = async () => {
+                try {
+                    const res = await fetch(`${API_BASE_URL}/api/products/export/excel`, {
+                        headers: { 'Authorization': `Bearer ${ACCESS_TOKEN}` }
+                    });
+                    if (!res.ok) throw new Error('Error descargando plantilla');
+                    const blob = await res.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `Plantilla_Productos.xlsx`;
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                } catch (e) { alert(e.message); }
             };
 
             document.getElementById('cancel-upload-button').onclick = () => hideModal(uploadModal);

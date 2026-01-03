@@ -76,6 +76,23 @@
                             <input type="text" id="org-logo"
                                 class="w-full px-4 py-3 bg-slate-950 border border-slate-700 rounded-xl text-white outline-none focus:ring-2 focus:ring-primary-500 transition">
                         </div>
+                        <div class="md:col-span-2 border-t border-slate-800 pt-6 mt-2">
+                            <h4 class="text-sm font-bold text-white mb-4">Configuración de Ticket</h4>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 mb-1 uppercase">Encabezado (Max 40
+                                chars)</label>
+                            <input type="text" id="org-ticket-header" maxlength="40"
+                                class="w-full px-4 py-3 bg-slate-950 border border-slate-700 rounded-xl text-white outline-none focus:ring-2 focus:ring-primary-500 transition"
+                                placeholder="Ej: ATLAS POS - Nota de Venta">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 mb-1 uppercase">Pie de Página (Max 60
+                                chars)</label>
+                            <input type="text" id="org-ticket-footer" maxlength="60"
+                                class="w-full px-4 py-3 bg-slate-950 border border-slate-700 rounded-xl text-white outline-none focus:ring-2 focus:ring-primary-500 transition"
+                                placeholder="Ej: Gracias por su compra!">
+                        </div>
                     </div>
                 </form>
             </div>
@@ -177,6 +194,8 @@
             document.getElementById('org-email').value = org.email || '';
             document.getElementById('org-website').value = org.website || '';
             document.getElementById('org-logo').value = org.logo_url || '';
+            document.getElementById('org-ticket-header').value = org.ticket_header || '';
+            document.getElementById('org-ticket-footer').value = org.ticket_footer || '';
         } catch (e) {
             console.error(e);
         }
@@ -190,7 +209,9 @@
             phone: document.getElementById('org-phone').value || null,
             email: document.getElementById('org-email').value || null,
             website: document.getElementById('org-website').value || null,
-            logo_url: document.getElementById('org-logo').value || null
+            logo_url: document.getElementById('org-logo').value || null,
+            ticket_header: document.getElementById('org-ticket-header').value || null,
+            ticket_footer: document.getElementById('org-ticket-footer').value || null
         };
         try {
             await apiFetch('/api/organization/', { method: 'PUT', body: JSON.stringify(payload) });

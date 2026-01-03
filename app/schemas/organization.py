@@ -9,6 +9,8 @@ class OrganizationBase(BaseModel):
     email: Optional[EmailStr] = None
     website: Optional[str] = None
     logo_url: Optional[str] = None
+    ticket_header: Optional[str] = None
+    ticket_footer: Optional[str] = None
 
 class OrganizationCreate(OrganizationBase):
     pass
